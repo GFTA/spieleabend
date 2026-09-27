@@ -121,25 +121,8 @@ h1 span{color:var(--accent)}
 /* ---------- game ---------- */
 #game{flex:1;display:flex;flex-direction:column;min-height:0}
 .topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
-.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.roundinfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
 .roundinfo b{color:var(--text)}
-.plates{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.plate{position:relative;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
-.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
-.plate.away{opacity:.55}
-.plate .pav{font-size:26px;line-height:1;flex:none}
-.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-right:10px}
-.plate .pname{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.plate .pmeta{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;min-width:0}
-.plate .pmeta span{overflow:hidden;text-overflow:ellipsis}
-.plate .chip{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
-.chip.c0{background:var(--c0)} .chip.c1{background:var(--c1)} .chip.c2{background:var(--c2)} .chip.c3{background:var(--c3)}
-.plate.done{box-shadow:inset 0 0 0 1.5px var(--green)}
-.plate .pgoal{display:flex;gap:2px;flex:none}
-.plate .pgoal i{width:6px;height:6px;border-radius:50%;background:var(--line)}
-.plate .pgoal i.on{background:var(--green)}
-.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
-.plate.active .pwins{background:var(--accent);color:#231a05}
 .iconbtn{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);display:grid;place-items:center}
 .iconbtn svg{width:22px;height:22px}
 
@@ -168,8 +151,26 @@ h1 span{color:var(--accent)}
 .yard{position:absolute;left:calc(var(--x) * var(--cell) - var(--cell) * .12);top:calc(var(--y) * var(--cell) - var(--cell) * .12);width:calc(var(--cell) * 2.24);height:calc(var(--cell) * 2.24);border-radius:calc(var(--cell) * .5);opacity:.28}
 .yard.c0{background:var(--c0)} .yard.c1{background:var(--c1)} .yard.c2{background:var(--c2)} .yard.c3{background:var(--c3)}
 .yard.on{opacity:.6;box-shadow:0 0 0 calc(var(--cell) * .06) var(--ring)}
-.center{position:absolute;left:calc(5 * var(--cell));top:calc(5 * var(--cell));width:var(--cell);height:var(--cell);display:grid;place-items:center}
-.center .die{--ds:calc(var(--cell) * .82)}
+/* name tags next to the yards, the die lies with whoever is on */
+.badge{position:absolute;z-index:1;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:calc(var(--cell) * 3.84);height:calc(var(--cell) * 1.62);
+  display:flex;align-items:center;gap:calc(var(--cell) * .14);padding:0 calc(var(--cell) * .18) 0 calc(var(--cell) * .26);border-radius:calc(var(--cell) * .36);
+  background:rgba(255,255,255,.5);box-shadow:inset calc(var(--cell) * .12) 0 0 var(--pc);color:#1b1325;transition:box-shadow .25s,background .25s}
+.badge.c0{--pc:var(--c0)} .badge.c1{--pc:var(--c1)} .badge.c2{--pc:var(--c2)} .badge.c3{--pc:var(--c3)}
+.badge.on{background:#fff;box-shadow:inset calc(var(--cell) * .12) 0 0 var(--pc),0 0 0 calc(var(--cell) * .09) var(--pc),0 calc(var(--cell) * .12) calc(var(--cell) * .35) rgba(0,0,0,.28)}
+.badge.away{opacity:.5}
+.badge.done{background:rgba(255,255,255,.8)}
+.bav{font-size:calc(var(--cell) * .72);line-height:1;flex:none}
+.binfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(var(--cell) * .06)}
+.binfo b{font-size:max(12px,calc(var(--cell) * .38));font-weight:800;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.binfo small{display:flex;align-items:center;gap:calc(var(--cell) * .14);font-size:max(10px,calc(var(--cell) * .28));font-weight:700;color:#6b5a3e;white-space:nowrap;overflow:hidden}
+.binfo .pgoal{display:flex;gap:2px;flex:none}
+.binfo .pgoal i{width:max(5px,calc(var(--cell) * .17));height:max(5px,calc(var(--cell) * .17));border-radius:50%;background:rgba(0,0,0,.16)}
+.binfo .pgoal i.on{background:var(--green)}
+.bwins{position:absolute;top:calc(var(--cell) * -.22);right:calc(var(--cell) * -.14);min-width:calc(var(--cell) * .62);height:calc(var(--cell) * .62);padding:0 4px;border-radius:99px;
+  background:var(--pc);color:#fff;font:800 max(10px,calc(var(--cell) * .34))/calc(var(--cell) * .62) var(--ui);text-align:center;box-shadow:0 0 0 2px var(--board)}
+.badge.c3 .bwins{color:#231a05}
+.board .die{position:absolute;z-index:4;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));--ds:calc(var(--cell) * 1.48)}
+.board .bubble{top:calc(var(--cell) * -.4)}
 /* pawns: a round body with a head, in the player's color */
 .piece{position:absolute;z-index:2;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:var(--cell);height:var(--cell);border:0;padding:0;margin:0;background:none;pointer-events:none;display:block}
 .piece i{position:absolute;left:18%;right:18%;bottom:14%;height:52%;border-radius:50% 50% 42% 42%;background:radial-gradient(circle at 38% 30%,rgba(255,255,255,.55) 0 14%,transparent 15%),var(--pc);
@@ -320,19 +321,17 @@ button.die:disabled{cursor:default}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
   .lobby-actions{flex-direction:row-reverse;margin-inline:-24px;padding-inline:24px}
   .lobby-actions .btn{flex:1}
-  #game{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
-  .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
-  .roundinfo{display:block}
-  .plates{max-width:none;grid-template-columns:repeat(var(--n,2),minmax(0,1fr))}
-  .plate .pav{font-size:30px}
-  .plate .pname{font-size:15px}
-  .arena{padding:8px 0 0}
+  #game{padding:0 24px 16px}
+  .topbar{padding:14px 0 4px;gap:12px;width:100%;max-width:980px;align-self:center}
+  .roundinfo{font-size:14px}
+  .arena{padding:6px 0 0}
   .lastmove{font-size:14px}
-  .dock{align-self:start;margin-top:48px;border-radius:22px;padding:18px;gap:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock{width:100%;max-width:640px;align-self:center;border-radius:22px;padding:12px 18px;gap:8px 16px;box-shadow:inset 0 0 0 1.5px var(--line);flex-direction:row;flex-wrap:wrap;align-items:center}
+  .dock .who{flex:1;min-width:0}
+  .dock .clock,.dock .acts{flex-basis:100%}
+  .dock .keys{flex:none;text-align:right}
   .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
-  .acts{flex-direction:column}
-  .who b{font-size:20px}
-  .dock .die{--ds:72px}
+  .who b{font-size:19px}
   .dstat .keys,.dock .keys{display:block}
 }
 .keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
@@ -457,7 +456,6 @@ button.die:disabled{cursor:default}
   <section id="game" hidden aria-label="Spieltisch">
     <div class="topbar">
       <div class="roundinfo" id="roundInfo"></div>
-      <div class="plates" id="plates"></div>
       <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
       </button>
@@ -473,7 +471,7 @@ button.die:disabled{cursor:default}
 
     <div class="dock" id="dock">
       <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div>
-        <button class="die" id="dieBtn" type="button" data-f="0" aria-label="Würfeln"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></button></div>
+        </div>
       <div class="tries" id="tries" hidden></div>
       <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
       <div class="acts">

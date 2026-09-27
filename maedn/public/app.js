@@ -68,6 +68,9 @@
   }
   const GOAL_XY = [[[1, 5], [2, 5], [3, 5], [4, 5]], [[5, 1], [5, 2], [5, 3], [5, 4]], [[9, 5], [8, 5], [7, 5], [6, 5]], [[5, 9], [5, 8], [5, 7], [5, 6]]];
   const YARD_XY = [[0, 0], [9, 0], [9, 9], [0, 9]].map(([x, y]) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]);
+  // per seat: the name tag next to the yard, and where the die lies when it is that player's turn
+  const BADGE_AT = [[0.08, 2.2], [7.08, 2.2], [7.08, 7.1], [0.08, 7.1]];
+  const DICE_AT = [[2.25, 0.18], [7.05, 0.18], [7.05, 9.18], [2.25, 9.18]];
   function cellOf(seat, rel, k) {
     if (rel < 0) return YARD_XY[seat][k];
     if (rel >= G.HOME) return GOAL_XY[seat][rel - G.HOME];
@@ -319,7 +322,11 @@
       for (const xy of GOAL_XY[s]) h += field(xy, `c${s}${off}`);
     }
     TRACK_XY.forEach((xy, i) => { h += field(xy, i % 10 === 0 ? `start c${i / 10}${used.has(i / 10) ? "" : " off"}` : ""); });
-    if (o.dice != null) h += `<span class="center"><span class="die" data-f="${o.dice}">${DIE}</span></span>`;
+    if (o.extra) h += o.extra;
+    if (o.dice != null && o.diceSeat != null) {
+      const d = `class="die${o.canRoll ? " go" : ""}" data-f="${o.dice}" style="${at(DICE_AT[o.diceSeat])}"`;
+      h += o.canRoll ? `<button type="button" ${d} data-roll aria-label="Würfeln">${DIE}</button>` : `<span ${d}>${DIE}</span>`;
+    }
     const can = new Map((o.moves || []).map((m, i) => [m.k, i]));
     v.players.forEach((p, i) => p.pieces.forEach((r, k) => {
       if (r < -1) return;
@@ -363,7 +370,7 @@
     }
   }
   function spinDie() {
-    const dice = [...document.querySelectorAll("#dieBtn, #board .center .die")];
+    const dice = [...document.querySelectorAll("#board .die")];
     if (!V || !V.dice) return;
     const final = V.dice;
     for (const d of dice) { d.classList.remove("roll"); void d.offsetWidth; d.classList.add("roll"); }
@@ -373,7 +380,7 @@
     spinDie.t = setInterval(() => {
       n++;
       const f = n >= 7 ? final : 1 + Math.floor(Math.random() * 6);
-      for (const d of document.querySelectorAll("#dieBtn, #board .center .die")) d.dataset.f = f;
+      for (const d of document.querySelectorAll("#board .die")) d.dataset.f = f;
       if (n >= 7) clearInterval(spinDie.t);
     }, 60);
   }
@@ -387,7 +394,7 @@
     const W = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
     const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - 10 - 4;
     const cs = parseFloat((LOOK_SIZES.find((x) => x[0] === look.size) || LOOK_SIZES[1])[0]);
-    const fit = Math.min(W / 11.5, H / 11.5, desktop.matches ? 64 : 48);
+    const fit = Math.min(W / 11.5, H / 11.5, desktop.matches ? 104 : 64);
     const maxW = cs > 1 ? (arena.clientWidth - 4) / 11.5 : W / 11.5; // a big board may use the side margins
     const cell = Math.max(18, Math.floor(Math.min(maxW, fit * cs)));
     b.style.setProperty("--cell", cell + "px");
@@ -396,16 +403,15 @@
   window.addEventListener("resize", () => { if (V) layoutBoard(); });
   if (window.ResizeObserver) new ResizeObserver(() => layoutBoard()).observe($("#arena"));
 
-  function plateHTML(i) {
+  function badgeHTML(i) {
     const p = V.players[i], members = mode === "online" && R ? R.members : null;
     const away = members && members[i] && !members[i].online;
-    const cls = ["plate", V.phase === "play" && V.cur === i ? "active" : "", away || p.out ? "away" : "", p.done ? "done" : ""].join(" ");
-    const tag = p.out ? "aufgegeben" : p.done ? `Platz ${p.place}` : p.bot ? "Computer" : away ? "offline" : mode === "online" && i === V.me ? "du" : "";
+    const cls = ["badge", "c" + p.seat, V.phase === "play" && V.cur === i ? "on" : "", away || p.out ? "away" : "", p.done ? "done" : ""].join(" ");
+    const tag = p.out ? "aufgegeben" : p.done ? `Platz ${p.place}` : away ? "offline" : mode === "online" && i === V.me ? "du" : G.COLORS[p.seat];
     const g = inGoal(p);
-    return `<div class="${cls}" data-seat="${i}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
-      `<span class="pinfo"><span class="pname">${esc(p.name)}</span><span class="pmeta"><i class="chip c${p.seat}" title="${G.COLORS[p.seat]}"></i>` +
-      `<span class="pgoal" title="${g} von 4 im Ziel">${[0, 1, 2, 3].map((j) => `<i class="${j < g ? "on" : ""}"></i>`).join("")}</span><span>${tag}</span></span></span>` +
-      `<span class="pwins" title="Siege">${p.wins}</span></div>`;
+    return `<div class="${cls}" data-seat="${i}" style="${at(BADGE_AT[p.seat])}"><span class="bav" aria-hidden="true">${p.avatar}</span>` +
+      `<span class="binfo"><b>${esc(p.name)}</b><small><span class="pgoal" title="${g} von 4 im Ziel">${[0, 1, 2, 3].map((j) => `<i class="${j < g ? "on" : ""}"></i>`).join("")}</span>${tag}</small></span>` +
+      `<span class="bwins" title="Siege">${p.wins}</span></div>`;
   }
 
   function renderGame() {
@@ -413,8 +419,6 @@
     const play = canPlay();
     if (!play || V.need !== "move") sel = null;
     if (sel != null && sel >= V.moves.length) sel = null;
-    $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
-    $("#plates").style.setProperty("--n", V.players.length);
     const teams = V.rules.teams ? " · Teams" : "";
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · ${V.goal === 1 ? "Erster gewinnt" : "alle Plätze"}${teams}`;
 
@@ -422,7 +426,8 @@
     const board = $("#board"), lm = V.lastMove;
     board.innerHTML = boardHTML(V, {
       moves: play && V.need === "move" ? V.moves : null, owner: V.owner, sel,
-      last: lm && V.phase === "play" ? lm : null, dice: V.dice || (V.lastRoll ? V.lastRoll.d : 0),
+      last: lm && V.phase === "play" ? lm : null, extra: V.players.map((_, i) => badgeHTML(i)).join(""),
+      dice: V.dice || 0, diceSeat: V.phase === "play" && V.cur >= 0 ? V.players[V.cur].seat : null, canRoll: play && V.need === "roll",
       yardOn: V.phase === "play" && V.cur >= 0 ? V.players[V.cur].seat : null
     });
     layoutBoard();
@@ -461,11 +466,6 @@
     $("#whoName").textContent = who;
     $("#whoHint").textContent = hint;
     $("#dock").classList.toggle("myturn", play);
-    const die = $("#dieBtn");
-    die.dataset.f = V.dice || (V.lastRoll && V.phase === "play" && V.lastRoll.pi === V.cur ? V.lastRoll.d : 0);
-    die.disabled = !(play && V.need === "roll");
-    die.classList.toggle("go", play && V.need === "roll");
-    die.hidden = V.phase !== "play";
     $("#tries").hidden = !(V.phase === "play" && V.three);
     $("#tries").innerHTML = [0, 1, 2].map((i) => `<i class="${i < V.tries ? "on" : ""}"></i>`).join("");
     if (rollAnim) { rollAnim = false; spinDie(); }
@@ -491,10 +491,10 @@
   }
 
   $("#board").addEventListener("click", (e) => {
+    if (e.target.closest("[data-roll]")) return roll();
     const t = e.target.closest("[data-k]");
     if (t && canPlay() && V.need === "move") move(+t.dataset.k);
   });
-  $("#dieBtn").addEventListener("click", roll);
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
   // keys: space rolls, 1-4 or arrows + Enter move, Esc closes
@@ -575,7 +575,7 @@
 
   // ---------- reactions (online) ----------
   function bubble(pi, e, who) {
-    const host = pi >= 0 ? document.querySelector(`#plates [data-seat="${pi}"]`) : $("#dock");
+    const host = pi >= 0 ? document.querySelector(`#board [data-seat="${pi}"]`) : $("#dock");
     if (!host) return;
     const b = document.createElement("span");
     const text = e.length > 3;
@@ -878,7 +878,7 @@
   $("#heroBoard").innerHTML = boardHTML({ players: [
     { seat: 0, pieces: [-1, 7, 41, -1] }, { seat: 1, pieces: [3, -1, -1, 22] },
     { seat: 2, pieces: [-1, -1, 15, 0] }, { seat: 3, pieces: [42, 12, -1, -1] }
-  ] }, { dice: 6 });
+  ] }, { dice: 6, diceSeat: 0 });
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
   $("#goalLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) { goalLocal = +b.dataset.v; store.set(K.goal, goalLocal); renderHome(); } });
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) { levelLocal = +b.dataset.v; store.set(K.level, levelLocal); renderHome(); } });
