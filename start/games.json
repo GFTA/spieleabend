@@ -1,0 +1,20 @@
+[
+  {
+    "id": "uno",
+    "name": "Uno",
+    "title": "Pass-Uno",
+    "desc": "Karten auf den Stapel ziehen, UNO rufen, Hausregeln nach Wahl. Mit Computer-Gegnern und Avataren.",
+    "players": "2–10 Spieler",
+    "url": "https://uno.cool-kidz.net/",
+    "status": "http://pass-uno:8080/info"
+  },
+  {
+    "id": "schiffe",
+    "name": "Schiffe versenken",
+    "title": "Schiffe versenken",
+    "desc": "Flotte verstecken, Koordinaten raten, versenken. Verschiedene Kartengrößen, Waffen und Computer-Gegner.",
+    "players": "2–4 Spieler",
+    "url": "https://schiffe.cool-kidz.net/",
+    "status": "http://schiffe:8080/info"
+  }
+]

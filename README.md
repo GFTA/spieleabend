@@ -12,6 +12,8 @@ Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 | Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
 | Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
 
+Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
+
 Jedes Spiel ist ein eigenständiger Ordner mit eigenem Server, Dockerfile und Tests.
 
 ## Installation auf dem Mini-PC (Docker)

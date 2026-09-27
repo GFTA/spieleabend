@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<title>Spieleabend</title>
+<link rel="icon" href="uno.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#1a1426; --bg2:#231a33; --surface:#2b2140; --line:#3d3057;
+  --text:#f4effb; --muted:#a99cc2;
+  --red:#e0393e; --yellow:#f2c230; --green:#2fa35b; --blue:#2d6fd6;
+  --sea:#1f2350; --hull:#d9d2e6;
+  --accent:#f2c230;
+  --display:"Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --ui:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* the same four table designs as in the games */
+:root[data-table="felt"]{--bg:#0f2a1f;--bg2:#15372a;--surface:#1c4636;--line:#2b5c48;--text:#eef7f1;--muted:#9cc3b1;--sea:#10363a}
+:root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3;--sea:#123057}
+:root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479;--sea:#cfe0f3;--hull:#4a5570}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent;
+  padding:calc(env(safe-area-inset-top,0px) + 28px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 32px) max(16px,env(safe-area-inset-left,0px))}
+button,input{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+
+.hero{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,11vw,64px);line-height:1;margin:0;letter-spacing:.01em}
+h1 span{color:var(--accent)}
+.tagline{margin:0;color:var(--muted);max-width:44ch;text-wrap:balance}
+.label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.game{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:24px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.game .top{display:flex;gap:16px;align-items:center}
+.game .art{flex:none;width:88px;height:88px;border-radius:22px;display:grid;place-items:center;background:var(--surface);overflow:hidden}
+.game .art img{width:100%;height:100%;display:block}
+.game h2{margin:0;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05;text-wrap:balance}
+.game .meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:6px;font-size:13px;color:var(--muted);font-weight:600}
+.game p{margin:0;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:800;color:var(--text)}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.on::before{background:var(--green);box-shadow:0 0 0 3px rgba(47,163,91,.25)}
+.pill.off::before{background:var(--red)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.actions .btn-primary{flex:1 1 150px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;text-decoration:none;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-primary:active{box-shadow:0 2px 0 #b78d12;transform:translateY(2px)}
+.join{flex:1 1 230px;display:flex;gap:8px;min-width:0}
+.join input{flex:1;width:0;min-width:0;border:0;border-radius:14px;padding:10px;font-family:var(--display);font-size:20px;letter-spacing:.18em;text-transform:uppercase;text-align:center;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
+.join input::placeholder{color:var(--muted);letter-spacing:.1em}
+.join .btn{padding:10px 14px;font-size:14px}
+@media (hover:hover){ .btn:hover{filter:brightness(1.08)} .game:hover{box-shadow:inset 0 0 0 1.5px var(--accent)} }
+
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.how div{padding:14px 16px;border-radius:18px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.how b{display:block;margin-bottom:4px}
+.how p{margin:0;color:var(--muted);font-size:14px}
+
+details.look{align-self:center;width:min(100%,420px)}
+details.look summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+details.look summary::-webkit-details-marker{display:none}
+details.look summary::after{content:"▾";color:var(--muted)}
+details.look[open] summary::after{transform:rotate(180deg)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;background:var(--bg2);padding:5px;border-radius:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.seg button{border:0;border-radius:10px;padding:10px 4px;background:transparent;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800}
+.swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.5)}
+footer{text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="label">cool-kidz.net</div>
+    <h1>Spiele<span>abend</span></h1>
+    <p class="tagline">Jeder mit dem eigenen Handy, oder ein Handy, das herumgereicht wird. Such dir ein Spiel aus.</p>
+  </header>
+
+  <section class="games" id="games" aria-label="Spiele"></section>
+
+  <section class="how" aria-label="So geht's">
+    <div><b>Raum erstellen</b><p>Einer öffnet ein Spiel, wählt „Jeder sein Handy“ und erstellt einen Raum.</p></div>
+    <div><b>Beitreten</b><p>Die anderen scannen den QR-Code im Spiel oder tippen den Raum-Code hier beim Spiel ein.</p></div>
+    <div><b>Nur ein Handy?</b><p>„Ein Handy für alle“ wählen und das Handy nach jedem Zug weitergeben.</p></div>
+  </section>
+
+  <details class="look">
+    <summary><span class="label">Aussehen</span><span id="lookSum"></span></summary>
+    <div class="seg" id="tables"></div>
+  </details>
+
+  <footer>Läuft auf dem Mini-PC zu Hause · Code auf github.com/GFTA/spieleabend</footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+  // table design, same choices as in the games (remembered on this page)
+  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
+  let table = "night";
+  try { table = JSON.parse(localStorage.getItem("spieleabend.table")) || "night"; } catch (e) {}
+  function applyTable() {
+    const root = document.documentElement;
+    if (table === "night") delete root.dataset.table; else root.dataset.table = table;
+    const t = TABLES.find((x) => x[0] === table) || TABLES[0];
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", t[2]);
+    $("#tables").innerHTML = TABLES.map(([k, n, c]) => `<button type="button" data-t="${k}" aria-pressed="${k === table}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("");
+    $("#lookSum").textContent = t[1];
+  }
+  $("#tables").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-t]"); if (!b) return;
+    table = b.dataset.t;
+    try { localStorage.setItem("spieleabend.table", JSON.stringify(table)); } catch (err) {}
+    applyTable();
+  });
+  applyTable();
+
+  let games = [];
+  function render(status) {
+    const st = Object.fromEntries((status || []).map((s) => [s.id, s]));
+    $("#games").innerHTML = games.map((g) => {
+      const s = st[g.id];
+      const pill = !s ? `<span class="pill">Prüfe …</span>`
+        : s.online ? `<span class="pill on">Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}</span>`
+        : `<span class="pill off">Gerade nicht erreichbar</span>`;
+      return `<article class="game" data-id="${esc(g.id)}">
+        <div class="top">
+          <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88"></div>
+          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}</div></div>
+        </div>
+        <p>${esc(g.desc)}</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="${esc(g.url)}" aria-label="${esc(g.name)} spielen">Spielen</a>
+          <form class="join" data-url="${esc(g.url)}">
+            <input id="code-${esc(g.id)}" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code für ${esc(g.name)}">
+            <button class="btn" type="submit">Beitreten</button>
+          </form>
+        </div>
+      </article>`;
+    }).join("");
+  }
+
+  // join a room straight from here: the game opens with the code filled in
+  $("#games").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = e.target.closest(".join"), input = f.querySelector("input");
+    const code = input.value.toUpperCase().replace(/[^A-Z]/g, "");
+    if (code.length !== 4) { input.focus(); input.select(); return; }
+    location.href = `${f.dataset.url}?r=${code}`;
+  });
+  $("#games").addEventListener("input", (e) => {
+    if (e.target.matches(".join input")) e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+  });
+
+  let lastStatus = null;
+  async function refresh() {
+    try { lastStatus = await (await fetch("status.json", { cache: "no-store" })).json(); } catch (e) {}
+    // keep what people are typing: only update the status pills
+    for (const s of lastStatus || []) {
+      const card = document.querySelector(`.game[data-id="${s.id}"] .pill`);
+      if (!card) continue;
+      card.className = `pill ${s.online ? "on" : "off"}`;
+      card.textContent = s.online ? `Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}` : "Gerade nicht erreichbar";
+    }
+  }
+  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((g) => { games = g; render(null); refresh(); setInterval(refresh, 15000); })
+    .catch(() => { $("#games").innerHTML = '<p class="tagline">Die Spieleliste ließ sich nicht laden. Bitte die Seite neu laden.</p>'; });
+})();
+</script>
+</body>
+</html>

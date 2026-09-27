@@ -1,0 +1,8 @@
+services:
+  spiele-start:
+    build: .
+    image: spiele-start:latest
+    container_name: spiele-start
+    restart: unless-stopped
+    ports:
+      - "${START_PORT:-8090}:8080"

@@ -1,0 +1,9 @@
+{
+  "name": "spieleabend-start",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Startseite mit allen Spielen des Spieleabends",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test test/*.test.js" },
+  "engines": { "node": ">=18" }
+}

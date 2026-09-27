@@ -1,0 +1,14 @@
+# Joins the Docker network of the existing cloudflared container, so the tunnel reaches the
+# page as http://spiele-start:8080 and the page reaches the games as pass-uno / schiffe.
+# Put TUNNEL_NETWORK=<network> into .env and start with:
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
+services:
+  spiele-start:
+    networks:
+      - default
+      - tunnel
+
+networks:
+  tunnel:
+    external: true
+    name: ${TUNNEL_NETWORK:?TUNNEL_NETWORK in .env setzen}
