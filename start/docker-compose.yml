@@ -6,3 +6,7 @@ services:
     restart: unless-stopped
     ports:
       - "${START_PORT:-8090}:8080"
+    # read live from the repo: after `git pull` a new game shows up without a rebuild
+    volumes:
+      - ./games.json:/app/games.json:ro
+      - ./public:/app/public:ro

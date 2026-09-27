@@ -8,9 +8,13 @@ Die Spiele stehen in [`games.json`](games.json). Ein neues Spiel ist ein neuer E
 (Name, Beschreibung, öffentliche Adresse, interne Status-Adresse im Docker-Netzwerk) plus
 ein Icon `public/<id>.svg`.
 
+`games.json` und `public/` werden per Volume live aus dem Repo gelesen: Nach einem `git pull`
+steht ein neues Spiel sofort auf der Seite, ohne Rebuild (nur einmal nach dieser Umstellung
+braucht es `up -d --build`).
+
 ## Starten
 
-Auf dem Mini-PC, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe` und `viergewinnt`:
+Auf dem Mini-PC, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe`, `viergewinnt`, `wuerfelpoker` und `maedn`:
 
 ```sh
 cd spieleabend/start

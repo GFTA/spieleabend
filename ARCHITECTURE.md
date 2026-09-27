@@ -291,6 +291,8 @@ passenden Container danebenstellen.
   die Startseiten-Kachel als auch den `?table=`-Link automatisch, ohne dass
   `start/public/index.html` angefasst werden muss
 - Icon `start/public/<spielid>.svg`
+- `spiele-start` liest `games.json` und `public/` per Volume live aus dem Repo: auf dem
+  Mini-PC reicht `git pull`, damit die Kachel erscheint (kein Rebuild der Startseite)
 - Zeile in der Tabelle in diesem Repo-Root-`README.md`
 
 ## Checkliste: neues Spiel hinzufügen
