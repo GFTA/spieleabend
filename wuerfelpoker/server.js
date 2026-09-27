@@ -18,6 +18,7 @@ const SAVE_FILE = path.join(DATA_DIR, "rooms.json");
 const MAX_PLAYERS = 8;
 const MAX_ROOMS = 200;
 const ROOM_TTL = 12 * 3600 * 1000;
+const IDLE_TTL = 5 * 60 * 1000; // close a room nobody has touched in a while, even mid-game
 const REACTIONS = ["👍", "😂", "😱", "😡", "🎉", "🙈", "Gut gespielt!", "Uff …", "Beeil dich!", "Na warte!"];
 const avatarOf = (a) => (Game.AVATARS.includes(a) ? a : Game.AVATARS[crypto.randomInt(Game.AVATARS.length)]);
 const levelOf = (r) => (Game.BOT_LEVELS[r.botLevel] ? r.botLevel : "normal");
@@ -382,7 +383,12 @@ setInterval(() => {
     ws.ping();
   }
   for (const [code, r] of rooms) {
-    if (Date.now() - r.touched > ROOM_TTL && !sockets.has(code)) { rooms.delete(code); saveRooms(); }
+    if (Date.now() - r.touched > IDLE_TTL) {
+      for (const ws of sockets.get(code) || []) send(ws, { t: "gone", reason: "idle" });
+      clearTimer(botTimers, code); clearTimer(turnTimers, code);
+      sockets.delete(code);
+      rooms.delete(code); saveRooms();
+    }
   }
 }, 25000).unref();
 

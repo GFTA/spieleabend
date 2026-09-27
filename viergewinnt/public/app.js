@@ -25,6 +25,15 @@
   const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
   const LOOK_SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   let look = Object.assign({ table: "night", size: "1" }, store.get(K.look) || {});
+  {
+    // came here from the games.cool-kidz.net start page with a design already picked there
+    const params = new URLSearchParams(location.search), qTable = params.get("table");
+    if (qTable && TABLES.some((x) => x[0] === qTable)) {
+      look.table = qTable; store.set(K.look, look);
+      params.delete("table");
+      history.replaceState(null, "", location.pathname + (params.toString() ? `?${params}` : ""));
+    }
+  }
   function applyLook() {
     const root = document.documentElement, t = TABLES.find((x) => x[0] === look.table) || TABLES[0];
     if (t[0] === "night") delete root.dataset.table; else root.dataset.table = t[0];
@@ -757,7 +766,7 @@
     } else if (m.t === "gone" || m.t === "left") {
       // keep the socket: a join or create sent a moment ago is answered on it
       store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast("Diesen Raum gibt es nicht mehr.");
+      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : "Diesen Raum gibt es nicht mehr.");
       render();
     }
   }

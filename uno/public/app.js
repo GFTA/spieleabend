@@ -946,7 +946,7 @@
     } else if (m.t === "gone" || m.t === "left") {
       // keep the socket: a join or create sent a moment ago is answered on it
       store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast("Diesen Raum gibt es nicht mehr.");
+      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : "Diesen Raum gibt es nicht mehr.");
       render();
     }
   }
