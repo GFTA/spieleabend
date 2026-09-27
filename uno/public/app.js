@@ -1115,6 +1115,15 @@
   const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
   const SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   let look = Object.assign({ table: "night", size: "1" }, store.get("passuno.look") || {});
+  {
+    // came here from the games.cool-kidz.net start page with a design already picked there
+    const params = new URLSearchParams(location.search), qTable = params.get("table");
+    if (qTable && TABLES.some((x) => x[0] === qTable)) {
+      look.table = qTable; store.set("passuno.look", look);
+      params.delete("table");
+      history.replaceState(null, "", location.pathname + (params.toString() ? `?${params}` : ""));
+    }
+  }
   function applyLook() {
     const root = document.documentElement, t = TABLES.find((x) => x[0] === look.table) || TABLES[0];
     if (t[0] === "night") delete root.dataset.table; else root.dataset.table = t[0];
