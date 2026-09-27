@@ -99,8 +99,8 @@ Er läuft problemlos neben Pass-Uno: im WLAN auf Port **8081** statt 8080.
 ### Mit Docker (empfohlen)
 
 ```sh
-git clone -b claude/schiffe-versenken-game-4g247z https://github.com/GFTA/justpdf.git
-cd justpdf/schiffe
+git clone https://github.com/GFTA/spieleabend.git
+cd spieleabend/schiffe
 docker compose up -d --build
 ```
 
@@ -128,7 +128,7 @@ sudo apt install nodejs npm        # Node.js 18 oder neuer
 sudo mkdir -p /opt/schiffe
 sudo cp -r server.js package.json package-lock.json public /opt/schiffe/
 cd /opt/schiffe && sudo npm ci --omit=dev
-sudo cp ~/justpdf/schiffe/deploy/schiffe.service /etc/systemd/system/
+sudo cp ~/spieleabend/schiffe/deploy/schiffe.service /etc/systemd/system/
 sudo systemctl enable --now schiffe
 ```
 

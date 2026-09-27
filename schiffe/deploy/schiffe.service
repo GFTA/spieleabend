@@ -1,6 +1,6 @@
 # systemd unit for running Schiffe versenken without Docker.
-# Copy the schiffe/ folder to /opt/schiffe, run `npm ci --omit=dev` there, then:
-#   sudo cp deploy/schiffe.service /etc/systemd/system/
+# Copy ~/spieleabend/schiffe to /opt/schiffe, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/schiffe/deploy/schiffe.service /etc/systemd/system/
 #   sudo systemctl enable --now schiffe
 [Unit]
 Description=Schiffe versenken game server
