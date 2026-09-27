@@ -1,0 +1,13 @@
+services:
+  wuerfelpoker:
+    build: .
+    image: wuerfelpoker:latest
+    container_name: wuerfelpoker
+    restart: unless-stopped
+    ports:
+      - "${WUERFEL_PORT:-8083}:8080"
+    volumes:
+      - wuerfelpoker-data:/data
+
+volumes:
+  wuerfelpoker-data:

@@ -12,6 +12,7 @@ Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 | Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
 | Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
 | Vier gewinnt | [`viergewinnt/`](viergewinnt/) | 2 Spieler plus Zuschauer, Felder 7×6 bis 10×8, Pop Out, 5 gewinnt, Computer-Gegner, Avatare, Tisch-Designs · Port 8082 |
+| Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler, alle sehen live, welche Würfel behalten werden, Computer-Gegner · Port 8083 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 

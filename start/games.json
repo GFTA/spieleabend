@@ -25,5 +25,14 @@
     "players": "2 Spieler + Zuschauer",
     "url": "https://vier.cool-kidz.net/",
     "status": "http://viergewinnt:8080/info"
+  },
+  {
+    "id": "wuerfelpoker",
+    "name": "Würfelpoker",
+    "title": "Würfelpoker",
+    "desc": "Fünf Würfel, drei Würfe, die beste Hand gewinnt. Alle sehen live, welche Würfel behalten werden.",
+    "players": "2–8 Spieler",
+    "url": "https://wuerfelpoker.cool-kidz.net/",
+    "status": "http://wuerfelpoker:8080/info"
   }
 ]
