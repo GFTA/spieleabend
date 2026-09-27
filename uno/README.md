@@ -44,8 +44,8 @@ landen in `data/rooms.json`, damit ein Neustart laufende Runden nicht verliert.
 ### Mit Docker (empfohlen)
 
 ```sh
-git clone -b claude/web-uno-mobile-731sse https://github.com/GFTA/justpdf.git
-cd justpdf/uno
+git clone https://github.com/GFTA/spieleabend.git
+cd spieleabend/uno
 docker compose up -d --build
 ```
 
@@ -73,7 +73,7 @@ sudo apt install nodejs npm        # Node.js 18 oder neuer
 sudo mkdir -p /opt/pass-uno
 sudo cp -r server.js package.json package-lock.json public /opt/pass-uno/
 cd /opt/pass-uno && sudo npm ci --omit=dev
-sudo cp ~/justpdf/uno/deploy/pass-uno.service /etc/systemd/system/
+sudo cp ~/spieleabend/uno/deploy/pass-uno.service /etc/systemd/system/
 sudo systemctl enable --now pass-uno
 ```
 
