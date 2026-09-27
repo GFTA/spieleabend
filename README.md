@@ -7,12 +7,16 @@ Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 - **Ein Handy für alle**: Das Handy wird herumgereicht, zwischen den Zügen kommt ein
   Sichtschutz. Geht auch ganz ohne Server.
 
+Alle Spiele teilen sich ein einheitliches Design- und Server-System (Tisch-Designs,
+Avatare, Raum-Verwaltung, Deployment) — beschrieben in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Das ist der Bauplan für jedes neue Spiel in diesem Repo.
+
 | Spiel | Ordner | Details |
 | --- | --- | --- |
 | Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
 | Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
 | Vier gewinnt | [`viergewinnt/`](viergewinnt/) | 2 Spieler plus Zuschauer, Felder 7×6 bis 10×8, Pop Out, 5 gewinnt, Computer-Gegner, Avatare, Tisch-Designs · Port 8082 |
-| Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler, alle sehen live, welche Würfel behalten werden, Computer-Gegner · Port 8083 |
+| Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler, alle sehen live, welche Würfel behalten werden, Computer-Gegner, Avatare, Tisch-Designs · Port 8083 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 
