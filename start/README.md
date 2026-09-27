@@ -10,7 +10,7 @@ ein Icon `public/<id>.svg`.
 
 ## Starten
 
-Auf dem Mini-PC, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno` und `schiffe`:
+Auf dem Mini-PC, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe` und `viergewinnt`:
 
 ```sh
 cd spieleabend/start

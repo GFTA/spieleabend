@@ -16,5 +16,14 @@
     "players": "2–4 Spieler",
     "url": "https://schiffe.cool-kidz.net/",
     "status": "http://schiffe:8080/info"
+  },
+  {
+    "id": "viergewinnt",
+    "name": "Vier gewinnt",
+    "title": "Vier gewinnt",
+    "desc": "Scheiben einwerfen, vier in eine Reihe bringen. Pop Out, 5 gewinnt und ein Computer-Gegner in drei Stufen.",
+    "players": "2 Spieler + Zuschauer",
+    "url": "https://vier.cool-kidz.net/",
+    "status": "http://viergewinnt:8080/info"
   }
 ]
