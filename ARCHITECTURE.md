@@ -4,7 +4,7 @@ Dieses Dokument beschreibt, was alle Spiele in diesem Repo gemeinsam haben —
 designtechnisch und servertechnisch. Es ist der Bauplan für jedes neue Spiel:
 wer sich daran hält, fühlt sich sofort wie die anderen an und lässt sich mit
 demselben Handgriff deployen. Stand heute (uno, schiffe, wuerfelpoker,
-viergewinnt) sind alle vier Punkte für Punkt danach gebaut — das hier ist die
+viergewinnt, maedn) sind alle fünf Punkte für Punkt danach gebaut — das hier ist die
 Doku dieser bereits gelebten Konvention, nicht ein Wunschzettel.
 
 Wird eine neue gemeinsame Konvention eingeführt (z. B. der `?table=`-Handoff
@@ -31,7 +31,7 @@ Renderer (`public/app.js`).
 
 Jedes Spiel definiert dieselbe Basis-Palette in `:root{}` und ergänzt nur
 spiel-eigene Variablen (Schiffe: `--sea`/`--hull`/`--wreck`, Würfelpoker:
-`--felt`/`--ivory`/`--pip`, Vier gewinnt: `--frame`/`--hole`, …):
+`--felt`/`--ivory`/`--pip`, Vier gewinnt: `--frame`/`--hole`, Mensch ärgere dich nicht: `--board`/`--spot`/`--c0`…`--c3`, …):
 
 ```css
 :root{
@@ -219,7 +219,7 @@ Client-seitig (`app.js`, WS-Message-Handler):
 
 ## Deployment
 
-### Dockerfile (wortidentisch in allen vier Spielen)
+### Dockerfile (wortidentisch in allen Spielen)
 
 ```dockerfile
 FROM node:22-alpine
@@ -241,7 +241,7 @@ CMD ["node", "server.js"]
 
 Basis-Compose macht das Spiel lokal im LAN erreichbar (Host-Port
 konfigurierbar über eine Env-Var, Default individuell pro Spiel: uno 8080,
-schiffe 8081, viergewinnt 8082, wuerfelpoker 8083, start 8090 — neues Spiel
+schiffe 8081, viergewinnt 8082, wuerfelpoker 8083, maedn 8084, start 8090 — neues Spiel
 nimmt sich den nächsten freien):
 
 ```yaml

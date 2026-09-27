@@ -1,0 +1,21 @@
+# systemd unit for running Mensch ärgere dich nicht without Docker.
+# Copy ~/spieleabend/maedn to /opt/maedn, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/maedn/deploy/maedn.service /etc/systemd/system/
+#   sudo systemctl enable --now maedn
+[Unit]
+Description=Mensch ärgere dich nicht game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/maedn
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8084
+Environment=DATA_DIR=/var/lib/maedn
+StateDirectory=maedn
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

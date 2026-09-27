@@ -1,0 +1,13 @@
+services:
+  maedn:
+    build: .
+    image: maedn:latest
+    container_name: maedn
+    restart: unless-stopped
+    ports:
+      - "${MAEDN_PORT:-8084}:8080"
+    volumes:
+      - maedn-data:/data
+
+volumes:
+  maedn-data:

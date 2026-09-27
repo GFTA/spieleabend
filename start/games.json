@@ -34,5 +34,14 @@
     "players": "2–8 Spieler",
     "url": "https://wuerfelpoker.cool-kidz.net/",
     "status": "http://wuerfelpoker:8080/info"
+  },
+  {
+    "id": "maedn",
+    "name": "Mensch ärgere dich nicht",
+    "title": "Mensch ärgere dich nicht",
+    "desc": "Würfeln, rauskommen, rauswerfen. Elf Hausregeln von Schlagpflicht bis Teams, dazu Computer-Gegner in drei Stufen.",
+    "players": "2–4 Spieler + Zuschauer",
+    "url": "https://mensch.cool-kidz.net/",
+    "status": "http://maedn:8080/info"
   }
 ]
