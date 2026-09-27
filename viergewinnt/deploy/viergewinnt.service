@@ -1,0 +1,21 @@
+# systemd unit for running Vier gewinnt without Docker.
+# Copy ~/spieleabend/viergewinnt to /opt/viergewinnt, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/viergewinnt/deploy/viergewinnt.service /etc/systemd/system/
+#   sudo systemctl enable --now viergewinnt
+[Unit]
+Description=Vier gewinnt game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/viergewinnt
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8082
+Environment=DATA_DIR=/var/lib/viergewinnt
+StateDirectory=viergewinnt
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

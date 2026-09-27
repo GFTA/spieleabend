@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vier gewinnt">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<!-- ARTIFACT-START -->
+<title>Vier gewinnt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#1a1426; --bg2:#231a33; --surface:#2b2140; --line:#3d3057;
+  --text:#f4effb; --muted:#a99cc2;
+  --red:#e0393e; --yellow:#f2c230; --green:#2fa35b; --blue:#2d6fd6;
+  --frame:#2d6fd6; --frame2:#1d4fa6; --hole:#140f1e; --ring:#fff; --sea:#1f2350;
+  --accent:#f2c230; --scrim:rgba(15,10,22,.86); --cs:1;
+  --display:"Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --ui:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="felt"]{--bg:#0f2a1f;--bg2:#15372a;--surface:#1c4636;--line:#2b5c48;--text:#eef7f1;--muted:#9cc3b1;--scrim:rgba(6,22,15,.86);--hole:#0a1f16;--sea:#10363a}
+:root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3;--scrim:rgba(6,12,24,.86);--hole:#0a1322;--sea:#123057;--frame:#3a6fd0;--frame2:#28549f}
+:root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479;--scrim:rgba(226,231,240,.92);
+  --hole:#f4f6fa;--ring:#1b2030;--sea:#cfe0f3;--frame:#2f6fd8;--frame2:#2458b0}
+*{box-sizing:border-box}
+/* The page itself never scrolls: iOS Safari ignores overflow:hidden on body and would
+   otherwise slide the whole page and pull its toolbar over the board. Only inner
+   areas (start screen, waiting room) scroll. */
+html{height:100%;background:var(--bg);overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0;margin:0;overflow:hidden;overscroll-behavior:none;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+  background:var(--bg);color:var(--text);font:15px/1.4 var(--ui);
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+#app{height:100%;display:flex;flex-direction:column;max-width:1120px;margin:0 auto}
+
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line);transform:none}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-primary:active{box-shadow:0 2px 0 #b78d12;transform:translateY(2px)}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn-block{width:100%}
+.field{width:100%;min-width:0;border:0;border-radius:12px;padding:13px 14px;font:inherit;font-size:16px;color:var(--text);background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);-webkit-user-select:text;user-select:text}
+.field::placeholder{color:var(--muted)}
+.field.code{font-family:var(--display);font-size:22px;letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:10px}
+
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:8px}
+.hero .board{--cell:30px;transform:rotate(-6deg);box-shadow:0 14px 30px rgba(0,0,0,.45)}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+h1 span{color:var(--accent)}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.panel{display:flex;flex-direction:column;gap:12px}
+.label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:stretch}
+.row .field.code{flex:0 0 132px}
+.row .btn{flex:1}
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;font-weight:600}
+.or::before,.or::after{content:"";flex:1;height:1.5px;background:var(--line)}
+.plist{display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;gap:8px;align-items:center}
+.prow .seat{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface);color:var(--muted);font-variant-numeric:tabular-nums}
+.prow .rm{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:transparent;color:var(--muted);font-size:22px}
+.prow .kind{flex:none;border:0;border-radius:12px;padding:0 10px;height:48px;min-width:92px;font-weight:800;font-size:13px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.prow .kind svg{width:18px;height:18px}
+.prow .kind[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 0 0 1.5px var(--blue);background:var(--sea)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg2);padding:5px;border-radius:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg button{border:0;border-radius:10px;padding:10px 6px;background:transparent;font-weight:600;line-height:1.2}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.hint b{color:var(--text)}
+
+/* ---------- lobby ---------- */
+.roomcode{font-family:var(--display);font-size:64px;line-height:1;letter-spacing:.12em;text-align:center;color:var(--accent)}
+.qr{align-self:center;width:188px;height:188px;padding:10px;border-radius:18px;background:#fff;display:grid;place-items:center}
+.qr svg{width:100%;height:100%;display:block}
+.link{display:flex;gap:8px;align-items:center;background:var(--bg2);border-radius:12px;padding:6px 6px 6px 12px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.link code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;-webkit-user-select:all;user-select:all}
+.link .btn{padding:8px 12px;font-size:14px}
+/* the lobby buttons stay reachable at the bottom on an opaque bar, never over the rules */
+.lobby-actions{position:sticky;bottom:-32px;z-index:3;display:flex;flex-direction:column;gap:10px;
+  margin:auto -16px -32px;padding:14px 16px 32px;background:var(--bg);box-shadow:0 -1px 0 var(--line),0 -16px 20px -8px var(--bg)}
+.cols,.col{display:flex;flex-direction:column;gap:22px}
+.members{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.members li{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);min-height:48px}
+.members .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.members .tag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.members .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.members .dot.p0{background:var(--red)} .members .dot.p1{background:var(--yellow)}
+.members li.me{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.members .rm{flex:none;width:34px;height:34px;margin:-6px -4px -6px 0;border-radius:10px;border:0;background:transparent;color:var(--muted);font-size:20px}
+.on{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
+.on.off{background:var(--muted);opacity:.5}
+.botico{width:18px;height:18px;flex:none;color:var(--muted)}
+
+/* ---------- game ---------- */
+#game{flex:1;display:flex;flex-direction:column;min-height:0}
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.roundinfo b{color:var(--text)}
+.plates{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plate{position:relative;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.plate.away{opacity:.55}
+.plate .pav{font-size:26px;line-height:1;flex:none}
+.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-right:10px}
+.plate .pname{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate .pmeta{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;min-width:0}
+.plate .pmeta span{overflow:hidden;text-overflow:ellipsis}
+.plate .chip{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.chip.p0{background:var(--red)} .chip.p1{background:var(--yellow)}
+.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
+.plate.active .pwins{background:var(--accent);color:#231a05}
+.iconbtn{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);display:grid;place-items:center}
+.iconbtn svg{width:22px;height:22px}
+
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px 16px}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+
+/* the board: a blue frame with round holes; every column is one button */
+.board{--cell:44px;--gap:calc(var(--cell) * .14);flex:none;display:flex;gap:var(--gap);padding:calc(var(--gap) * 1.4);border-radius:calc(var(--cell) * .3);
+  background:var(--frame);box-shadow:inset 0 -6px 0 var(--frame2),0 14px 30px rgba(0,0,0,.35);touch-action:manipulation}
+.col{display:flex;flex-direction:column-reverse;gap:var(--gap);border:0;padding:0;margin:0;background:none;border-radius:calc(var(--cell) * .5);position:relative}
+.board.play .col:not(:disabled){cursor:pointer}
+.col:disabled{cursor:default}
+.hole{position:relative;width:var(--cell);height:var(--cell);border-radius:50%;background:var(--hole);box-shadow:inset 0 3px 0 rgba(0,0,0,.35)}
+.disc{position:absolute;inset:6%;border-radius:50%;box-shadow:inset 0 calc(var(--cell) * -.08) 0 rgba(0,0,0,.22),inset 0 0 0 calc(var(--cell) * .09) rgba(255,255,255,.12)}
+.disc.p0{background:radial-gradient(circle at 50% 45%,#ff5a5f 0 38%,var(--red) 39%)}
+.disc.p1{background:radial-gradient(circle at 50% 45%,#ffd95a 0 38%,var(--yellow) 39%)}
+.disc.ghost{opacity:.55;box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.disc.last::after{content:"";position:absolute;inset:38%;border-radius:50%;background:rgba(255,255,255,.75)}
+.disc.p1.last::after{background:rgba(35,26,5,.55)}
+.disc.fall{animation:fall calc(180ms + var(--fall) * 45ms) cubic-bezier(.5,0,1,1) both,bounce .22s calc(180ms + var(--fall) * 45ms) ease-out}
+@keyframes fall{from{transform:translateY(calc((var(--cell) + var(--gap)) * var(--fall) * -1))}to{transform:none}}
+@keyframes bounce{40%{transform:translateY(calc(var(--cell) * -.12))}100%{transform:none}}
+.disc.win{animation:win 1s ease-in-out infinite;box-shadow:0 0 0 calc(var(--cell) * .07) #fff,0 0 calc(var(--cell) * .4) rgba(255,255,255,.7)}
+@keyframes win{50%{transform:scale(.88)}}
+.board.shake{animation:shake .35s}
+@keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
+.board.popmode .col .hole:first-child{box-shadow:inset 0 3px 0 rgba(0,0,0,.35),0 0 0 3px var(--accent)}
+
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:30px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:12px 12px;font-size:15px}
+#popBtn[aria-pressed="true"]{background:var(--accent);color:#231a05;box-shadow:0 3px 0 #b78d12}
+.clock{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.clock .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.clock i{display:block;height:100%;width:100%;background:var(--accent);border-radius:4px}
+.clock.urgent i{background:var(--red)}
+.clock.urgent{color:var(--red);animation:blink .5s steps(2) infinite}
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding:calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);background:var(--scrim);color:var(--text);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+.sheet h2{margin:0;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1;text-wrap:balance}
+#handoff .pass{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#handoff .name{font-family:var(--display);font-size:clamp(34px,11vw,60px);line-height:1.05;text-align:center;word-break:break-word;text-wrap:balance}
+#handoff .meta{color:var(--muted);text-align:center;max-width:36ch}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:440px}
+.log li{background:var(--bg2);border-radius:12px;padding:9px 12px;font-size:14px;box-shadow:inset 0 0 0 1px var(--line)}
+.log li:last-child{box-shadow:inset 0 0 0 1.5px var(--accent)}
+#handoff .btn{max-width:440px}
+#roundEnd .sheet{max-width:560px}
+.fleets .board{--bs:var(--fbs,140px)}
+.fleets{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.fleets figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.fleets figcaption{font-size:13px;font-weight:800;max-width:var(--fbs,140px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fleets figure.win .board{box-shadow:inset 0 0 0 2px var(--accent)}
+.fleets figure.win figcaption{color:var(--accent)}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.rules{font-size:14px;display:flex;flex-direction:column;gap:8px;-webkit-user-select:text;user-select:text}
+.rules ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.rules summary{font-weight:800;cursor:pointer;padding:4px 0}
+#menuActions{display:flex;flex-direction:column;gap:8px}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle input:checked{background:var(--red)}
+.toggle input:checked::after{transform:translateX(18px)}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+.rules-list{display:flex;flex-direction:column;gap:8px}
+.rules-list .toggle{align-items:flex-start}
+.rules-list .toggle input{margin-top:2px}
+.toggle:has(input:disabled){cursor:default;opacity:.9}
+.toggle input:disabled{cursor:default}
+.houserules summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.houserules summary::-webkit-details-marker{display:none}
+.houserules summary::after{content:"▾";color:var(--muted);transition:transform .2s}
+.houserules[open] summary::after{transform:rotate(180deg)}
+.houserules[open] summary{margin-bottom:8px}
+.rules-sum{flex:1;text-align:right;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);z-index:60;width:max-content;max-width:calc(100% - 32px);
+  background:#fff;color:#1a1426;font-weight:600;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);text-align:center;transition:opacity .2s,transform .2s}
+#toast.off{opacity:0;transform:translate(-50%,-10px);pointer-events:none}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+@keyframes blink{50%{opacity:.4}}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button{border:0;background:transparent;font-size:28px;width:46px;height:46px;border-radius:12px;line-height:1}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:14px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.dock .bubble.say{font-size:15px}
+/* avatars */
+.avbtn{flex:none;width:50px;height:50px;border-radius:14px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:28px;line-height:1}
+.avgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn{width:42px;height:42px;font-size:22px;border-radius:12px}
+.prow .avbtn:disabled{opacity:1}
+.members .av{font-size:20px;line-height:1;border:0;background:transparent;padding:0;flex:none}
+.members button.av{cursor:pointer;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--accent);padding:3px}
+.av-i{font-style:normal;margin-right:.3em}
+#hoAvatar{font-size:64px;line-height:1}
+/* look: table design and size */
+.look{display:flex;flex-direction:column;gap:10px}
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+.history{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;font-size:13px}
+.history li{padding:6px 10px;border-radius:10px;background:var(--bg)}
+.bubble{position:absolute;z-index:5;left:50%;top:-6px;font-size:34px;line-height:1;pointer-events:none;transform:translateX(-50%);animation:floatup 2.4s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.dock .bubble{top:-24px;font-size:40px}
+@keyframes floatup{0%{transform:translate(-50%,10px) scale(.4);opacity:0}15%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{opacity:1}100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
+#confetti{position:fixed;inset:0;z-index:25;pointer-events:none;width:100%;height:100%}
+#flash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
+#flash span{font-family:var(--display);font-size:min(17vw,112px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:bang .9s ease-out forwards;text-align:center;line-height:.95}
+#flash span.blue{color:var(--accent)}
+#flash small{display:block;font-size:.26em;color:#fff;text-shadow:2px 2px 0 #1b1325;margin-top:.3em}
+@keyframes bang{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.35) rotate(-4deg);opacity:0}}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .board.play .col:not(:disabled):hover{background:rgba(255,255,255,.12)}
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  #lobby{padding-inline:24px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  .lobby-actions{flex-direction:row-reverse;margin-inline:-24px;padding-inline:24px}
+  .lobby-actions .btn{flex:1}
+  #game{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
+  .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
+  .roundinfo{display:block}
+  .plates{max-width:560px}
+  .plate .pav{font-size:30px}
+  .plate .pname{font-size:15px}
+  .arena{padding:8px 0 0}
+  .lastmove{font-size:14px}
+  .dock{align-self:start;margin-top:48px;border-radius:22px;padding:18px;gap:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
+  .acts{flex-direction:column}
+  .who b{font-size:20px}
+  .dstat .keys,.dock .keys{display:block}
+}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+<!-- ARTIFACT-HEAD-END -->
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="hero">
+      <div class="board" id="heroBoard" aria-hidden="true"></div>
+      <h1>Vier <span>gewinnt</span></h1>
+      <p class="tagline">Zu zweit gegeneinander, jeder mit dem eigenen Handy oder beide an einem Gerät. Allein gegen den Computer geht auch.</p>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Jeder sein Handy</button>
+      <button type="button" data-tab="local" aria-pressed="false">Ein Gerät für beide</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <label class="label" for="myName">Dein Name</label>
+      <div class="row">
+        <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+        <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+      </div>
+      <div class="avgrid" id="avatarGrid" hidden></div>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Spielfeld, Hausregeln und einen Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Jeder sein Handy“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem Mini-PC zu Hause. Öffne dann dessen Adresse, etwa <b>http://192.168.178.20:8082</b>. Hier geht nur „Ein Gerät für beide“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="label">Spieler</div>
+      <div class="plist" id="plist"></div>
+      <p class="hint">Tippe auf <b>Mensch</b>, um daraus einen Computer-Gegner zu machen.</p>
+      <div class="label">Spielfeld</div>
+      <div class="seg" id="sizeLocal" role="group" aria-label="Spielfeld"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke des Computer-Gegners"></div>
+      <details class="houserules">
+        <summary><span class="label">Hausregeln</span><span class="rules-sum" id="rulesLocalSum"></span></summary>
+        <div class="rules-list" id="rulesLocal"></div>
+      </details>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <details class="houserules">
+      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
+      <div class="look" id="lookHome"></div>
+    </details>
+    <div class="panel" id="statsPanel" hidden>
+      <div class="label">Bilanz auf diesem Gerät</div>
+      <ol class="scores" id="statsList"></ol>
+      <button class="btn btn-ghost" id="statsReset" type="button">Bilanz löschen</button>
+    </div>
+    <p class="hint">Abwechselnd wirft jeder eine Scheibe in eine Spalte, sie fällt bis ganz nach unten. Wer zuerst vier in einer Reihe hat, waagerecht, senkrecht oder schräg, gewinnt.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <div class="cols"><div class="col">
+    <div class="panel">
+      <div class="label" style="text-align:center">Raum-Code</div>
+      <div class="roomcode" id="roomCode"></div>
+      <div class="qr" id="qr" hidden></div>
+      <p class="hint" style="text-align:center" id="joinHint"></p>
+      <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button></div>
+    </div>
+    <div class="panel">
+      <div class="label" id="membersLabel"></div>
+      <ul class="members" id="members"></ul>
+      <button class="btn btn-ghost" id="addBot" type="button">+ Computer-Gegner</button>
+      <button class="btn btn-primary" id="sitBtn" type="button" hidden>Mitspielen</button>
+      <p class="hint" id="lobbyHint"></p>
+    </div>
+    </div><div class="col">
+    <div class="panel">
+      <div class="label">Spielfeld</div>
+      <div class="seg" id="sizeOnline" role="group" aria-label="Spielfeld"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke des Computer-Gegners"></div>
+    </div>
+    <details class="houserules" id="rulesLobbyBox">
+      <summary><span class="label">Hausregeln</span><span class="rules-sum" id="rulesLobbySum"></span></summary>
+      <div class="panel">
+        <p class="hint" id="rulesLobbyHint"></p>
+        <div class="rules-list" id="rulesLobby"></div>
+      </div>
+    </details>
+    </div></div>
+    <div class="lobby-actions">
+      <button class="btn btn-primary btn-block" id="startOnline" type="button">Spiel starten</button>
+      <button class="btn btn-ghost btn-block" id="leaveLobby" type="button">Raum verlassen</button>
+    </div>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="board" id="board"></div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
+      <div class="acts">
+        <button class="btn" id="popBtn" type="button" aria-pressed="false" hidden>Unten herausziehen</button>
+        <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
+      </div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <button class="btn btn-block" id="reLook" type="button">Brett ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <div class="sheet">
+    <h2>Punktestand</h2>
+    <ol class="scores" id="menuScores"></ol>
+    <div class="rules">
+      <details>
+        <summary>Spielregeln</summary>
+        <ul>
+          <li>Wer dran ist, tippt auf eine Spalte. Die Scheibe fällt bis auf die unterste freie Stelle.</li>
+          <li>Wer zuerst <b>vier eigene Scheiben in einer Reihe</b> hat, gewinnt: waagerecht, senkrecht oder schräg. Mit der Hausregel „5 gewinnt“ braucht es fünf.</li>
+          <li>Ist das Brett voll und niemand hat eine Reihe, ist es unentschieden. In der nächsten Runde beginnt der andere.</li>
+          <li><b>Pop Out</b> (Hausregel): Statt einzuwerfen darfst du eine eigene Scheibe aus der untersten Reihe herausziehen, alles darüber rutscht nach.</li>
+          <li>Am Computer: Spalte anklicken, oder <b>1</b>–<b>9</b> bzw. <b>←</b>/<b>→</b> und <b>Enter</b>. <b>P</b> schaltet Pop Out um, <b>Esc</b> schließt Fenster.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="rules"><details><summary>Spielverlauf</summary><ol class="history" id="menuLog"></ol></details></div>
+    <div class="hint" id="menuRules"></div>
+    <div class="rules"><details><summary>Aussehen</summary><div class="look" id="lookMenu"></div></details></div>
+    <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+    <div id="menuActions"></div>
+    <button class="btn btn-primary btn-block" id="menuClose" type="button">Weiterspielen</button>
+  </div>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="flash" hidden><span id="flashText"></span></div>
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="game.js"></script>
+<script src="app.js"></script>
+<!-- ARTIFACT-BODY-END -->
+</body>
+</html>
