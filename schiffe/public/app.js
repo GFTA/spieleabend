@@ -22,7 +22,7 @@
   const BOT_MS = 1100;
 
   // ---------- look: table design and board size (applied before anything is drawn) ----------
-  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
+  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
   const LOOK_SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   let look = Object.assign({ table: "night", size: "1" }, store.get(K.look) || {});
   {
@@ -46,6 +46,16 @@
   // ---------- avatars ----------
   const randomAvatar = () => G.AVATARS[Math.floor(Math.random() * G.AVATARS.length)];
   let myAvatar = G.AVATARS.includes(store.get(K.avatar)) ? store.get(K.avatar) : randomAvatar();
+  {
+    // name and avatar picked on the games.cool-kidz.net start page (same hand-off as ?table=)
+    const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
+    if (qa && G.AVATARS.includes(qa)) { myAvatar = qa; store.set(K.avatar, myAvatar); }
+    if (qn) store.set(K.me, qn);
+    if (q.has("name") || q.has("av")) {
+      q.delete("name"); q.delete("av");
+      history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
+    }
+  }
   store.set(K.avatar, myAvatar);
   let localAvatars = Array.isArray(store.get(K.avatars)) ? store.get(K.avatars) : [];
   const avatarFor = (i) => (G.AVATARS.includes(localAvatars[i]) ? localAvatars[i] : G.AVATARS[i % G.AVATARS.length]);
@@ -962,14 +972,24 @@
   }
 
   // ---------- reactions (online) ----------
+  // reactions float above everything (fixed), so the top edge of the screen or a scrolling
+  // player strip can't clip them; near the top they show up below the player instead
+  function showBubble(host, b) {
+    const r = host.getBoundingClientRect(), down = r.top < 110;
+    b.style.top = (down ? r.bottom + 6 : r.top - 6) + "px";
+    if (down) b.classList.add("down");
+    document.body.appendChild(b);
+    const w = b.offsetWidth / 2 + 8;
+    b.style.left = Math.min(innerWidth - w, Math.max(w, r.left + r.width / 2)) + "px";
+  }
   function bubble(pi, e, who) {
     const host = pi >= 0 && pi === (R && R.you) ? $("#dock") : pi >= 0 ? document.querySelector(`#opps [data-seat="${pi}"]`) : $("#dock");
     if (!host) return;
     const b = document.createElement("span");
     const text = e.length > 3;
     b.className = "bubble" + (text ? " say" : ""); b.textContent = pi < 0 && who ? `${who}: ${e}` : e;
-    host.appendChild(b);
-    setTimeout(() => b.remove(), 2500);
+    showBubble(host, b);
+    setTimeout(() => b.remove(), 2800);
     sfx("pop");
   }
   $("#reactBtn").addEventListener("click", (e) => { e.stopPropagation(); $("#reactBar").hidden = !$("#reactBar").hidden; });
@@ -1125,6 +1145,7 @@
     const lan = /^http:\/\/(\d+\.){3}\d+[:/]/.test(url);
     $("#joinHint").textContent = "Die anderen scannen den QR-Code oder öffnen den Link und geben den Code ein." + (lan ? " Alle müssen im selben WLAN sein." : "");
     const host = R.you === R.host;
+    $("#closeLobby").hidden = !host;
     const teams = R.rules.teams && R.members.length === 4;
     const watching = R.you < 0, seen = R.watchers || [];
     $("#membersLabel").textContent = `Spieler (${R.members.length}/${G.MAX_PLAYERS})` + (seen.length ? ` · ${seen.length} ${seen.length === 1 ? "schaut" : "schauen"} zu` : "");
@@ -1180,7 +1201,7 @@
 
   // look settings on the start screen and in the menu
   function renderLook() {
-    const html = `<div class="label">Tisch</div><div class="seg">${TABLES.map(([k, n, c]) =>
+    const html = `<div class="label">Tisch</div><div class="seg tables">${TABLES.map(([k, n, c]) =>
       `<button type="button" data-table="${k}" aria-pressed="${look.table === k}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("")}</div>` +
       `<div class="label">Größe</div><div class="seg three">${LOOK_SIZES.map(([k, n]) =>
       `<button type="button" data-size="${k}" aria-pressed="${look.size === k}">${n}</button>`).join("")}</div>`;
@@ -1295,7 +1316,7 @@
     } else if (m.t === "gone" || m.t === "left") {
       // keep the socket: a join or create sent a moment ago is answered on it
       store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : "Diesen Raum gibt es nicht mehr.");
+      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
       render();
     }
   }
@@ -1375,6 +1396,14 @@
 
   $("#startOnline").addEventListener("click", () => wsSend({ t: "start" }));
   $("#leaveLobby").addEventListener("click", () => wsSend({ t: "leave" }));
+  // host closes the room for everyone; tap twice, like the menu actions
+  let closeArm = null;
+  $("#closeLobby").addEventListener("click", (e) => {
+    const b = e.currentTarget, reset = () => { closeArm = null; b.textContent = "Raum für alle schließen"; b.classList.remove("btn-danger"); };
+    if (closeArm) { clearTimeout(closeArm); reset(); wsSend({ t: "close" }); return; }
+    b.textContent = "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
+    closeArm = setTimeout(reset, 3500);
+  });
   $("#copyBtn").addEventListener("click", () => {
     const url = $("#joinUrl").textContent;
     const ok = () => toast("Link kopiert.");
@@ -1425,6 +1454,7 @@
       if (V && V.phase === "play" && V.me >= 0 && !V.players[V.me].out)
         box.append(armed("Aufgeben", () => wsSend({ t: "act", a: { t: "giveup" } })));
       if (host) box.append(armed("Spiel beenden, zurück in den Warteraum", () => wsSend({ t: "end" })));
+      if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
     }
     $("#menu").hidden = false;

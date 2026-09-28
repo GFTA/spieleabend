@@ -32,6 +32,8 @@
 :root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3;--scrim:rgba(6,12,24,.86);--hole:#0a1322;--sea:#123057;--frame:#3a6fd0;--frame2:#28549f}
 :root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479;--scrim:rgba(226,231,240,.92);
   --hole:#f4f6fa;--ring:#1b2030;--sea:#cfe0f3;--frame:#2f6fd8;--frame2:#2458b0}
+:root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--scrim:rgba(251,227,236,.92);
+  --hole:#fff4f8;--ring:#3a1a2b;--sea:#e6d9f4;--frame:#e27fa4;--frame2:#c85f88}
 *{box-sizing:border-box}
 /* The page itself never scrolls: iOS Safari ignores overflow:hidden on body and would
    otherwise slide the whole page and pull its toolbar over the board. Only inner
@@ -239,12 +241,12 @@ h1 span{color:var(--accent)}
 #reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
 #reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
 #reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
-.bubble.say{font-size:14px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
-.dock .bubble.say{font-size:15px}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+
 /* avatars */
 .avbtn{flex:none;width:50px;height:50px;border-radius:14px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:28px;line-height:1}
-.avgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
 .avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
 .prow .avbtn{width:42px;height:42px;font-size:22px;border-radius:12px}
 .prow .avbtn:disabled{opacity:1}
@@ -254,15 +256,17 @@ h1 span{color:var(--accent)}
 #hoAvatar{font-size:64px;line-height:1}
 /* look: table design and size */
 .look{display:flex;flex-direction:column;gap:10px}
+.look .seg.tables{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
 .look .seg{grid-template-columns:repeat(4,1fr)}
 .look .seg.three{grid-template-columns:repeat(3,1fr)}
 .look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
 .look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
 .history{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;font-size:13px}
 .history li{padding:6px 10px;border-radius:10px;background:var(--bg)}
-.bubble{position:absolute;z-index:5;left:50%;top:-6px;font-size:34px;line-height:1;pointer-events:none;transform:translateX(-50%);animation:floatup 2.4s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
-.dock .bubble{top:-24px;font-size:40px}
-@keyframes floatup{0%{transform:translate(-50%,10px) scale(.4);opacity:0}15%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{opacity:1}100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
+.bubble{position:fixed;z-index:60;font-size:40px;line-height:1;pointer-events:none;transform:translate(-50%,-100%);animation:floatup 2.8s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.bubble.down{transform:translate(-50%,0);animation-name:floatdown}
+@keyframes floatup{0%{transform:translate(-50%,-70%) scale(.4);opacity:0}12%{transform:translate(-50%,-100%) scale(1.15);opacity:1}22%{transform:translate(-50%,-100%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,calc(-100% - 16px));opacity:0}}
+@keyframes floatdown{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}12%{transform:translate(-50%,0) scale(1.15);opacity:1}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{transform:translate(-50%,16px);opacity:0}}
 #confetti{position:fixed;inset:0;z-index:25;pointer-events:none;width:100%;height:100%}
 #flash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #flash span{font-family:var(--display);font-size:min(17vw,112px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:bang .9s ease-out forwards;text-align:center;line-height:.95}
@@ -412,6 +416,7 @@ h1 span{color:var(--accent)}
     <div class="lobby-actions">
       <button class="btn btn-primary btn-block" id="startOnline" type="button">Spiel starten</button>
       <button class="btn btn-ghost btn-block" id="leaveLobby" type="button">Raum verlassen</button>
+      <button class="btn btn-ghost btn-block" id="closeLobby" type="button" hidden>Raum für alle schließen</button>
     </div>
   </section>
 

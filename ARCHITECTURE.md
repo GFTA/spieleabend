@@ -49,21 +49,35 @@ spiel-eigene Variablen (Schiffe: `--sea`/`--hull`/`--wreck`, Würfelpoker:
 Aussehen-Menü, s.u.) — jedes Spiel multipliziert seine Spielelement-Größe
 damit.
 
-### Tisch-Designs (immer exakt diese vier, gleiche Reihenfolge, gleiche Farben)
+### Tisch-Designs (immer exakt diese fünf, gleiche Reihenfolge, gleiche Farben)
 
 ```js
-const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
+const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
 ```
 
 „Nacht“ ist der Default (kein `data-table`-Attribut nötig). Für die anderen
-drei überschreibt `:root[data-table="X"]{...}` dieselben Variablennamen wie
+vier überschreibt `:root[data-table="X"]{...}` dieselben Variablennamen wie
 oben, plus die spiel-eigenen:
 
 ```css
 :root[data-table="felt"]{--bg:#0f2a1f;--bg2:#15372a;--surface:#1c4636;--line:#2b5c48;--text:#eef7f1;--muted:#9cc3b1; /* + spieleigene Vars */}
 :root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3; /* + spieleigene Vars */}
 :root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479; /* + spieleigene Vars */}
+:root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--scrim:rgba(251,227,236,.92); /* + spieleigene Vars, pastellig */}
 ```
+
+„Blüte“ ist ein helles Pastell-Pink-Theme und folgt „Hell“ Regel für Regel:
+jede `[data-table="light"]`-Regel (auch Zusatzregeln wie Unos
+`.card-back::after`) bekommt eine `[data-table="blossom"]`-Schwester. Die
+spiel-eigenen Farben werden dabei pastellig umgefärbt statt übernommen
+(z. B. Meer lavendel `--sea:#e6d9f4`, Vier-gewinnt-Rahmen rosa
+`--frame:#e27fa4`, Brett `--board:#fff1f5`, Filz `--felt:#f5d5e2`). `--accent`
+bleibt Gelb, weil die Primär-Buttons einen fest gelben Schatten haben.
+
+Die Design-Buttons im Spiel liegen in `<div class="seg tables">` mit
+`.look .seg.tables{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}`,
+damit fünf (oder später mehr) Optionen auf schmalen Handys umbrechen statt
+rauszulaufen.
 
 Im JS (`app.js`, Abschnitt „look“):
 
@@ -129,6 +143,42 @@ UI: ein `<button class="avbtn" id="myAvatar">` (eigener Avatar, online) bzw.
 Liste. Bots zeigen immer 🤖 statt Avatar. Dieselbe `.avbtn`-CSS-Klasse
 (50×50px, 14px radius, 28px Emoji, in Karten-Reihen 42×42px) in jedem Spiel.
 
+Das aufklappbare Avatar-Raster hat **keine feste Spaltenzahl**, sonst ragt es
+auf 320px-Handys rechts raus:
+
+```css
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;/* … */}
+.avgrid button{/* … */;padding:0;min-width:0}
+```
+
+### Name & Avatar von der Startseite
+
+`games.cool-kidz.net` hat einen „Du“-Bereich (Avatar-Button, Name, Raster mit
+derselben `AVATARS`-Liste), gespeichert unter `spieleabend.me`. Wie das Design
+wird beides an jeden „Spielen“/„Beitreten“-Link gehängt: `?name=…&av=…`
+(Name nur, wenn nicht leer; Avatar immer). Die Startseite aktualisiert beim
+Tippen nur die `href`s (`updateLinks()`), rendert die Karten nicht neu — sonst
+wären halb eingetippte Raum-Codes weg.
+
+Jedes Spiel übernimmt das direkt nach `let myAvatar = …`, bevor irgendwas
+gerendert wird, dauerhaft in seine eigenen Schlüssel (`K.me`, `K.avatar`) und
+räumt die URL auf:
+
+```js
+{
+  // name and avatar picked on the games.cool-kidz.net start page (same hand-off as ?table=)
+  const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
+  if (qa && G.AVATARS.includes(qa)) { myAvatar = qa; store.set(K.avatar, myAvatar); }
+  if (qn) store.set(K.me, qn);
+  if (q.has("name") || q.has("av")) {
+    q.delete("name"); q.delete("av");
+    history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
+  }
+}
+```
+
+`#myName` hat überall `maxlength="18"` — die Übernahme kürzt genauso.
+
 ### Sonstige geteilte UI-Konventionen
 
 - Schriften: Google Fonts „Bowlby One“ (Überschriften/Logos) + „Figtree“ (UI)
@@ -141,6 +191,19 @@ Liste. Bots zeigen immer 🤖 statt Avatar. Dieselbe `.avbtn`-CSS-Klasse
   Vorlage in einem der bestehenden Spiele) für Installierbarkeit/Offline
 - Reaktions-Emojis im Online-Spiel: dieselben acht (`👍😂😱😡🎉🙈` + „Gut
   gespielt!“/„Uff …“/„Beeil dich!“/„Na warte!“)
+- Reaktions-Blasen hängen **nicht** im Spieler-Element (das liegt meist oben
+  in einer scrollenden Leiste und schneidet sie ab), sondern als
+  `position:fixed`-Overlay am `body`. `showBubble(host, b)` misst den Spieler,
+  setzt die Blase darüber — oder, wenn der Spieler im oberen Bildschirmrand
+  sitzt (`top < 110px`), darunter (`.bubble.down`, Animation `floatdown`) —
+  und klemmt sie horizontal in den Bildschirm. Nur kleine Bewegung (16px),
+  2,8s sichtbar.
+- Die Hauptaktion (Würfel, Karte ziehen, …) sitzt an **einem festen Ort** in
+  der Dock-Leiste unten: auf dem Handy immer mit dem Daumen erreichbar, am
+  Desktop immer an derselben Stelle. Ein Tipp darauf wird nie still
+  verschluckt — gibt es genau einen möglichen Zug, führt er ihn aus
+  (Mensch ärgere dich nicht: 6 würfeln, nochmal tippen → Figur kommt raus),
+  sonst sagt er, was zu tun ist.
 
 ## Server-Architektur (`server.js`)
 
@@ -174,14 +237,17 @@ setInterval(() => {
     ws.ping();
   }
   for (const [code, r] of rooms) {
-    if (Date.now() - r.touched > IDLE_TTL) {
-      for (const ws of sockets.get(code) || []) send(ws, { t: "gone", reason: "idle" });
-      /* jeweilige Bot-/Zug-Timer für den Code aufräumen */
-      sockets.delete(code);
-      rooms.delete(code); saveRooms();
-    }
+    if (Date.now() - r.touched > IDLE_TTL) closeRoom(code, "idle");
   }
 }, 25000).unref();
+
+// close a room for good and tell everyone still in it why ("idle" or "closed" by the host)
+function closeRoom(code, reason) {
+  for (const ws of sockets.get(code) || []) { send(ws, { t: "gone", reason }); ws.code = null; ws.pid = null; }
+  /* jeweilige Bot-/Zug-/Spezial-Timer für den Code aufräumen */
+  sockets.delete(code);
+  rooms.delete(code); saveRooms();
+}
 ```
 
 Das schließt Räume **unabhängig davon, ob noch jemand verbunden ist** —
@@ -189,15 +255,42 @@ Das schließt Räume **unabhängig davon, ob noch jemand verbunden ist** —
 laufenden Spiels mit Zug-Timer (30s, s.u.) killt das niemanden mitten im
 Zug: jeder erzwungene Timeout aktualisiert `touched` mit.
 
+**Raum schließen durch den Host** läuft über dieselbe Funktion:
+
+```js
+case "close": { // host closes the room for everyone
+  if (!room || ws.pid !== room.host) return;
+  closeRoom(room.code, "closed");
+  return;
+}
+```
+
+Im Client gibt es dafür einen Knopf „Raum für alle schließen“ nur für den
+Host — im Warteraum (`#closeLobby` unter „Raum verlassen“) und im Spielmenü
+(`armed(…)`-Aktion). Beide wollen zweimal getippt werden („Sicher? Nochmal
+tippen“), wie alle zerstörerischen Menü-Aktionen.
+
 Client-seitig (`app.js`, WS-Message-Handler):
 
 ```js
 } else if (m.t === "gone" || m.t === "left") {
   store.del(K.online); R = null; mode = null;
-  if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : "Diesen Raum gibt es nicht mehr.");
+  if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
   render();
 }
 ```
+
+### Einstellungen im Warteraum
+
+Alles, was beim Erstellen gewählt wird (Spielziel/Runden, Hausregeln,
+Computer-Stärke, Feldgröße …), muss der Host **im Warteraum noch ändern
+können**, solange das Spiel nicht läuft (`room.state` ist leer) — die anderen
+sehen die Auswahl live, aber ausgegraut. Nach „Spiel beenden, zurück in den
+Warteraum“ geht das wieder. Neuere Spiele bündeln das in einer
+`{t:"settings", goal, rules, level, …}`-Nachricht; Uno und Würfelpoker haben
+dafür `{t:"rules"}`, `{t:"botLevel"}` und `{t:"goal"}`. Der Hinweis auf dem
+Startbildschirm lautet entsprechend „… kannst du danach im Warteraum noch
+ändern“.
 
 ### Bots & Zug-Timer
 
@@ -298,8 +391,9 @@ passenden Container danebenstellen.
 ## Checkliste: neues Spiel hinzufügen
 
 1. Ordner mit `server.js`, `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
-2. Design-System aus diesem Dokument übernehmen: Basis-`:root`-Palette, vier `TABLES`, `data-table`-Overrides, `applyLook()`, `?table=`-Übernahme-Block, geteilte `AVATARS`-Liste, `.avbtn`/`.look`-Markup
-3. Server: `IDLE_TTL`/`ROOM_TTL`, Idle-Cleanup-Loop mit `{t:"gone",reason:"idle"}`, `/info`-Endpunkt im Standard-Shape
+2. Design-System aus diesem Dokument übernehmen: Basis-`:root`-Palette, fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
+3. Server: `IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape
+   Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen
 5. Freien Port wählen, `docker-compose.yml`/`.tunnel.yml` nach obigem Muster
 6. Auf dem Mini-PC: `.env` mit `TUNNEL_NETWORK`, Tunnel-Ingress +

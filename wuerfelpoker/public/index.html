@@ -31,6 +31,7 @@
 :root[data-table="felt"]{--bg:#0f2a1f;--bg2:#15372a;--surface:#1c4636;--line:#2b5c48;--text:#eef7f1;--muted:#9cc3b1;--scrim:rgba(6,22,15,.86);--felt:#123424}
 :root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3;--scrim:rgba(6,12,24,.86);--felt:#12233c}
 :root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479;--scrim:rgba(226,231,240,.92);--felt:#dde3ee}
+:root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--scrim:rgba(251,227,236,.92);--felt:#f5d5e2}
 *{box-sizing:border-box}
 /* the page itself never scrolls (iOS would slide it under its toolbar); inner areas do */
 html{height:100%;background:var(--bg);overflow:hidden;overscroll-behavior:none}
@@ -114,8 +115,8 @@ h1 span{color:var(--accent)}
 .tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
 .avrow{display:flex;gap:8px}
 .avbtn{flex:none;width:50px;height:50px;border-radius:14px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:28px;line-height:1}
-.avgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
 .avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
 .plist{display:flex;flex-direction:column;gap:8px}
 .prow{display:flex;gap:8px;align-items:center}
@@ -160,7 +161,6 @@ h1 span{color:var(--accent)}
 .pcard .res{display:flex;gap:3px;min-height:22px}
 .pcard .hand{font-size:12px;color:var(--muted);font-weight:600;min-height:1.3em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pcard.active .hand{color:var(--text)}
-.pcard .bubble{top:-4px}
 
 .tray{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:8px 16px}
 .turn{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;text-align:center}
@@ -229,6 +229,7 @@ h1 span{color:var(--accent)}
 .fulllog{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;font-size:13px}
 .fulllog li{padding:6px 10px;border-radius:10px;background:var(--surface)}
 .look{display:flex;flex-direction:column;gap:10px}
+.look .seg.tables{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
 #menuActions{display:flex;flex-direction:column;gap:8px}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);z-index:60;width:max-content;max-width:calc(100% - 32px);
   background:#fff;color:#1a1426;font-weight:600;padding:12px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);text-align:center;transition:opacity .2s,transform .2s}
@@ -240,10 +241,11 @@ h1 span{color:var(--accent)}
 #reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;flex-wrap:wrap;justify-content:center;max-width:300px;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
 #reactBar button{border:0;background:transparent;font-size:28px;width:46px;height:46px;border-radius:12px;line-height:1}
 #reactBar .phrase{width:auto;height:36px;padding:0 10px;font-size:13px;font-weight:800;border-radius:10px;background:var(--bg2)}
-.bubble{position:absolute;z-index:5;left:50%;top:-6px;font-size:34px;line-height:1;pointer-events:none;transform:translateX(-50%);animation:floatup 2.4s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
-.bubble.text{font-size:13px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
-.dock .bubble{top:-24px;font-size:40px}
-@keyframes floatup{0%{transform:translate(-50%,10px) scale(.4);opacity:0}15%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{opacity:1}100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
+.bubble{position:fixed;z-index:60;font-size:40px;line-height:1;pointer-events:none;transform:translate(-50%,-100%);animation:floatup 2.8s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.bubble.down{transform:translate(-50%,0);animation-name:floatdown}
+.bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
+@keyframes floatup{0%{transform:translate(-50%,-70%) scale(.4);opacity:0}12%{transform:translate(-50%,-100%) scale(1.15);opacity:1}22%{transform:translate(-50%,-100%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,calc(-100% - 16px));opacity:0}}
+@keyframes floatdown{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}12%{transform:translate(-50%,0) scale(1.15);opacity:1}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{transform:translate(-50%,16px);opacity:0}}
 #confetti{position:fixed;inset:0;z-index:25;pointer-events:none;width:100%;height:100%}
 @media (min-width:900px) and (min-height:700px){
   .pcard{flex-basis:170px}
@@ -287,7 +289,7 @@ h1 span{color:var(--accent)}
       <div class="label">Neuen Raum erstellen</div>
       <div class="seg four" id="goalOnline" role="group" aria-label="Spielziel"></div>
       <button class="btn" id="createBtn" type="button">Raum erstellen</button>
-      <p class="hint">Hausregeln und Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <p class="hint">Spielziel, Hausregeln und Computer-Gegner kannst du danach im Warteraum noch ändern.</p>
     </div>
     <div class="panel" id="onlineOff" hidden>
       <p class="hint">Für „Jeder sein Handy“ muss Würfelpoker auf einem Server laufen. Hier geht nur „Ein Handy für alle“.</p>
@@ -330,6 +332,10 @@ h1 span{color:var(--accent)}
       <p class="hint" style="text-align:center" id="joinHint"></p>
       <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button></div>
     </div>
+    <div class="panel">
+      <div class="label">Spielziel</div>
+      <div class="seg four" id="goalLobby" role="group" aria-label="Spielziel"></div>
+    </div>
     <details class="fold">
       <summary><span class="label">Hausregeln</span><span class="fold-sum" id="rulesLobbySum"></span></summary>
       <div class="panel">
@@ -350,6 +356,7 @@ h1 span{color:var(--accent)}
     <div class="lobby-actions">
       <button class="btn btn-primary btn-block" id="startOnline" type="button">Spiel starten</button>
       <button class="btn btn-ghost btn-block" id="leaveLobby" type="button">Raum verlassen</button>
+      <button class="btn btn-ghost btn-block" id="closeLobby" type="button" hidden>Raum für alle schließen</button>
     </div>
   </section>
 

@@ -206,6 +206,11 @@ function handle(ws, msg) {
       attach(ws, r, pid); broadcast(r);
       return;
     }
+    case "close": { // host closes the room for everyone
+      if (!room || ws.pid !== room.host) return;
+      closeRoom(room.code, "closed");
+      return;
+    }
     case "leave": {
       if (!room) return;
       const pid = ws.pid;
@@ -249,6 +254,12 @@ function handle(ws, msg) {
     case "rules": { // host changes house rules in the waiting room
       if (!room || ws.pid !== room.host || room.state) return;
       room.rules = Game.normRules(msg.rules);
+      broadcast(room); saveRooms();
+      return;
+    }
+    case "goal": { // host changes the goal in the waiting room
+      if (!room || ws.pid !== room.host || room.state || ![0, 3, 5, 7].includes(+msg.goal)) return;
+      room.goal = +msg.goal;
       broadcast(room); saveRooms();
       return;
     }
@@ -383,14 +394,17 @@ setInterval(() => {
     ws.ping();
   }
   for (const [code, r] of rooms) {
-    if (Date.now() - r.touched > IDLE_TTL) {
-      for (const ws of sockets.get(code) || []) send(ws, { t: "gone", reason: "idle" });
-      clearTimer(botTimers, code); clearTimer(turnTimers, code);
-      sockets.delete(code);
-      rooms.delete(code); saveRooms();
-    }
+    if (Date.now() - r.touched > IDLE_TTL) closeRoom(code, "idle");
   }
 }, 25000).unref();
+
+// close a room for good and tell everyone still in it why ("idle" or "closed" by the host)
+function closeRoom(code, reason) {
+  for (const ws of sockets.get(code) || []) { send(ws, { t: "gone", reason }); ws.code = null; ws.pid = null; }
+  clearTimer(botTimers, code); clearTimer(turnTimers, code);
+  sockets.delete(code);
+  rooms.delete(code); saveRooms();
+}
 
 loadRooms();
 server.listen(PORT, HOST, () => {

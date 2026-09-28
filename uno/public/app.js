@@ -43,6 +43,16 @@
   let localAvatars = store.get("passuno.avatars") || [];
   let localLevel = G.BOT_LEVELS[store.get("passuno.level")] ? store.get("passuno.level") : "normal";
   let myAvatar = G.AVATARS.includes(store.get("passuno.avatar")) ? store.get("passuno.avatar") : G.AVATARS[Math.floor(Math.random() * G.AVATARS.length)];
+  {
+    // name and avatar picked on the games.cool-kidz.net start page (same hand-off as ?table=)
+    const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
+    if (qa && G.AVATARS.includes(qa)) { myAvatar = qa; store.set("passuno.avatar", myAvatar); }
+    if (qn) store.set(K.me, qn);
+    if (q.has("name") || q.has("av")) {
+      q.delete("name"); q.delete("av");
+      history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
+    }
+  }
   const avatarFor = (i) => localAvatars[i] || G.AVATARS[i % G.AVATARS.length];
   const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
   let lastTurn = null;
@@ -602,13 +612,23 @@
   }
 
   // ---------- reactions (online) ----------
+  // reactions float above everything (fixed), so the top edge of the screen or a scrolling
+  // player strip can't clip them; near the top they show up below the player instead
+  function showBubble(host, b) {
+    const r = host.getBoundingClientRect(), down = r.top < 110;
+    b.style.top = (down ? r.bottom + 6 : r.top - 6) + "px";
+    if (down) b.classList.add("down");
+    document.body.appendChild(b);
+    const w = b.offsetWidth / 2 + 8;
+    b.style.left = Math.min(innerWidth - w, Math.max(w, r.left + r.width / 2)) + "px";
+  }
   function bubble(pi, e) {
     const host = pi === (R && R.you) ? $("#dock") : document.querySelector(`#table .seat[data-seat="${pi}"]`);
     if (!host) return;
     const b = document.createElement("span");
     b.className = e.length > 2 ? "bubble text" : "bubble"; b.textContent = e;
-    host.appendChild(b);
-    setTimeout(() => b.remove(), 2500);
+    showBubble(host, b);
+    setTimeout(() => b.remove(), 2800);
     sfx("pop");
   }
   $("#reactBtn").addEventListener("click", (e) => { e.stopPropagation(); $("#reactBar").hidden = !$("#reactBar").hidden; });
@@ -827,6 +847,7 @@
     const on = R.members.filter((m) => m.online).length;
     $("#membersLabel").textContent = `Spieler (${R.members.length}/10)`;
     const host = R.you === R.host;
+    $("#closeLobby").hidden = !host;
     $("#members").innerHTML = R.members.map((m, i) =>
       `<li class="${i === R.you ? "me" : ""}"><span class="on${m.online ? "" : " off"}"></span>${i === R.you && !m.bot ? `<button class="av" type="button" data-myav="1" title="Avatar wechseln">${m.avatar}</button>` : `<span class="av">${m.avatar || ""}</span>`}<span class="nm">${esc(m.name)}</span>` +
       `${m.bot ? '<span class="tag">Computer</span>' : ""}${i === R.host ? '<span class="tag">Host</span>' : ""}${i === R.you ? '<span class="tag">du</span>' : ""}` +
@@ -838,6 +859,10 @@
     $("#startOnline").hidden = !host;
     $("#startOnline").disabled = R.members.length < 2;
     $("#startOnline").textContent = R.members.length < 2 ? "Warte auf Mitspieler …" : `Spiel starten (${R.members.length} Spieler)`;
+    for (const b of document.querySelectorAll("#goalLobby button")) {
+      b.setAttribute("aria-pressed", String(+b.dataset.goal === R.goal));
+      b.disabled = !host;
+    }
     const goalTxt = R.goal ? `Gespielt wird bis ${R.goal} Punkte.` : "Gespielt wird eine Runde.";
     const rl = $("#rulesLobby"), key = JSON.stringify(R.rules) + host;
     if (rl.dataset.k !== key) { rl.dataset.k = key; rl.innerHTML = rulesHTML(R.rules || {}, host, false); }
@@ -946,7 +971,7 @@
     } else if (m.t === "gone" || m.t === "left") {
       // keep the socket: a join or create sent a moment ago is answered on it
       store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : "Diesen Raum gibt es nicht mehr.");
+      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
       render();
     }
   }
@@ -956,6 +981,7 @@
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
   $("#goalOnline").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalOnline = +b.dataset.goal; renderHome(); } });
   $("#goalLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalLocal = +b.dataset.goal; renderHome(); } });
+  $("#goalLobby").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b && R && R.you === R.host) wsSend({ t: "goal", goal: +b.dataset.goal }); });
 
   $("#myName").value = store.get(K.me) || "";
   $("#soundOn").checked = soundOn;
@@ -1020,6 +1046,14 @@
   $("#addBot").addEventListener("click", () => wsSend({ t: "addBot" }));
   $("#members").addEventListener("click", (e) => { const b = e.target.closest("[data-rmbot]"); if (b) wsSend({ t: "removeBot", seat: +b.dataset.rmbot }); });
   $("#leaveLobby").addEventListener("click", () => wsSend({ t: "leave" }));
+  // host closes the room for everyone; tap twice, like the menu actions
+  let closeArm = null;
+  $("#closeLobby").addEventListener("click", (e) => {
+    const b = e.currentTarget, reset = () => { closeArm = null; b.textContent = "Raum für alle schließen"; b.classList.remove("btn-danger"); };
+    if (closeArm) { clearTimeout(closeArm); reset(); wsSend({ t: "close" }); return; }
+    b.textContent = "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
+    closeArm = setTimeout(reset, 3500);
+  });
   $("#copyBtn").addEventListener("click", () => {
     const url = $("#joinUrl").textContent;
     const ok = () => toast("Link kopiert.");
@@ -1092,6 +1126,7 @@
         if (!m.bot && !m.online) box.append(armed(`🤖 Computer spielt für ${m.name}`, () => wsSend({ t: "standIn", seat: i })));
       });
       if (R.you === R.host) box.append(armed("Spiel beenden, zurück in den Warteraum", () => wsSend({ t: "end" })));
+      if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
     }
     $("#menu").hidden = false;
@@ -1112,7 +1147,7 @@
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ---------- look: table design and card size ----------
-  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"]];
+  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
   const SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   let look = Object.assign({ table: "night", size: "1" }, store.get("passuno.look") || {});
   {
@@ -1132,7 +1167,7 @@
     if (meta) meta.setAttribute("content", t[0] === "light" ? "#eceff5" : getComputedStyle(root).getPropertyValue("--bg").trim() || t[2]);
   }
   function renderLook() {
-    const html = `<div class="label">Tisch</div><div class="seg">${TABLES.map(([k, n, c]) =>
+    const html = `<div class="label">Tisch</div><div class="seg tables">${TABLES.map(([k, n, c]) =>
       `<button type="button" data-table="${k}" aria-pressed="${look.table === k}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("")}</div>` +
       `<div class="label">Kartengröße</div><div class="seg three">${SIZES.map(([k, n]) =>
       `<button type="button" data-size="${k}" aria-pressed="${look.size === k}">${n}</button>`).join("")}</div>`;

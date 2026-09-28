@@ -210,6 +210,11 @@ function handle(ws, msg) {
       broadcast(room); saveRooms();
       return;
     }
+    case "close": { // host closes the room for everyone
+      if (!room || !isHost) return;
+      closeRoom(room.code, "closed");
+      return;
+    }
     case "leave": {
       if (!room) return;
       const pid = ws.pid;
@@ -367,14 +372,17 @@ setInterval(() => {
     ws.ping();
   }
   for (const [code, r] of rooms) {
-    if (Date.now() - r.touched > IDLE_TTL) {
-      for (const ws of sockets.get(code) || []) send(ws, { t: "gone", reason: "idle" });
-      clearTimeout(botTimers.get(code)); botTimers.delete(code);
-      sockets.delete(code);
-      rooms.delete(code); saveRooms();
-    }
+    if (Date.now() - r.touched > IDLE_TTL) closeRoom(code, "idle");
   }
 }, 25000).unref();
+
+// close a room for good and tell everyone still in it why ("idle" or "closed" by the host)
+function closeRoom(code, reason) {
+  for (const ws of sockets.get(code) || []) { send(ws, { t: "gone", reason }); ws.code = null; ws.pid = null; }
+  clearTimeout(botTimers.get(code)); botTimers.delete(code);
+  sockets.delete(code);
+  rooms.delete(code); saveRooms();
+}
 
 loadRooms();
 server.listen(PORT, HOST, () => {

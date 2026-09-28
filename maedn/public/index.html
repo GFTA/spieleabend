@@ -33,6 +33,8 @@
 :root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3;--scrim:rgba(6,12,24,.86);--sea:#123057;--board:#e2e9f1;--board2:#b9c7d8;--spotline:#3c4a60;--path:#7487a3}
 :root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479;--scrim:rgba(226,231,240,.92);
   --ring:#1b2030;--sea:#cfe0f3;--board:#fbf5e6;--board2:#e3d6b6}
+:root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--scrim:rgba(251,227,236,.92);
+  --ring:#3a1a2b;--sea:#e6d9f4;--board:#fff1f5;--board2:#efc9d8}
 *{box-sizing:border-box}
 /* The page itself never scrolls: iOS Safari ignores overflow:hidden on body and would
    otherwise slide the whole page and pull its toolbar over the board. Only inner
@@ -170,7 +172,6 @@ h1 span{color:var(--accent)}
   background:var(--pc);color:#fff;font:800 max(10px,calc(var(--cell) * .34))/calc(var(--cell) * .62) var(--ui);text-align:center;box-shadow:0 0 0 2px var(--board)}
 .badge.c3 .bwins{color:#231a05}
 .board .die{position:absolute;z-index:4;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));--ds:calc(var(--cell) * 1.48)}
-.board .bubble{top:calc(var(--cell) * -.4)}
 /* pawns: a round body with a head, in the player's color */
 .piece{position:absolute;z-index:2;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:var(--cell);height:var(--cell);border:0;padding:0;margin:0;background:none;pointer-events:none;display:block}
 .piece i{position:absolute;left:18%;right:18%;bottom:14%;height:52%;border-radius:50% 50% 42% 42%;background:radial-gradient(circle at 38% 30%,rgba(255,255,255,.55) 0 14%,transparent 15%),var(--pc);
@@ -179,6 +180,8 @@ h1 span{color:var(--accent)}
 .piece.p0{--pc:var(--c0)} .piece.p1{--pc:var(--c1)} .piece.p2{--pc:var(--c2)} .piece.p3{--pc:var(--c3)}
 .piece.can{pointer-events:auto;cursor:pointer;z-index:3}
 .piece.can i{animation:bob .8s ease-in-out infinite}
+.piece.can.hint{animation:hint .35s ease-in-out 3}
+@keyframes hint{50%{transform:scale(1.25)}}
 .piece.can::before{content:"";position:absolute;inset:4%;border-radius:50%;box-shadow:0 0 0 calc(var(--cell) * .07) #1b1325,0 0 0 calc(var(--cell) * .13) #fff,0 0 calc(var(--cell) * .4) calc(var(--cell) * .1) rgba(255,255,255,.8)}
 .piece.sel::before{box-shadow:0 0 0 calc(var(--cell) * .07) #1b1325,0 0 0 calc(var(--cell) * .15) var(--accent)}
 .piece.last i{outline:calc(var(--cell) * .05) solid rgba(255,255,255,.85);outline-offset:1px}
@@ -216,6 +219,10 @@ button.die:disabled{cursor:default}
 .who{display:flex;align-items:center;gap:10px}
 .who > div{flex:1;min-width:0}
 .who .wav{font-size:30px;line-height:1;flex:none}
+/* the die sits in the dock: always at the bottom edge on phones, always in the same spot on desktop */
+.dock .die{--ds:64px}
+.dock .die:disabled{opacity:.6}
+.dock .die:disabled[data-f="0"]{opacity:.35}
 .who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
 .who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
 .acts{display:flex;gap:8px}
@@ -280,12 +287,12 @@ button.die:disabled{cursor:default}
 #reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
 #reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
 #reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
-.bubble.say{font-size:14px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
-.dock .bubble.say{font-size:15px}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+
 /* avatars */
 .avbtn{flex:none;width:50px;height:50px;border-radius:14px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:28px;line-height:1}
-.avgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px}
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;padding:8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
 .avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
 .prow .avbtn{width:42px;height:42px;font-size:22px;border-radius:12px}
 .prow .avbtn:disabled{opacity:1}
@@ -295,15 +302,17 @@ button.die:disabled{cursor:default}
 #hoAvatar{font-size:64px;line-height:1}
 /* look: table design and size */
 .look{display:flex;flex-direction:column;gap:10px}
+.look .seg.tables{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
 .look .seg{grid-template-columns:repeat(4,1fr)}
 .look .seg.three{grid-template-columns:repeat(3,1fr)}
 .look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
 .look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
 .history{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;font-size:13px}
 .history li{padding:6px 10px;border-radius:10px;background:var(--bg)}
-.bubble{position:absolute;z-index:5;left:50%;top:-6px;font-size:34px;line-height:1;pointer-events:none;transform:translateX(-50%);animation:floatup 2.4s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
-.dock .bubble{top:-24px;font-size:40px}
-@keyframes floatup{0%{transform:translate(-50%,10px) scale(.4);opacity:0}15%{transform:translate(-50%,0) scale(1.15);opacity:1}75%{opacity:1}100%{transform:translate(-50%,-46px) scale(1);opacity:0}}
+.bubble{position:fixed;z-index:60;font-size:40px;line-height:1;pointer-events:none;transform:translate(-50%,-100%);animation:floatup 2.8s ease-out forwards;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+.bubble.down{transform:translate(-50%,0);animation-name:floatdown}
+@keyframes floatup{0%{transform:translate(-50%,-70%) scale(.4);opacity:0}12%{transform:translate(-50%,-100%) scale(1.15);opacity:1}22%{transform:translate(-50%,-100%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,calc(-100% - 16px));opacity:0}}
+@keyframes floatdown{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}12%{transform:translate(-50%,0) scale(1.15);opacity:1}22%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{transform:translate(-50%,16px);opacity:0}}
 #confetti{position:fixed;inset:0;z-index:25;pointer-events:none;width:100%;height:100%}
 #flash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
 #flash span{font-family:var(--display);font-size:min(17vw,112px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:bang .9s ease-out forwards;text-align:center;line-height:.95}
@@ -328,6 +337,7 @@ button.die:disabled{cursor:default}
   .lastmove{font-size:14px}
   .dock{width:100%;max-width:640px;align-self:center;border-radius:22px;padding:12px 18px;gap:8px 16px;box-shadow:inset 0 0 0 1.5px var(--line);flex-direction:row;flex-wrap:wrap;align-items:center}
   .dock .who{flex:1;min-width:0}
+  .dock .die{--ds:76px}
   .dock .clock,.dock .acts{flex-basis:100%}
   .dock .keys{flex:none;text-align:right}
   .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
@@ -449,6 +459,7 @@ button.die:disabled{cursor:default}
     <div class="lobby-actions">
       <button class="btn btn-primary btn-block" id="startOnline" type="button">Spiel starten</button>
       <button class="btn btn-ghost btn-block" id="leaveLobby" type="button">Raum verlassen</button>
+      <button class="btn btn-ghost btn-block" id="closeLobby" type="button" hidden>Raum für alle schließen</button>
     </div>
   </section>
 
@@ -471,7 +482,8 @@ button.die:disabled{cursor:default}
 
     <div class="dock" id="dock">
       <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div>
-        </div>
+        <button class="die" id="dieBtn" type="button" data-f="0" aria-label="Würfeln" disabled><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></button>
+      </div>
       <div class="tries" id="tries" hidden></div>
       <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
       <div class="acts">
