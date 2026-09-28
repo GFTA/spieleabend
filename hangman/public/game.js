@@ -300,24 +300,35 @@
     const n = v.mask.length, gone = new Set(v.wrong.concat(v.guessed));
     return LIST.filter(({ w }) => w.length === n && [...w].every((c, i) => (v.mask[i] ? c === v.mask[i] : !gone.has(c)))).map((x) => x.w);
   }
+  // Like a person: it guesses common letters first and only "sees" the word once enough of it
+  // stands. The word list stands in for its vocabulary, but it only uses it from a share of
+  // revealed letters on (per level), otherwise a 480-word list gives the word away after two
+  // letters. Leicht is a bit careless, Profi thinks along earlier.
+  const BOT = {
+    1: { think: 0.75, solve: 0.85, noise: 5, careless: 0.15 }, // uses the list late, picks among the 5 most common letters
+    2: { think: 0.6, solve: 0.75, noise: 3, careless: 0.1 },
+    3: { think: 0.35, solve: 0.55, noise: 1, careless: 0 }
+  };
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const v = view(S, pi), level = S.level || 2;
+    const v = view(S, pi), cfg = BOT[S.level] || BOT[2];
     const open = ALPHABET.filter((l) => !v.guessed.includes(l) && !v.wrong.includes(l));
     const byFreq = FREQ.filter((l) => open.includes(l));
-    if (level === 1) return { t: "letter", l: Math.random() < 0.35 ? open[rand(open.length)] : byFreq[rand(Math.min(4, byFreq.length))] };
-    const cand = [...new Set(candidates(v))];
+    const shown = v.mask.filter(Boolean).length / v.mask.length;
+    const cand = shown >= cfg.think ? [...new Set(candidates(v))] : [];
     const left = S.maxErrors - S.errors;
-    if (cand.length === 1 || (level === 3 && cand.length === 2 && left > 2)) return { t: "solve", word: cand[rand(cand.length)] };
-    if (cand.length) { // the letter in the most fitting words
+    if (cand.length === 1 && shown >= cfg.solve) return { t: "solve", word: cand[0] };
+    if (cand.length === 2 && shown >= Math.max(cfg.solve, 0.7) && left > 3 && S.level === 3) return { t: "solve", word: cand[rand(2)] };
+    if (cand.length && Math.random() >= cfg.careless) { // the letter in the most fitting words
       let best = null, bestN = -1;
       for (const l of byFreq) {
         const n = cand.filter((w) => w.includes(l)).length;
         if (n > bestN) { best = l; bestN = n; }
       }
-      if (bestN > 0 && (level === 3 || Math.random() < 0.8)) return { t: "letter", l: best };
+      if (bestN > 0) return { t: "letter", l: best };
     }
-    return { t: "letter", l: byFreq[0] || open[0] };
+    if (Math.random() < cfg.careless) return { t: "letter", l: open[rand(open.length)] };
+    return { t: "letter", l: byFreq[rand(Math.min(cfg.noise, byFreq.length))] || open[0] };
   }
 
   // The word stays hidden until the round ends, except for whoever picked it.

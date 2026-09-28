@@ -24,8 +24,8 @@ ausgesucht hat, bekommt 5 Punkte. Nach 3, 5 oder 8 Runden gewinnt, wer die meist
 
 - **Hausregeln**: Anfang und Ende (erster und letzter Buchstabe aufgedeckt), Schwer (nur
   6 Fehler), Zugzeit (20 Sekunden pro Tipp, 60 Sekunden zum Aussuchen).
-- **Computer-Gegner** in drei Stufen. Sie sehen nur, was alle sehen, und grenzen mit der
-  Wortliste ein, welche Wörter noch passen.
+- **Computer-Gegner** in drei Stufen. Sie sehen nur, was alle sehen, raten erst die häufigsten
+  Buchstaben und erkennen das Wort erst, wenn ein guter Teil davon steht (Profi früher).
 - **Wie bei den anderen Spielen**: Warteraum mit Bereit und Revanche, Chat, Reaktionen,
   Avatare, Tisch-Designs, Bilanz, Töne, Konfetti. Am Computer einfach Buchstaben tippen,
   Enter öffnet „Wort lösen“.
