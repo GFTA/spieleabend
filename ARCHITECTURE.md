@@ -215,9 +215,37 @@ räumt die URL auf:
   (Mensch ärgere dich nicht: 6 würfeln, nochmal tippen → Figur kommt raus),
   sonst sagt er, was zu tun ist.
 
-## Server-Architektur (`server.js`)
+## Server-Architektur (`shared/room-server.js` + `server.js` pro Spiel)
 
-Reiner `http` + `ws`-Server ohne Framework, ein File. Gemeinsame Bausteine:
+Alle Spiele laufen auf **einem** gemeinsamen Server-Kern: `shared/room-server.js`
+(reiner `http` + `ws`-Server ohne Framework). Er enthält alles, was unten
+beschrieben ist: Räume, Warteraum/Bereit, Revanche, Wiederverbinden,
+Zuschauer, Computer-Gegner und Zug-Uhren, Raum schließen, Idle-Cleanup,
+Persistenz und die HTTP-Oberfläche. Das `server.js` eines Spiels ist nur noch
+ein kurzer Adapter, der die Engine (`public/game.js`) und ein paar
+spielspezifische Haken übergibt:
+
+```js
+const Game = require("./public/game.js");
+module.exports = require("../shared/room-server.js")({
+  dir: __dirname, Game, id: "maedn", title: "Mensch ärgere dich nicht",
+  maxPlayers: Game.MAX_PLAYERS, watchers: 20, reactions: [/* acht Reaktionen */],
+  newRoom: (msg) => ({ goal, rules, level }),       // Einstellungen beim Erstellen
+  roomFields: (room) => ({ goal, rules, level }),   // … in jeder Raum-Nachricht
+  settings(room, msg) { /* {t:"settings"} im Warteraum */ },
+  newGame: (room, players) => Game.newGame(/* … */),
+  leaveGame(room, pid, ctx) { /* optional: Aufgeben / Computer übernimmt */ }
+});
+```
+
+Optionale Haken: `botPlan`/`botMove` (eigenes Bot-Timing, Standard ist
+`Game.botMove` nach `BOT_MS`), `turnClock` (30-s-Zug-Uhr des Servers),
+`handlers` (zusätzliche Nachrichten wie Unos `{t:"rules"}`), `hostHandover`
+(Host-Rolle wandert weiter, wenn der Host offline geht — Uno, Würfelpoker).
+Neue gemeinsame Server-Funktionen gehören **nur** in `shared/room-server.js`.
+Die Code-Beispiele unten zeigen die Bausteine, wie sie dort stehen.
+
+Gemeinsame Bausteine:
 
 ### Konstanten & Env
 
@@ -398,14 +426,20 @@ Startbildschirm lautet entsprechend „… kannst du danach im Warteraum noch
 
 ### Dockerfile (wortidentisch in allen Spielen)
 
+Gebaut wird vom Repo-Root aus (Compose: `context: ..`, Build-Arg `GAME` =
+Spielordner), damit `shared/` mit ins Image kommt. Das Root-`.dockerignore`
+hält den Kontext klein.
+
 ```dockerfile
 FROM node:22-alpine
-WORKDIR /app
+ARG GAME
+WORKDIR /app/game
 ENV NODE_ENV=production PORT=8080 DATA_DIR=/data
-COPY package.json package-lock.json ./
+COPY ${GAME}/package.json ${GAME}/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
-COPY server.js ./
-COPY public ./public
+COPY shared /app/shared
+COPY ${GAME}/server.js ./
+COPY ${GAME}/public ./public
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data
@@ -424,7 +458,11 @@ nimmt sich den nächsten freien):
 ```yaml
 services:
   <spielid>:
-    build: .
+    build:
+      context: ..
+      dockerfile: <ordner>/Dockerfile
+      args:
+        GAME: <ordner>
     image: <spielid>:latest
     container_name: <spielid>
     restart: unless-stopped
@@ -474,9 +512,9 @@ passenden Container danebenstellen.
 
 ## Checkliste: neues Spiel hinzufügen
 
-1. Ordner mit `server.js`, `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
+1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
 2. Design-System aus diesem Dokument übernehmen: Basis-`:root`-Palette, fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
-3. Server: `IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape
+3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen
 5. Freien Port wählen, `docker-compose.yml`/`.tunnel.yml` nach obigem Muster

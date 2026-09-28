@@ -21,7 +21,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo.
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 
-Jedes Spiel ist ein eigenständiger Ordner mit eigenem Server, Dockerfile und Tests.
+Jedes Spiel ist ein eigener Ordner mit Engine, Oberfläche, Dockerfile und Tests; den Server-Teil (Räume, Warteraum, Revanche, Computer-Gegner …) teilen sich alle in `shared/room-server.js`.
 
 ## Installation auf dem Mini-PC (Docker)
 

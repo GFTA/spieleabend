@@ -1,6 +1,10 @@
 services:
   wuerfelpoker:
-    build: .
+    build:
+      context: ..
+      dockerfile: wuerfelpoker/Dockerfile
+      args:
+        GAME: wuerfelpoker
     image: wuerfelpoker:latest
     container_name: wuerfelpoker
     restart: unless-stopped

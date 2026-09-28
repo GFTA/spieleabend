@@ -1,6 +1,10 @@
 services:
   maedn:
-    build: .
+    build:
+      context: ..
+      dockerfile: maedn/Dockerfile
+      args:
+        GAME: maedn
     image: maedn:latest
     container_name: maedn
     restart: unless-stopped

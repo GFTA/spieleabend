@@ -1,10 +1,15 @@
+# Built from the repo root (see docker-compose.yml: context "..", GAME = this folder),
+# so the shared room server in ../shared comes along. The game sits in /app/game and
+# finds it at ../shared, exactly like in the repo.
 FROM node:22-alpine
-WORKDIR /app
+ARG GAME
+WORKDIR /app/game
 ENV NODE_ENV=production PORT=8080 DATA_DIR=/data
-COPY package.json package-lock.json ./
+COPY ${GAME}/package.json ${GAME}/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
-COPY server.js ./
-COPY public ./public
+COPY shared /app/shared
+COPY ${GAME}/server.js ./
+COPY ${GAME}/public ./public
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data

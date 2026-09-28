@@ -1,6 +1,10 @@
 services:
   schiffe:
-    build: .
+    build:
+      context: ..
+      dockerfile: schiffe/Dockerfile
+      args:
+        GAME: schiffe
     image: schiffe:latest
     container_name: schiffe
     restart: unless-stopped

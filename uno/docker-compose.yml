@@ -1,6 +1,10 @@
 services:
   pass-uno:
-    build: .
+    build:
+      context: ..
+      dockerfile: uno/Dockerfile
+      args:
+        GAME: uno
     image: pass-uno:latest
     container_name: pass-uno
     restart: unless-stopped

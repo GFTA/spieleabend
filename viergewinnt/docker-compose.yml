@@ -1,6 +1,10 @@
 services:
   viergewinnt:
-    build: .
+    build:
+      context: ..
+      dockerfile: viergewinnt/Dockerfile
+      args:
+        GAME: viergewinnt
     image: viergewinnt:latest
     container_name: viergewinnt
     restart: unless-stopped

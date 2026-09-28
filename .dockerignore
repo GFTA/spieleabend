@@ -1,0 +1,9 @@
+# Build context of the games is the repo root (they share ./shared); keep it small.
+.git
+**/node_modules
+**/data
+**/dist
+**/test
+**/*.md
+**/.env
+start
