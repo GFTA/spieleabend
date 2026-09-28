@@ -24,8 +24,11 @@
     bot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6" /></svg>'
   };
 
+  ICONS.chat = SVG('<path d="M4 5h16v11H9l-5 4z"/>', ' stroke-linejoin="round"');
+  const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
+
   // ---------- markup ----------
-  const slot = (root, name) => { const t = root.querySelector(`template[data-slot="${name}"]`); return t ? t.innerHTML : ""; };
+  const slot =(root, name) => { const t = root.querySelector(`template[data-slot="${name}"]`); return t ? t.innerHTML : ""; };
   const lobby = $("#lobby"), menu = $("#menu");
   const rulesHTML = slot(menu, "rules");
   lobby.innerHTML = `
@@ -44,6 +47,11 @@
       <button class="btn btn-ghost" id="addBot" type="button">+ Computer-Gegner</button>
       <button class="btn btn-primary" id="sitBtn" type="button" hidden>Mitspielen</button>
       <p class="hint" id="lobbyHint"></p>
+    </div>
+    <div class="panel chatpanel">
+      <div class="label">Chat</div>
+      <ol class="chatlog" id="chatLobbyLog"></ol>
+      ${CHAT_FORM}
     </div>
     </div><div class="col">
     ${slot(lobby, "settings")}
@@ -81,19 +89,164 @@
       <a class="btn iconact" href="https://games.cool-kidz.net/" data-start-link aria-label="Zur Spieleabend-Startseite" title="Zur Spieleabend-Startseite">${ICONS.home}</a>
     </div>
   </div>`;
+  // chat during a game: a button in the top bar next to the menu, and a sheet with the whole log
+  $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="chatBtn" type="button" aria-label="Chat" title="Chat" hidden>${ICONS.chat}<span class="badge" id="chatBadge" hidden></span></button>`);
+  document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
+    <button class="btn btn-primary btn-block" id="chatClose" type="button">Weiterspielen</button></div></div>`);
 
   // ---------- behavior ----------
   // app: {
   //   room() -> R, view() -> V, mode() -> "online" | "local" | null, server() -> /info of this server
   //   watching(v?) get/set "watching the running game from the waiting room"
-  //   send(msg), toast(text), render(), maxPlayers, watchers (full rooms let people watch)
+  //   toast(text), render(), maxPlayers, watchers (full rooms let people watch)
+  //   onlineKey: where the room code + secret are stored to rejoin after a reload
+  //   on: { opened(), joined(m), room(m), react(m), error(m), left() }  what the game does with server messages
+  //   bubble(pi, text, name) -> show a short text over a player (reactions; chat lines during a game)
   //   memberExtra(m, i) -> html after the name (colour dot, ...)
   //   renderSettings(host) -> fill the settings slot and the house rules
   //   cycleAvatar() -> the next avatar for me (also stored by the app)
   //   menu: { open(), local(box), player(box), skip(V) -> may the host skip the current player, standIn }
   // }
+  // returns { send, resume, update, renderLobby, rematchStatus, armed, ... }; update() runs on every render
   window.RoomUI = function (app) {
     const R = () => app.room(), V = () => app.view();
+    const store = window.Spieleabend.store;
+
+    // ---------- connection: one socket, reconnects on its own, rejoins with the stored secret ----------
+    let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null;
+    function connect() {
+      if (ws && ws.readyState <= 1) return;
+      // each socket only ever touches itself: a late close of an old socket must not wipe out the new one
+      const sock = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+      ws = sock;
+      sock.onopen = () => {
+        if (ws !== sock) { sock.close(); return; }
+        retry = 0; clearTimeout(giveUpT);
+        if (app.on.opened) app.on.opened();
+        const s = store.get(app.onlineKey);
+        if (s && !queue.some((m) => m.t === "create" || m.t === "join"))
+          sock.send(JSON.stringify(s.watch ? { t: "join", code: s.code, name: s.watch } : { t: "resume", code: s.code, secret: s.secret }));
+        for (const m of queue.splice(0)) sock.send(JSON.stringify(m));
+        app.render();
+      };
+      sock.onmessage = (e) => { if (ws !== sock) return; try { onMsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+      sock.onclose = () => {
+        if (ws !== sock) return;
+        ws = null;
+        if (wantOnline) setTimeout(connect, Math.min(8000, 400 * 2 ** retry++));
+        app.render();
+      };
+    }
+    // send now, or for create/join: connect first and send as soon as the socket is open
+    function send(m) {
+      if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; }
+      if (m.t === "create" || m.t === "join") {
+        queue.push(m); wantOnline = true; retry = 0; connect();
+        clearTimeout(giveUpT);
+        giveUpT = setTimeout(() => {
+          if (ws && ws.readyState === 1) return;
+          queue = []; wantOnline = false;
+          if (ws) ws.close();
+          app.toast("Der Spiel-Server antwortet nicht. Prüf die Adresse oder die Internetverbindung.");
+          app.render();
+        }, 8000);
+        return true;
+      }
+      return false;
+    }
+    // after a reload: back into the room stored in onlineKey
+    function resume() { wantOnline = true; connect(); }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && wantOnline && !(ws && ws.readyState <= 1)) { retry = 0; connect(); }
+    });
+    function onMsg(m) {
+      if (m.t === "watching" || m.t === "joined") {
+        store.set(app.onlineKey, m.t === "watching" ? { code: m.code, watch: m.name } : { code: m.code, secret: m.secret });
+        wantOnline = true;
+        if (location.search) history.replaceState(null, "", location.pathname);
+        app.on.joined(m);
+        if (m.t === "watching") app.toast("Das Spiel läuft schon oder der Raum ist voll: Du schaust zu.");
+      } else if (m.t === "room") {
+        app.on.room(m);
+      } else if (m.t === "react") {
+        app.on.react(m);
+      } else if (m.t === "chatlog") {
+        chat = m.list || []; unread = 0; renderChat();
+      } else if (m.t === "chat") {
+        addChat(m.line);
+      } else if (m.t === "error") {
+        if (app.on.error) app.on.error(m);
+        app.toast(m.msg);
+      } else if (m.t === "gone" || m.t === "left") {
+        // keep the socket: a join or create sent a moment ago is answered on it
+        store.del(app.onlineKey);
+        chat = []; unread = 0; renderChat();
+        app.on.left();
+        if (m.t === "gone") app.toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
+        app.render();
+      }
+    }
+    // runs on every render: the connection pill (only after a short grace period, phones drop
+    // sockets all the time) and the chat button
+    function update() {
+      const online = app.mode() === "online", down = online && wantOnline && !(ws && ws.readyState === 1);
+      if (!down) { clearTimeout(netT); netT = null; $("#net").hidden = true; }
+      else if (!netT && $("#net").hidden) netT = setTimeout(() => { netT = null; if (app.mode() === "online" && !(ws && ws.readyState === 1)) $("#net").hidden = false; }, 2000);
+      $("#chatBtn").hidden = !online || !R();
+      if (!online) $("#chat").hidden = true;
+      renderBadge();
+    }
+
+    // ---------- chat: one per room, in the waiting room and as a sheet during the game ----------
+    let chat = [], unread = 0;
+    const mine = (line) => { const r = R(), s = store.get(app.onlineKey); return !!r && line.pi === r.you && (r.you >= 0 || (s && s.watch === line.name)); };
+    const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+    function renderChat() {
+      const html = chat.length ? chat.map((l) => `<li class="${mine(l) ? "me" : ""}"><span class="av" aria-hidden="true">${esc(l.avatar || "")}</span><div><b>${esc(l.name || "?")}</b> <time>${hhmm(l.at)}</time><p>${esc(l.text)}</p></div></li>`).join("")
+        : '<li class="empty">Noch keine Nachrichten.</li>';
+      for (const id of ["#chatLobbyLog", "#chatLog"]) { const el = $(id); el.innerHTML = html; el.scrollTop = el.scrollHeight; }
+      renderBadge();
+    }
+    function renderBadge() {
+      const b = $("#chatBadge");
+      b.hidden = !unread; b.textContent = unread > 9 ? "9+" : String(unread);
+      $("#chatBtn").setAttribute("aria-label", unread ? `Chat, ${unread} neu` : "Chat");
+    }
+    function addChat(line) {
+      if (chat.some((l) => l.id === line.id)) return;
+      chat = chat.concat(line).slice(-100);
+      const seen = !$("#chat").hidden || !$("#lobby").hidden;
+      if (!mine(line) && !seen) {
+        unread++;
+        if (app.bubble) app.bubble(line.pi, line.text.length > 30 ? line.text.slice(0, 29) + "…" : line.text, line.name);
+      }
+      renderChat();
+    }
+    // the server takes one line per second: a quicker one waits here instead of being refused
+    let chatAt = 0, chatWait = [];
+    function sendChat(text) {
+      chatWait.push(text);
+      if (chatWait.length > 1) return;
+      (function next() {
+        const wait = chatAt + 1100 - Date.now();
+        if (wait > 0) return setTimeout(next, wait);
+        chatAt = Date.now();
+        send({ t: "chat", text: chatWait.shift() });
+        if (chatWait.length) setTimeout(next, 1100);
+      })();
+    }
+    for (const f of document.querySelectorAll("form[data-chat]")) f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = f.querySelector("input"), text = input.value.trim();
+      if (!text) return;
+      if (!(ws && ws.readyState === 1)) { app.toast("Keine Verbindung, die Nachricht wurde nicht gesendet."); return; }
+      sendChat(text); input.value = "";
+    });
+    renderChat();
+    $("#chatBtn").addEventListener("click", () => { $("#chat").hidden = false; unread = 0; renderChat(); });
+    $("#chatClose").addEventListener("click", () => { $("#chat").hidden = true; });
+    $("#chat").addEventListener("click", (e) => { if (e.target.id === "chat") $("#chat").hidden = true; });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#chat").hidden) { $("#chat").hidden = true; e.stopPropagation(); } }, true);
 
     function joinUrl() {
       const r = R(), server = app.server();
@@ -202,15 +355,15 @@
     $("#readyBtn").addEventListener("click", () => {
       if ($("#readyBtn").dataset.act === "watch") { app.watching(true); app.render(); return; }
       const r = R(), me = r && r.members[r.you];
-      if (me) app.send({ t: "ready", on: !me.ready });
+      if (me) send({ t: "ready", on: !me.ready });
     });
-    $("#startOnline").addEventListener("click", () => app.send({ t: "start" }));
-    $("#leaveLobby").addEventListener("click", () => app.send({ t: "leave" }));
+    $("#startOnline").addEventListener("click", () => send({ t: "start" }));
+    $("#leaveLobby").addEventListener("click", () => send({ t: "leave" }));
     // host closes the room for everyone; tap twice, like the menu actions
     let closeArm = null;
     $("#closeLobby").addEventListener("click", (e) => {
       const b = e.currentTarget, reset = () => { closeArm = null; b.classList.remove("btn-danger"); };
-      if (closeArm) { clearTimeout(closeArm); reset(); app.send({ t: "close" }); return; }
+      if (closeArm) { clearTimeout(closeArm); reset(); send({ t: "close" }); return; }
       b.classList.add("btn-danger"); app.toast("Nochmal tippen, dann ist der Raum für alle geschlossen.");
       closeArm = setTimeout(reset, 3500);
     });
@@ -220,12 +373,12 @@
       const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#joinUrl")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); app.toast("Link markiert, jetzt kopieren."); };
       try { navigator.clipboard.writeText(url).then(ok, fallback); } catch (e) { fallback(); }
     });
-    $("#addBot").addEventListener("click", () => app.send({ t: "bot" }));
-    $("#sitBtn").addEventListener("click", () => app.send({ t: "sit" }));
+    $("#addBot").addEventListener("click", () => send({ t: "bot" }));
+    $("#sitBtn").addEventListener("click", () => send({ t: "sit" }));
     $("#members").addEventListener("click", (e) => {
       const b = e.target.closest("[data-unbot]");
-      if (b) return app.send({ t: "unbot", i: +b.dataset.unbot });
-      if (e.target.closest("[data-myav]")) app.send({ t: "avatar", avatar: app.cycleAvatar() });
+      if (b) return send({ t: "unbot", i: +b.dataset.unbot });
+      if (e.target.closest("[data-myav]")) send({ t: "avatar", avatar: app.cycleAvatar() });
     });
 
     // ---------- in-game menu ----------
@@ -242,7 +395,7 @@
       return b;
     }
     function openMenu() {
-      const v = V(), r = R(), mode = app.mode(), send = app.send;
+      const v = V(), r = R(), mode = app.mode();
       $("#menuLog").innerHTML = v ? v.log.slice().reverse().map((l) => `<li>${esc(l)}</li>`).join("") : "";
       app.menu.open(); // scores, the goal and house rules line, the look settings, ...
       const box = $("#menuActions"); box.innerHTML = "";
@@ -276,12 +429,12 @@
     $("#menuLeave").addEventListener("click", () => {
       const b = $("#menuLeave");
       clearTimeout(leaveArm);
-      if (b.classList.contains("btn-danger")) { b.classList.remove("btn-danger"); $("#menu").hidden = true; app.send({ t: "leave" }); return; }
+      if (b.classList.contains("btn-danger")) { b.classList.remove("btn-danger"); $("#menu").hidden = true; send({ t: "leave" }); return; }
       b.classList.add("btn-danger"); app.toast("Nochmal tippen, dann verlässt du den Raum.");
       leaveArm = setTimeout(() => b.classList.remove("btn-danger"), 3500);
     });
     $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
 
-    return { renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, ICONS };
+    return { send, resume, update, renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, ICONS };
   };
 })();

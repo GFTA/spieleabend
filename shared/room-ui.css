@@ -62,3 +62,20 @@
 /* after a game: who is in for the rematch */
 .revotes{text-align:center;font-size:13px;line-height:1.5;margin:0}
 .revotes span{white-space:nowrap}
+
+/* ---------- chat: panel in the waiting room, sheet during the game ---------- */
+.chatlog{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+#chat .chatlog{max-height:min(50vh,420px);min-height:120px}
+.chatlog li{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:14px;line-height:1.35}
+.chatlog li.me{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.chatlog li.empty{justify-content:center;color:var(--muted);background:none;box-shadow:none}
+.chatlog .av{font-size:20px;line-height:1;flex:none}
+.chatlog div{min-width:0;flex:1}
+.chatlog b{font-weight:800}
+.chatlog time{color:var(--muted);font-size:11px;margin-left:4px}
+.chatlog p{margin:2px 0 0;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.chatform{display:flex;gap:8px;margin-top:8px}
+.chatform .field{flex:1;min-width:0}
+.chatform .btn{flex:none;padding-inline:14px}
+#chatBtn{position:relative}
+#chatBtn .badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--bg)}

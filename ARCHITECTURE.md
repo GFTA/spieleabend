@@ -374,6 +374,24 @@ Bereit-Logik), `UI.rematchStatus()` und `UI.armed()` für eigene
 Zweimal-tippen-Aktionen. Neue Warteraum- oder Menü-Funktionen gehören **nur**
 dorthin.
 
+**Verbindung und Chat** stecken ebenfalls in `room-ui.js`: ein WebSocket, der sich
+selbst neu verbindet, nach einem Neuladen per gespeichertem `secret` (bzw. als
+Zuschauer per Name) wieder in den Raum kommt und `create`/`join` bis zum Öffnen
+puffert, plus die Verbindungs-Pille `#net`. Das Spiel gibt dafür `onlineKey` und
+`on: { opened, joined, room, react, error, left }` mit, sendet über `UI.send()`
+(in den Apps als `wsSend()`), ruft beim Start `UI.resume()` und in jedem
+`render()` `UI.update()`.
+
+Der **Chat** gehört zum Raum: `{t:"chat", text}` an den Server (max. 200 Zeichen,
+eine Zeile pro Sekunde, der Browser puffert schnellere), der schickt
+`{t:"chat", line:{id, at, pi, name, avatar, text}}` an alle im Raum inklusive
+Zuschauer und hält die letzten 100 Zeilen in `room.chat`, solange der Raum lebt;
+nach `joined`/`watching` kommt der Verlauf als `{t:"chatlog", list}`. Im
+Warteraum steht der Chat unter den Spielern, im Spiel hinter dem Sprechblasen-Knopf
+`#chatBtn` neben dem Menü, mit Zähler für Ungelesenes; neue Zeilen erscheinen dort
+kurz als Blase über dem Spieler (`bubble`-Haken des Spiels). Getestet in
+`maedn/test/chat.test.js`.
+
 Client-seitig (`app.js`, WS-Message-Handler):
 
 ```js

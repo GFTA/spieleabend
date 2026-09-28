@@ -419,7 +419,7 @@
       $("#handoff").hidden = true; $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
-    updateNet();
+    UI.update();
   }
 
   // where the opponents sit, in seating order starting with the player after me
@@ -802,90 +802,28 @@
 
 
   // connection pill: only after a short grace period, phones drop sockets all the time
-  let netT = null;
-  function updateNet() {
-    const down = mode === "online" && wantOnline && !(ws && ws.readyState === 1);
-    if (!down) { clearTimeout(netT); netT = null; $("#net").hidden = true; return; }
-    if (!netT && $("#net").hidden) netT = setTimeout(() => { netT = null; if (mode === "online" && !(ws && ws.readyState === 1)) $("#net").hidden = false; }, 2000);
-  }
 
   // ---------- online connection ----------
-  let ws = null, wantOnline = false, retry = 0, queue = [];
-  function connect() {
-    if (ws && ws.readyState <= 1) return;
-    // each socket only ever touches itself: a late close of an old socket must not
-    // wipe out the new one (that lost join messages after "room gone")
-    const sock = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
-    ws = sock;
-    sock.onopen = () => {
-      if (ws !== sock) { sock.close(); return; }
-      retry = 0; clearTimeout(giveUpT);
-      if (serverState !== "ok") { serverState = "ok"; server = server || {}; }
-      const s = store.get(K.online);
-      if (s && !queue.some((m) => m.t === "create" || m.t === "join")) sock.send(JSON.stringify({ t: "resume", code: s.code, secret: s.secret }));
-      for (const m of queue.splice(0)) sock.send(JSON.stringify(m));
-      render();
-    };
-    sock.onmessage = (e) => { if (ws !== sock) return; try { onMsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
-    sock.onclose = () => {
-      if (ws !== sock) return;
-      ws = null;
-      if (wantOnline) setTimeout(connect, Math.min(8000, 400 * 2 ** retry++));
-      render();
-    };
-  }
-  let giveUpT = null;
-  function wsSend(m) {
-    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; }
-    if (m.t === "create" || m.t === "join") {
-      queue.push(m); wantOnline = true; retry = 0; connect();
-      clearTimeout(giveUpT);
-      giveUpT = setTimeout(() => {
-        if (ws && ws.readyState === 1) return;
-        queue = []; wantOnline = false;
-        if (ws) ws.close();
-        toast("Der Spiel-Server antwortet nicht. Prüf die Adresse oder die Internetverbindung.");
-        render();
-      }, 8000);
-      return true;
-    }
-    return false;
-  }
-  function onMsg(m) {
-    if (m.t === "joined") {
-      store.set(K.online, { code: m.code, secret: m.secret });
-      wantOnline = true;
-      mode = "online";
-      if (location.search) history.replaceState(null, "", location.pathname);
-      wake();
-    } else if (m.t === "room") {
-      R = m; mode = "online";
-      if (m.view) {
-        const v = m.view;
-        for (const ev of m.events || []) {
-          if (ev.t === "played") { sfx("card"); playFrom = ev.pi; }
-          if ((ev.t === "drew" || ev.t === "took") && ev.pi === v.me) sfx("draw");
-          if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi === v.me) drawFx = true;
-          ruleEvent(ev, v.players, v.me);
-          if (ev.t === "uno") { flashUno(ev.pi === v.me ? "" : v.players[ev.pi].name); sfx("uno"); }
-          if (ev.t === "penalty") { toast(ev.pi === v.me ? "Zu langsam: 2 Strafkarten!" : `${v.players[ev.pi].name} war zu langsam: 2 Strafkarten!`); sfx("bad"); }
-          if (ev.t === "drew" && ev.pi === v.me && v.drawnId == null) {
-            const c = v.hand.find((x) => x.id === ev.id);
-            if (c) toast(`Gezogen: ${G.cardName(c)}. Passt nicht, dein Zug ist vorbei.`);
-          }
+  function wsSend(m) { return UI.send(m); }
+  // a room update from the server: sounds and notes for what just happened, then draw
+  function onRoom(m) {
+    R = m; mode = "online";
+    if (m.view) {
+      const v = m.view;
+      for (const ev of m.events || []) {
+        if (ev.t === "played") { sfx("card"); playFrom = ev.pi; }
+        if ((ev.t === "drew" || ev.t === "took") && ev.pi === v.me) sfx("draw");
+        if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi === v.me) drawFx = true;
+        ruleEvent(ev, v.players, v.me);
+        if (ev.t === "uno") { flashUno(ev.pi === v.me ? "" : v.players[ev.pi].name); sfx("uno"); }
+        if (ev.t === "penalty") { toast(ev.pi === v.me ? "Zu langsam: 2 Strafkarten!" : `${v.players[ev.pi].name} war zu langsam: 2 Strafkarten!`); sfx("bad"); }
+        if (ev.t === "drew" && ev.pi === v.me && v.drawnId == null) {
+          const c = v.hand.find((x) => x.id === ev.id);
+          if (c) toast(`Gezogen: ${G.cardName(c)}. Passt nicht, dein Zug ist vorbei.`);
         }
       }
-      render();
-    } else if (m.t === "react") {
-      bubble(m.pi, m.e);
-    } else if (m.t === "error") {
-      toast(m.msg);
-    } else if (m.t === "gone" || m.t === "left") {
-      // keep the socket: a join or create sent a moment ago is answered on it
-      store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
-      render();
     }
+    render();
   }
 
   // ---------- events ----------
@@ -897,7 +835,16 @@
   const UI = window.RoomUI({
     room: () => R, view: () => V, mode: () => mode, server: () => server,
     watching: (v) => (v === undefined ? watching : (watching = v)),
-    send: wsSend, toast, render: () => render(), maxPlayers: 10,
+    onlineKey: K.online,
+    on: {
+      opened() { if (serverState !== "ok") { serverState = "ok"; server = server || {}; } },
+      joined(m) { mode = "online"; wake(); },
+      room: onRoom,
+      react(m) { bubble(m.pi, m.e); },
+      left() { R = null; mode = null; }
+    },
+    bubble: (pi, text) => bubble(pi, text),
+    toast, render: () => render(), maxPlayers: 10,
     cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
     // goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
@@ -1046,7 +993,6 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") { abortDrag(); return; }
     if (mode) wake();
-    if (wantOnline && !(ws && ws.readyState <= 1)) { retry = 0; connect(); }
   });
 
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -1093,7 +1039,7 @@
   const code = new URLSearchParams(location.search).get("r");
   if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
   render();
-  if (webHost && (store.get(K.online) && !code)) { wantOnline = true; connect(); }
+  if (webHost && (store.get(K.online) && !code)) UI.resume();
   detectServer().then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }

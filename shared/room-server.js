@@ -45,6 +45,7 @@ module.exports = function roomServer(g) {
   const MAX_PLAYERS = g.maxPlayers;
   const MAX_WATCHERS = g.watchers || 0;
   const MAX_ROOMS = 200;
+  const CHAT_MAX = 200, CHAT_KEEP = 100; // characters per chat line, lines kept per room
   const ROOM_TTL = 12 * 3600 * 1000;
   const IDLE_TTL = 5 * 60 * 1000; // close a room nobody has touched in a while, even mid-game
   const BOT_MS = +process.env.BOT_MS || 1100; // how long a computer player "thinks" (default bot plan)
@@ -105,6 +106,7 @@ module.exports = function roomServer(g) {
     if (!sockets.has(room.code)) sockets.set(room.code, new Set());
     sockets.get(room.code).add(ws);
     send(ws, { t: "watching", code: room.code, name });
+    send(ws, { t: "chatlog", list: room.chat || [] });
     broadcast(room);
   }
 
@@ -219,6 +221,7 @@ module.exports = function roomServer(g) {
       if (room.state && room.state.players[pid]) room.state.players[pid].bot = false;
     }
     send(ws, { t: "joined", code: room.code, pid, secret: m.secret });
+    send(ws, { t: "chatlog", list: room.chat || [] });
   }
   function detach(ws) {
     if (!ws.code) return;
@@ -393,6 +396,21 @@ module.exports = function roomServer(g) {
         if (a.t === "timeout") return; // only the server's clock may do that
         const res = apply(room, ws.pid, a);
         if (!res.ok) err(res.error);
+        return;
+      }
+      case "chat": { // a chat line for everyone in the room, watchers too; the last CHAT_KEEP stay while the room lives
+        if (!room || ws.pid == null) return;
+        const text = String(msg.text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, CHAT_MAX);
+        if (!text) return;
+        const now = Date.now();
+        if (now - (ws.lastChat || 0) < 1000) return err("Nicht so schnell, eine Nachricht pro Sekunde.");
+        ws.lastChat = now;
+        const me = ws.pid >= 0 ? room.members[ws.pid] : null;
+        const line = { id: (room.chatSeq = (room.chatSeq || 0) + 1), at: now, pi: ws.pid, name: me ? me.name : ws.watchName, avatar: me ? avatarOf(me.avatar) : avatarOf(ws.watchAvatar), text };
+        room.chat = (room.chat || []).concat(line).slice(-CHAT_KEEP);
+        room.touched = now;
+        for (const s of sockets.get(room.code) || []) if (s.pid != null) send(s, { t: "chat", line });
+        saveRooms();
         return;
       }
       case "react": { // emoji for everyone at the table, at most one per second

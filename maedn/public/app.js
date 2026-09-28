@@ -272,7 +272,7 @@
       $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
-    updateNet();
+    UI.update();
   }
 
   const DIE = '<b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b>';
@@ -678,7 +678,17 @@
   const UI = window.RoomUI({
     room: () => R, view: () => V, mode: () => mode, server: () => server,
     watching: (v) => (v === undefined ? watching : (watching = v)),
-    send: wsSend, toast, render: () => render(), maxPlayers: G.MAX_PLAYERS, watchers: true,
+    onlineKey: K.online,
+    on: {
+      opened() { if (serverState !== "ok") { serverState = "ok"; server = server || {}; } },
+      joined(m) { mode = "online"; wake(); },
+      room(m) { R = m; mode = "online"; inflight = false; if (m.view) handleEvents(m.events, m.view); render(); },
+      react(m) { bubble(m.pi, m.e, m.name); },
+      error(m) { inflight = false; },
+      left() { R = null; mode = null; }
+    },
+    bubble: (pi, text, name) => bubble(pi, text, name),
+    toast, render: () => render(), maxPlayers: G.MAX_PLAYERS, watchers: true,
     cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
     memberExtra: (m, i) => { const seats = G.SEATS[Math.max(2, R.members.length)] || G.SEATS[4]; return `<i class="dot c${seats[i]}" title="${G.COLORS[seats[i]]}"></i>`; },
     // goal, computer strength and house rules; the host picks, everyone sees it
@@ -734,84 +744,9 @@
 
 
   // connection pill: only after a short grace period, phones drop sockets all the time
-  let netT = null;
-  function updateNet() {
-    const down = mode === "online" && wantOnline && !(ws && ws.readyState === 1);
-    if (!down) { clearTimeout(netT); netT = null; $("#net").hidden = true; return; }
-    if (!netT && $("#net").hidden) netT = setTimeout(() => { netT = null; if (mode === "online" && !(ws && ws.readyState === 1)) $("#net").hidden = false; }, 2000);
-  }
 
   // ---------- online connection ----------
-  let ws = null, wantOnline = false, retry = 0, queue = [];
-  function connect() {
-    if (ws && ws.readyState <= 1) return;
-    // each socket only ever touches itself: a late close of an old socket must not
-    // wipe out the new one
-    const sock = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
-    ws = sock;
-    sock.onopen = () => {
-      if (ws !== sock) { sock.close(); return; }
-      retry = 0; clearTimeout(giveUpT);
-      if (serverState !== "ok") { serverState = "ok"; server = server || {}; }
-      const s = store.get(K.online);
-      if (s && !queue.some((m) => m.t === "create" || m.t === "join"))
-        sock.send(JSON.stringify(s.watch ? { t: "join", code: s.code, name: s.watch } : { t: "resume", code: s.code, secret: s.secret }));
-      for (const m of queue.splice(0)) sock.send(JSON.stringify(m));
-      render();
-    };
-    sock.onmessage = (e) => { if (ws !== sock) return; try { onMsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
-    sock.onclose = () => {
-      if (ws !== sock) return;
-      ws = null;
-      if (wantOnline) setTimeout(connect, Math.min(8000, 400 * 2 ** retry++));
-      render();
-    };
-  }
-  let giveUpT = null;
-  function wsSend(m) {
-    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; }
-    if (m.t === "create" || m.t === "join") {
-      queue.push(m); wantOnline = true; retry = 0; connect();
-      clearTimeout(giveUpT);
-      giveUpT = setTimeout(() => {
-        if (ws && ws.readyState === 1) return;
-        queue = []; wantOnline = false;
-        if (ws) ws.close();
-        toast("Der Spiel-Server antwortet nicht. Prüf die Adresse oder die Internetverbindung.");
-        render();
-      }, 8000);
-      return true;
-    }
-    return false;
-  }
-  function onMsg(m) {
-    if (m.t === "watching") {
-      store.set(K.online, { code: m.code, watch: m.name });
-      wantOnline = true; mode = "online";
-      if (location.search) history.replaceState(null, "", location.pathname);
-      toast("Das Spiel läuft schon oder der Raum ist voll: Du schaust zu.");
-    } else if (m.t === "joined") {
-      store.set(K.online, { code: m.code, secret: m.secret });
-      wantOnline = true;
-      mode = "online";
-      if (location.search) history.replaceState(null, "", location.pathname);
-      wake();
-    } else if (m.t === "room") {
-      R = m; mode = "online"; inflight = false;
-      if (m.view) handleEvents(m.events, m.view);
-      render();
-    } else if (m.t === "react") {
-      bubble(m.pi, m.e, m.name);
-    } else if (m.t === "error") {
-      inflight = false;
-      toast(m.msg);
-    } else if (m.t === "gone" || m.t === "left") {
-      // keep the socket: a join or create sent a moment ago is answered on it
-      store.del(K.online); R = null; mode = null;
-      if (m.t === "gone") toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
-      render();
-    }
-  }
+  function wsSend(m) { return UI.send(m); }
 
   // ---------- events ----------
   // a small board on the start screen, mid-game
@@ -908,7 +843,6 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (mode) wake();
-    if (wantOnline && !(ws && ws.readyState <= 1)) { retry = 0; connect(); }
   });
 
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -940,7 +874,7 @@
   const code = new URLSearchParams(location.search).get("r");
   if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
   render();
-  if (webHost && (store.get(K.online) && !code)) { wantOnline = true; connect(); }
+  if (webHost && (store.get(K.online) && !code)) UI.resume();
   detectServer().then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }
