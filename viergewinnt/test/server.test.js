@@ -61,6 +61,8 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   await a.next((m) => m.t === "room" && m.members[1].avatar === "🦖");
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
+  b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
+  await a.next((m) => m.t === "room" && m.members[1].ready);
   a.send({ t: "settings", size: 7 });
   await a.next((m) => m.t === "room" && m.size === 7);
   a.send({ t: "start" });
@@ -99,7 +101,7 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   await a.next((m) => m.t === "room" && m.members.length === 1 && m.watchers.length === 0);
   a.send({ t: "bot" });
   const withBot = await a.next((m) => m.t === "room" && m.members.length === 2 && m.members[1].bot);
-  assert.deepStrictEqual(withBot.members[1], { name: "Robo Rudi", bot: true, avatar: "🤖", online: true });
+  assert.deepStrictEqual(withBot.members[1], { name: "Robo Rudi", bot: true, avatar: "🤖", online: true, lobby: false, ready: false });
   a.send({ t: "settings", level: 1 });
   a.send({ t: "start" });
   v = (await a.next((m) => m.t === "room" && m.view)).view;

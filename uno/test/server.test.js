@@ -59,6 +59,8 @@ test("create, join, start and play over WebSockets", async () => {
 
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
+  b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
+  await a.next((m) => m.t === "room" && m.members[1].ready);
   a.send({ t: "start" });
   const sa = await a.next((m) => m.t === "room" && m.view);
   const sb = await b.next((m) => m.t === "room" && m.view);

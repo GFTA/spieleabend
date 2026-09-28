@@ -258,6 +258,12 @@ h1 span{color:var(--accent)}
 .homelink:hover{color:var(--text)}
 a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
 .gamerules ul,.gamerules ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45}
+/* waiting room: ready up, watch a running game, rematch status */
+.members .tag.ok{background:var(--green);color:#fff}
+.members .tag.wait{background:var(--surface);color:var(--muted)}
+.nowplaying{display:block;padding:12px 14px;border-radius:14px;background:var(--bg2);font-size:14px;line-height:1.45;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.revotes{text-align:center;font-size:13px;line-height:1.5;margin:0}
+.revotes span{white-space:nowrap}
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>
@@ -332,6 +338,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
 
   <!-- ===== lobby ===== -->
   <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <div class="panel nowplaying" id="nowPlaying" hidden></div>
     <div class="panel">
       <div class="label" style="text-align:center">Raum-Code</div>
       <div class="roomcode" id="roomCode"></div>
@@ -365,6 +372,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
       <p class="hint" id="lobbyHint"></p>
     </div>
     <div class="lobby-actions">
+      <button class="btn btn-primary btn-block" id="readyBtn" type="button" hidden>Bereit</button>
       <button class="btn btn-primary btn-block" id="startOnline" type="button">Spiel starten</button>
       <button class="btn btn-ghost btn-block" id="leaveLobby" type="button">Raum verlassen</button>
       <button class="btn btn-ghost btn-block" id="closeLobby" type="button" hidden>Raum für alle schließen</button>
@@ -413,6 +421,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
     <ol class="ranking" id="reRanking"></ol>
     <div class="histwrap" id="reHistWrap"><table class="hist" id="reHist"></table></div>
     <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
     <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
   </div>
 </div>

@@ -69,6 +69,8 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   assert.match((await a.next((m) => m.t === "error")).msg, /Mehr als 4/);
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
+  b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
+  await a.next((m) => m.t === "room" && m.members[1].ready);
   a.send({ t: "settings", goal: 2, level: 1, rules: { rush: true } });
   await a.next((m) => m.t === "room" && m.goal === 2 && m.rules.rush);
 

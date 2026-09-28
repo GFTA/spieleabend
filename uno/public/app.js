@@ -30,6 +30,7 @@
   let L = null;           // local engine state
   let hidden = true;      // local: hand-off screen is up
   let R = null;           // last online room message
+  let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
   let sel = null;         // selected card id (tap fallback)
   let pendingWild = null;
@@ -427,7 +428,9 @@
       scheduleLocalBot();
     } else if (mode === "online" && R) {
       $("#handoff").hidden = true;
-      if (!R.view) { V = null; showScreen("lobby"); renderLobby(); $("#roundEnd").hidden = true; }
+      const meM = R.members[R.you], waiting = !!(R.view && meM && meM.lobby);
+      if (!waiting) watching = false;
+      if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); renderLobby(); renderReady(); $("#roundEnd").hidden = true; }
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
       V = null;
@@ -787,14 +790,21 @@
     $("#reText").textContent = `${last.pts} Punkte aus den Karten der anderen.` + (V.goal > 0 && !last.over ? ` Gespielt wird bis ${V.goal}.` : "");
     scoreList($("#reScores"), last.winner);
     $("#reBtn").textContent = last.over ? "Revanche" : "Nächste Runde";
-    if (mode === "online" && R && last.over) { // a rematch needs everyone at the table
-      const voters = R.members.map((m, i) => i).filter((i) => !R.members[i].bot && R.members[i].online);
-      const yes = voters.filter((i) => (R.rematch || []).includes(i)).length;
-      $("#reBtn").textContent = (R.rematch || []).includes(R.you) ? `Warte auf die anderen (${yes}/${voters.length})` : `Revanche (${yes}/${voters.length} bereit)`;
+    if (mode === "online" && R && last.over) { // a rematch needs everyone still at the table
+      const n = V.players.length, votes = R.rematch || [];
+      const table = R.members.map((m, i) => i).filter((i) => i < n && !R.members[i].lobby && !R.members[i].bot && R.members[i].online);
+      const yes = table.filter((i) => votes.includes(i)).length;
+      $("#reBtn").textContent = votes.includes(R.you)
+        ? (yes === table.length ? "Zu wenige für eine Revanche, warte auf Mitspieler" : `Warte auf die anderen (${yes}/${table.length})`)
+        : `Revanche (${yes}/${table.length} bereit)`;
+      $("#reBtn").hidden = V.me < 0;
+      $("#reVotes").innerHTML = rematchStatus(n, votes);
     }
+    $("#reVotes").hidden = !(mode === "online" && R && last.over);
     const back = $("#reBack");
     if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }
     else { back.hidden = R.host !== V.me; back.textContent = "Zurück in den Warteraum"; }
+    if (mode === "online" && last.over) back.hidden = !R.members[R.you]; // after a game everyone decides for themselves
   }
 
   function renderHome() {
@@ -1058,6 +1068,63 @@
   // back to the Spieleabend start page: games.cool-kidz.net behind the tunnel, port 8090 of the same box in the LAN
   if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
     for (const a of document.querySelectorAll("[data-start-link]")) a.href = `${location.protocol}//${location.hostname}:8090/`;
+  // ---------- waiting room: ready up, or watch the game that runs ----------
+  function renderReady() {
+    const me = R.members[R.you], host = R.you === R.host, run = R.view;
+    const over = !!(run && run.phase === "roundEnd" && run.last && run.last.over);
+    const n = run ? run.players.length : 0, playing = (i) => !!run && i < n && !R.members[i].lobby;
+    const btn = $("#readyBtn"), start = $("#startOnline"), box = $("#nowPlaying");
+    btn.hidden = !me || me.bot;
+    if (run && !over) { btn.dataset.act = "watch"; btn.textContent = "Zuschauen"; btn.classList.add("btn-primary"); }
+    else {
+      btn.dataset.act = "ready";
+      btn.textContent = me && me.ready ? (over ? "Bei der Revanche dabei ✓" : "Bereit ✓") : (over ? "Bei der Revanche mitspielen" : "Bereit");
+      btn.classList.toggle("btn-primary", !(me && me.ready));
+    }
+    box.hidden = !run;
+    if (run) {
+      const names = R.members.filter((m, i) => playing(i)).map((m) => esc(m.name)).join(", ");
+      box.innerHTML = over
+        ? `<b>Das Spiel ist vorbei.</b> ${names} stimmen gerade über eine Revanche ab. Willst du mitspielen, tippe auf „Bei der Revanche mitspielen“.`
+        : `<b>Gerade läuft ein Spiel:</b> ${names}. Du kannst zuschauen. Ist es vorbei, kannst du bei der Revanche einsteigen.`;
+    }
+    const go = R.members.filter((m, i) => m.bot || (m.online && (m.ready || i === R.host)));
+    start.hidden = !host || !!run;
+    start.disabled = go.length < 2;
+    start.textContent = go.length < 2 ? "Warte, bis jemand bereit ist …" : `Spiel starten (${go.length} Spieler)`;
+    // who is ready, who plays, who waits
+    [...document.querySelectorAll("#members > li")].forEach((li, i) => {
+      const m = R.members[i];
+      if (!m || m.bot) return;
+      const t = run ? (playing(i) ? ["spielt", ""] : m.ready ? ["dabei", "ok"] : ["wartet", "wait"]) : m.ready ? ["bereit", "ok"] : null;
+      if (t) li.insertAdjacentHTML("beforeend", `<span class="tag ${t[1]}">${t[0]}</span>`);
+    });
+    if (run) for (const el of document.querySelectorAll("#lobby .seg button, #lobby .rules-list input")) el.disabled = true;
+    if (!me) return;
+    const people = R.members.filter((m) => !m.bot && m.online), ready = people.filter((m) => m.ready).length;
+    $("#lobbyHint").textContent = run
+      ? (over ? "" : "Wer im Warteraum ist, spielt die nächste Runde mit, wenn er sich bereit meldet.")
+      : (me.ready ? `Du bist bereit (${ready} von ${people.length}). Sind alle bereit, geht es los.` : `Tippe auf „Bereit“, wenn du mitspielen willst (${ready} von ${people.length} bereit).`) +
+        (host ? " Mit „Spiel starten“ geht es sofort los, wer nicht bereit ist, wartet dann hier." : "");
+  }
+  // after a game: who is in for the rematch, who is still deciding, who went back, who left
+  function rematchStatus(n, votes) {
+    const groups = { in: [], extra: [], wait: [], lobby: [], gone: [] };
+    R.members.forEach((m, i) => {
+      if (m.bot) return;
+      if (i < n && !m.lobby) groups[!m.online ? "gone" : votes.includes(i) ? "in" : "wait"].push(m);
+      else if (m.ready && m.online) groups.extra.push(m);
+      else if (i < n) groups[m.online ? "lobby" : "gone"].push(m);
+    });
+    return [["in", "Bereit"], ["extra", "Aus dem Warteraum dabei"], ["wait", "Überlegt noch"], ["lobby", "Zurück im Warteraum"], ["gone", "Gegangen"]]
+      .filter(([k]) => groups[k].length).map(([k, t]) => `<span><b>${t}:</b> ${groups[k].map((m) => esc(m.name)).join(", ")}</span>`).join(" · ");
+  }
+  $("#readyBtn").addEventListener("click", () => {
+    if ($("#readyBtn").dataset.act === "watch") { watching = true; render(); return; }
+    const me = R && R.members[R.you];
+    if (me) wsSend({ t: "ready", on: !me.ready });
+  });
+
   $("#leaveLobby").addEventListener("click", () => wsSend({ t: "leave" }));
   // host closes the room for everyone; tap twice, like the menu actions
   let closeArm = null;
@@ -1101,6 +1168,8 @@
   $("#reBtn").addEventListener("click", () => doAct({ t: "next" }));
   $("#reBack").addEventListener("click", () => {
     if (mode === "local") { store.del(K.local); L = null; mode = null; render(); }
+    else if (R && R.members[R.you] && R.members[R.you].lobby) { watching = false; render(); }
+    else if (V && V.phase === "roundEnd" && V.last && V.last.over) wsSend({ t: "lobby" });
     else wsSend({ t: "end" });
   });
 
@@ -1131,7 +1200,15 @@
         armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; render(); })
       );
     } else if (mode === "online" && R) {
-      if (R.you === R.host && V && (V.phase === "play" || V.phase === "drawn") && V.cur !== V.me)
+      if (R.members[R.you] && R.members[R.you].lobby) { // watching from the waiting room: no player actions
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "btn btn-block"; b.textContent = "Zurück in den Warteraum";
+        b.addEventListener("click", () => { watching = false; $("#menu").hidden = true; render(); });
+        box.append(b);
+        if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
+        box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+      } else {
+if (R.you === R.host && V && (V.phase === "play" || V.phase === "drawn") && V.cur !== V.me)
         box.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
       if (V && V.phase !== "roundEnd" && !(V.players[V.me] || {}).out)
         box.append(armed("Runde aufgeben", () => wsSend({ t: "act", a: { t: "surrender" } })));
@@ -1141,6 +1218,7 @@
       if (R.you === R.host) box.append(armed("Spiel beenden, zurück in den Warteraum", () => wsSend({ t: "end" })));
       if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+      }
     }
     $("#menu").hidden = false;
   });

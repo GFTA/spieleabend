@@ -43,6 +43,8 @@ test("rooms, rolls and holds are shared live", async () => {
   assert.strictEqual(lobby.members[0].avatar, "🐙");
   assert.ok(lobby.members[1].avatar && lobby.members[1].avatar !== "not-an-emoji");
   assert.strictEqual(lobby.rules.firstSets, true);
+  b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
+  await a.next((m) => m.t === "room" && m.members[1].ready);
   a.send({ t: "start" });
   const s = await b.next((m) => m.t === "room" && m.view);
   const cur = s.view.cur;

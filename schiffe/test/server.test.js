@@ -72,10 +72,12 @@ test("create, join, place and play over WebSockets, with a computer player", asy
 
   a.send({ t: "bot" });
   const withBot = await b.next((m) => m.t === "room" && m.members.length === 3);
-  assert.deepStrictEqual(withBot.members[2], { name: "Admiral Byte", bot: true, avatar: "🤖", online: true });
+  assert.deepStrictEqual(withBot.members[2], { name: "Admiral Byte", bot: true, avatar: "🤖", online: true, lobby: false, ready: false });
 
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
+  b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
+  await a.next((m) => m.t === "room" && m.members[1].ready);
   a.send({ t: "start" });
   const sa = await a.next((m) => m.t === "room" && m.view);
   assert.strictEqual(sa.view.phase, "place");
@@ -87,19 +89,18 @@ test("create, join, place and play over WebSockets, with a computer player", asy
   assert.strictEqual(rooms.get(joined.code).members[0].avatar, "🐙");
   assert.strictEqual(sa.view.players[1].ships, null);
 
-  // joining a running game: Chris watches without seeing any fleet
+  // joining a running game with a seat free: Chris waits in the waiting room and may watch,
+  // seeing the table without any fleet, but can't play along
   const c = client(port); await c.open;
   c.send({ t: "join", code: joined.code, name: "Chris" });
-  assert.deepStrictEqual(await c.next((m) => m.t === "watching"), { t: "watching", code: joined.code, name: "Chris" });
+  assert.strictEqual((await c.next((m) => m.t === "joined")).pid, 3);
   const watched = await c.next((m) => m.t === "room" && m.view);
-  assert.strictEqual(watched.you, -1);
+  assert.strictEqual(watched.you, 3);
   assert.strictEqual(watched.view.me, -1);
+  assert.strictEqual(watched.members[3].lobby, true);
   assert.ok(watched.view.players.every((p) => p.ships === null));
-  assert.deepStrictEqual((await a.next((m) => m.t === "room" && m.watchers.length === 1)).watchers, ["Chris"]);
   c.send({ t: "act", a: { t: "place", ships: FLEET } });
-  assert.match((await c.next((m) => m.t === "error")).msg, /Unbekannter/);
-  c.send({ t: "sit" });
-  assert.match((await c.next((m) => m.t === "error")).msg, /Warte/);
+  assert.match((await c.next((m) => m.t === "error")).msg, /nicht im Spiel/);
 
   a.send({ t: "act", a: { t: "place", ships: [[0, 1]] } });
   assert.match((await a.next((m) => m.t === "error")).msg, /vollständig/);
@@ -137,7 +138,7 @@ test("create, join, place and play over WebSockets, with a computer player", asy
   b.send({ t: "react", e: "🎉" });
   assert.deepStrictEqual(await a.next((m) => m.t === "react"), { t: "react", pi: 1, e: "🎉" });
   c.send({ t: "react", e: "Gut gespielt!" });
-  assert.deepStrictEqual(await b.next((m) => m.t === "react" && m.pi === -1), { t: "react", pi: -1, e: "Gut gespielt!", name: "Chris" });
+  assert.deepStrictEqual(await b.next((m) => m.t === "react" && m.pi === 3), { t: "react", pi: 3, e: "Gut gespielt!" });
 
   // reconnect with the secret keeps the seat
   const secret = joined.secret;
@@ -151,12 +152,9 @@ test("create, join, place and play over WebSockets, with a computer player", asy
   a2.send({ t: "end" });
   await a2.next((m) => m.t === "room" && !m.view);
   a2.send({ t: "unbot", i: 2 });
-  const noBot = await a2.next((m) => m.t === "room" && m.members.length === 2);
+  const noBot = await a2.next((m) => m.t === "room" && m.members.length === 3);
   assert.ok(!noBot.members.some((m) => m.bot));
-  // the spectator takes the free seat
-  c.send({ t: "sit" });
-  assert.strictEqual((await c.next((m) => m.t === "joined")).pid, 2);
-  await a2.next((m) => m.t === "room" && m.members.length === 3 && m.watchers.length === 0);
+  assert.deepStrictEqual(noBot.members.map((m) => [m.name, m.lobby]), [["Anna", false], ["Ben", false], ["Chris", false]]);
   c.send({ t: "leave" });
   await c.next((m) => m.t === "left");
   await a2.next((m) => m.t === "room" && m.members.length === 2);

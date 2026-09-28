@@ -290,34 +290,56 @@ Client-seitig (`app.js`, WS-Message-Handler):
 }
 ```
 
-### Revanche nur, wenn alle wollen
+### Warteraum, Bereit-System und Revanche
 
-Ist ein Online-Spiel vorbei (`state.phase === "roundEnd" && state.last.over`),
-startet `{t:"act", a:{t:"next"}}` nicht sofort neu, sondern zählt als
-Stimme. Erst wenn jeder Mitspieler zugestimmt hat, geht das `next` an die
-Spiellogik. Computer-Gegner stimmen automatisch zu. Wer offline ist,
-blockiert nicht, und Zuschauer (`pid < 0`) stimmen nicht mit. „Nächste Runde“
-mitten in einem Spiel bleibt ohne Abstimmung.
+Ein Raum kann gleichzeitig Leute **im Spiel** und Leute **im Warteraum** haben.
+Die Invariante, auf der alles aufbaut: Während ein Spiel läuft, sind
+`room.members[0..n)` seine Spieler (`n = state.players.length`,
+Mitgliedsnummer = Platz im Spiel). Wer dahinter steht oder `.lobby` gesetzt
+hat, ist im Warteraum. `seatPlayers(room, play)` sortiert die Mitglieder bei
+jedem Spielstart so um (Spieler nach vorn, Rest dahinter) und zieht Sockets
+und Host mit. Deshalb funktioniert Wiederverbinden per `secret` weiter: Man
+landet auf dem neuen Index.
 
-```js
-function rematchReady(room, pid) {
-  const on = online(room.code);
-  room.rematch = (room.rematch || []).filter((i) => i !== pid).concat(pid);
-  const ready = room.members.every((m, i) => m.bot || !on.has(i) || room.rematch.includes(i));
-  if (ready) room.rematch = null;
-  return ready;
-}
-// in case "act", direkt nach const a = msg.a || {};
-if (a.t === "next" && room.state.phase === "roundEnd" && room.state.last && room.state.last.over) {
-  if (ws.pid == null || ws.pid < 0) return;
-  if (!rematchReady(room, ws.pid)) { room.touched = Date.now(); broadcast(room); saveRooms(); return; }
-}
-```
+- **Bereit:** Im Warteraum meldet man sich mit `{t:"ready", on}` bereit
+  (`member.ready`). Sind alle anwesenden Menschen bereit, startet das Spiel von
+  selbst (`autoStart`). Der Host kann mit „Spiel starten“ sofort starten, dann
+  spielen die Bereiten, der Host und die Computer mit, der Rest wartet.
+  Mindestens zwei Spieler, nicht nur Computer.
+- **Während ein Spiel läuft**, steht im Warteraum statt „Bereit“ der Knopf
+  **„Zuschauen“** (rein clientseitig, `watching = true`). Zusätzlich gibt es
+  einen Hinweis „Gerade läuft ein Spiel: …“. Warteraum-Mitglieder bekommen die
+  Zuschauer-Ansicht (`view(state, -1)`), dürfen nicht `act`en („Du bist
+  gerade nicht im Spiel.“) und haben im Menü nur „Zurück in den Warteraum“,
+  „Raum verlassen“ und, als Host, „Raum für alle schließen“. Wer während
+  eines Spiels beitritt, landet ebenfalls im Warteraum statt abgewiesen zu
+  werden; nur bei vollem Raum wird man reiner Zuschauer (Spiele mit
+  Zuschauer-Modus).
+- **Nach dem Spiel** (`phase === "roundEnd" && last.over`) wählt jeder selbst:
+  „Revanche“ (`{t:"act", a:{t:"next"}}` zählt als Stimme, `room.rematch`) oder
+  „Zurück in den Warteraum“ (`{t:"lobby"}`). Wer den Tab schließt, gilt als
+  gegangen. `checkRematch(room)` läuft nach jeder Stimme, jedem Wechsel in den
+  Warteraum, jedem Bereit-Melden und jedem Verbindungsabbruch:
+  - noch jemand am Tisch, der online ist und nicht abgestimmt hat → warten
+  - alle abgestimmt → Revanche mit ihnen, den Computern am Tisch und allen,
+    die sich im Warteraum bereit gemeldet haben („Bei der Revanche
+    mitspielen“). Gleiche Besetzung wie vorher → die Spiel-Engine macht ihr
+    eigenes `next`, sonst startet ein neues Spiel in neuer Besetzung.
+  - zu wenige (nur eine Person) → der Knopf sagt „Zu wenige für eine
+    Revanche, warte auf Mitspieler“
+  - niemand mehr am Tisch → alle zurück in den Warteraum (`toLobby`)
+- Der Ergebnis-Bildschirm zeigt eine Statuszeile (`#reVotes`): „Bereit · Aus
+  dem Warteraum dabei · Überlegt noch · Zurück im Warteraum · Gegangen“. „Nächste
+  Runde“ mitten in einem Spiel bleibt ohne Abstimmung, und der Host kann über
+  das Menü weiterhin für alle beenden (`{t:"end"}` → `toLobby`).
 
-Die Raum-Nachricht trägt `rematch: room.rematch || []`, „Zurück in den
-Warteraum“ setzt `room.rematch = null`. Der Knopf zeigt den Stand:
-„Revanche (1/3 bereit)“ bzw. nach der eigenen Stimme „Warte auf die anderen
-(2/3)“. Gezählt werden alle menschlichen Mitspieler, die gerade online sind.
+Die Raum-Nachricht trägt pro Mitglied `lobby` und `ready` sowie
+`rematch: room.rematch || []`. Serverseitig ist das ein gemeinsamer Baustein
+(`inGame`, `seatPlayers`, `readyPlayers`, `startWith`, `autoStart`,
+`toLobby`, `checkRematch`), clientseitig `renderReady()` und
+`rematchStatus()`. Beides ist in allen Spielen gleich und nur an den Stellen
+angepasst, an denen die Spiele ihren Zustand anlegen. Durchgetestet in
+`maedn/test/lobby.test.js`.
 
 ### Einstellungen im Warteraum
 

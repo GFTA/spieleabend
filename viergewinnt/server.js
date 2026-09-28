@@ -106,13 +106,13 @@ function watch(ws, room, name) {
 
 function broadcast(room, events) {
   const on = online(room.code);
-  const members = room.members.map((m, i) => ({ name: m.name, bot: !!m.bot, avatar: m.bot ? Game.BOT_AVATAR : avatarOf(m.avatar), online: m.bot || on.has(i) }));
+  const members = room.members.map((m, i) => ({ name: m.name, bot: !!m.bot, avatar: m.bot ? Game.BOT_AVATAR : avatarOf(m.avatar), online: m.bot || on.has(i), lobby: !!room.state && !inGame(room, i), ready: !!m.ready }));
   const seen = watchers(room.code);
   for (const ws of sockets.get(room.code) || []) {
     if (ws.pid == null) continue;
     send(ws, {
       t: "room", code: room.code, you: ws.pid, host: room.host, goal: room.goal, size: room.size, rules: room.rules, members, rematch: room.rematch || [],
-      level: room.level || 2, watchers: seen, view: room.state ? Game.view(room.state, ws.pid) : null, events: events || []
+      level: room.level || 2, watchers: seen, view: room.state ? Game.view(room.state, ws.pid >= 0 && ws.pid < room.state.players.length ? ws.pid : -1) : null, events: events || []
     });
   }
 }
@@ -133,7 +133,7 @@ function detach(ws) {
   if (set) { set.delete(ws); if (!set.size) sockets.delete(ws.code); }
   const room = rooms.get(ws.code);
   ws.code = null; ws.pid = null;
-  if (room) broadcast(room);
+  if (room && !checkRematch(room) && !autoStart(room)) broadcast(room);
 }
 
 // take a seat out of the waiting room and shift everyone behind it
@@ -182,12 +182,12 @@ function handle(ws, msg) {
         if (r.members[same].bot || online(r.code).has(same)) return err(`Der Name „${name}“ ist schon vergeben.`);
         attach(ws, r, same); broadcast(r); return;
       }
-      if (r.state || r.members.length >= MAX_PLAYERS) { // running game or full room: watch instead
+      if (r.members.length >= MAX_PLAYERS) { // full room: watch instead
         if (watchers(r.code).length >= MAX_WATCHERS) return err("Der Raum ist voll, auch zum Zuschauen.");
         ws.watchAvatar = avatarOf(msg.avatar);
         return watch(ws, r, name);
       }
-      r.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar) });
+      r.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar), lobby: !!r.state });
       attach(ws, r, r.members.length - 1);
       broadcast(r); saveRooms();
       return;
@@ -199,15 +199,31 @@ function handle(ws, msg) {
       attach(ws, r, pid); broadcast(r);
       return;
     }
-    case "sit": { // a spectator takes a free seat in the waiting room
+    case "sit": { // a spectator takes a free seat in the waiting room (also while a game runs)
       if (!room || ws.pid !== -1) return;
-      if (room.state) return err("Warte, bis der Host zurück in den Warteraum geht.");
       if (room.members.length >= MAX_PLAYERS) return err(`Der Raum ist voll (${MAX_PLAYERS} Spieler).`);
       const name = ws.watchName;
       if (room.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) return err(`Der Name „${name}“ ist schon vergeben.`);
-      room.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(ws.watchAvatar) });
+      room.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(ws.watchAvatar), lobby: !!room.state });
       attach(ws, room, room.members.length - 1);
       broadcast(room); saveRooms();
+      return;
+    }
+    case "ready": { // waiting room: ready for the next game (or to join the rematch)
+      if (!room || ws.pid == null || ws.pid < 0 || inGame(room, ws.pid) || room.members[ws.pid].bot) return;
+      room.members[ws.pid].ready = !!msg.on;
+      room.touched = Date.now();
+      if (!(room.state ? checkRematch(room) : autoStart(room))) { broadcast(room); saveRooms(); }
+      return;
+    }
+    case "lobby": { // after a game: back to the waiting room instead of a rematch
+      if (!room || !room.state || !inGame(room, ws.pid)) return;
+      const S = room.state;
+      if (S.phase !== "roundEnd" || !S.last || !S.last.over) return;
+      room.members[ws.pid].lobby = true; room.members[ws.pid].ready = false;
+      room.rematch = (room.rematch || []).filter((i) => i !== ws.pid);
+      room.touched = Date.now();
+      if (!checkRematch(room)) { broadcast(room); saveRooms(); }
       return;
     }
     case "close": { // host closes the room for everyone
@@ -219,7 +235,7 @@ function handle(ws, msg) {
       if (!room) return;
       const pid = ws.pid;
       if (pid === -1) { send(ws, { t: "left" }); detach(ws); return; }
-      if (!room.state) removeMember(room, pid);
+      if (!room.state || pid >= room.state.players.length) removeMember(room, pid);
       else if (room.state.phase === "play") apply(room, pid, { t: "giveup" }); // leaving a running game gives it up
       send(ws, { t: "left" });
       detach(ws);
@@ -264,17 +280,19 @@ function handle(ws, msg) {
       if (!room) return;
       if (!isHost) return err("Nur wer den Raum erstellt hat, kann starten.");
       if (room.state) return;
-      if (room.members.length < 2) return err("Es braucht 2 Spieler. Hol dir sonst einen Computer-Gegner dazu.");
-      room.state = Game.newGame(room.members.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })), room.goal, room.size, room.rules, room.level);
-      broadcast(room); saveRooms(); scheduleBot(room);
+      const e = startWith(room, readyPlayers(room, true));
+      if (e) err(e);
       return;
     }
     case "act": {
       if (!room || !room.state) return;
       const a = msg.a || {};
-      if (a.t === "next" && room.state.phase === "roundEnd" && room.state.last && room.state.last.over) { // rematch: everyone votes
-        if (ws.pid == null || ws.pid < 0) return; // spectators don't
-        if (!rematchReady(room, ws.pid)) { room.touched = Date.now(); broadcast(room); saveRooms(); return; }
+      if (ws.pid == null || !inGame(room, ws.pid)) return err("Du bist gerade nicht im Spiel.");
+      if (a.t === "next" && room.state.phase === "roundEnd" && room.state.last && room.state.last.over) { // rematch: a vote
+        room.rematch = (room.rematch || []).filter((i) => i !== ws.pid).concat(ws.pid);
+        room.touched = Date.now();
+        if (!checkRematch(room)) { broadcast(room); saveRooms(); }
+        return;
       }
       if (a.t === "skip" && !isHost) return err("Nur der Host kann Spieler überspringen.");
       const expired = Game.tick(room.state); // a turn clock that ran out goes first
@@ -293,9 +311,7 @@ function handle(ws, msg) {
     }
     case "end": { // host closes the game and returns everyone to the waiting room
       if (!room || !isHost) return;
-      room.state = null;
-      room.rematch = null;
-      scheduleBot(room);
+      toLobby(room);
       broadcast(room); saveRooms();
       return;
     }
@@ -381,14 +397,73 @@ setInterval(() => {
   }
 }, 25000).unref();
 
-// a rematch starts only once every player still at the table has asked for it;
-// computer players always want one, and whoever is offline can't hold it up
-function rematchReady(room, pid) {
+// ---------- waiting room: ready up, sit out, rematch ----------
+// While a game runs, room.members[0..n) are its players (member index = seat, n =
+// state.players.length). Everyone behind them, and anyone marked .lobby, is in the
+// waiting room and may watch. Waiting-room members mark themselves .ready for the next game.
+const inGame = (room, i) => !!room.state && i >= 0 && i < room.state.players.length && !room.members[i].lobby;
+
+// put the next game's players first and everyone else behind them; sockets and host follow
+function seatPlayers(room, play) {
+  const order = play.concat(room.members.map((_, i) => i).filter((i) => !play.includes(i)));
+  const to = new Map(order.map((from, i) => [from, i]));
+  room.members = order.map((i) => room.members[i]);
+  for (const ws of sockets.get(room.code) || []) if (ws.pid != null && ws.pid >= 0) ws.pid = to.get(ws.pid);
+  room.host = to.get(room.host);
+  room.members.forEach((m, i) => { m.lobby = i >= play.length; m.ready = false; });
+  room.rematch = null;
+}
+// who plays next: the computers, and whoever is here and ready (the host too when starting by hand)
+function readyPlayers(room, withHost) {
   const on = online(room.code);
-  room.rematch = (room.rematch || []).filter((i) => i !== pid).concat(pid);
-  const ready = room.members.every((m, i) => m.bot || !on.has(i) || room.rematch.includes(i));
-  if (ready) room.rematch = null;
-  return ready;
+  return room.members.map((_, i) => i).filter((i) => room.members[i].bot || (on.has(i) && (room.members[i].ready || (withHost && i === room.host))));
+}
+// start a new game with these members; returns an error text if that isn't possible
+function startWith(room, play) {
+  play = play.slice(0, MAX_PLAYERS);
+  if (play.length < 2 || play.every((i) => room.members[i].bot)) return "Es braucht mindestens 2 Spieler, die bereit sind.";
+  seatPlayers(room, play);
+  const players = room.members.slice(0, play.length);
+  room.state = Game.newGame(players.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })), room.goal, room.size, room.rules, room.level);
+  room.touched = Date.now();
+  broadcast(room); saveRooms(); scheduleBot(room);
+  return null;
+}
+// everyone here in the waiting room is ready: off we go
+function autoStart(room) {
+  if (room.state) return false;
+  const on = online(room.code);
+  const people = room.members.map((_, i) => i).filter((i) => !room.members[i].bot && on.has(i));
+  if (!people.length || !people.every((i) => room.members[i].ready)) return false;
+  return startWith(room, readyPlayers(room, false)) === null;
+}
+// everyone back to the waiting room
+function toLobby(room) {
+  room.state = null; room.rematch = null;
+  room.members.forEach((m) => { m.lobby = false; m.ready = false; });
+  scheduleBot(room);
+}
+// after a game: the rematch starts once everyone still at the table (and online) has voted,
+// with them, the computers and whoever got ready in the waiting room; if no one is left at
+// the table, everybody goes back to the waiting room. Returns true if it acted.
+function checkRematch(room) {
+  const S = room.state;
+  if (!S || S.phase !== "roundEnd" || !S.last || !S.last.over) return false;
+  const on = online(room.code), votes = room.rematch || [];
+  const table = room.members.map((_, i) => i).filter((i) => inGame(room, i));
+  const people = table.filter((i) => !room.members[i].bot && on.has(i));
+  if (!people.length) { toLobby(room); broadcast(room); saveRooms(); return true; }
+  if (!people.every((i) => votes.includes(i))) return false;
+  const play = room.members.map((_, i) => i).filter((i) => inGame(room, i)
+    ? room.members[i].bot || votes.includes(i)
+    : !room.members[i].bot && room.members[i].ready && on.has(i));
+  if (play.length === S.players.length && play.every((x, i) => x === i)) { // same table: the engine's own rematch
+    room.rematch = null;
+    room.members.forEach((m, i) => { if (i < play.length) { m.lobby = false; m.ready = false; } });
+    apply(room, play.find((i) => !room.members[i].bot), { t: "next" });
+    return true;
+  }
+  return startWith(room, play) === null;
 }
 
 // close a room for good and tell everyone still in it why ("idle" or "closed" by the host)
