@@ -52,5 +52,14 @@
     "players": "1–8 Spieler + Zuschauer",
     "url": "https://hangman.cool-kidz.net/",
     "status": "http://hangman:8080/info"
+  },
+  {
+    "id": "phase10",
+    "name": "Phase 10",
+    "title": "Phase 10",
+    "desc": "Zehn Phasen, eine nach der anderen: Drillinge, Folgen, eine Farbe. Mit Jokern, Aussetzen, Anlegen und Computer-Gegnern.",
+    "players": "2–6 Spieler + Zuschauer",
+    "url": "https://phase10.cool-kidz.net/",
+    "status": "http://phase10:8080/info"
   }
 ]

@@ -1,0 +1,17 @@
+services:
+  phase10:
+    build:
+      context: ..
+      dockerfile: phase10/Dockerfile
+      args:
+        GAME: phase10
+    image: phase10:latest
+    container_name: phase10
+    restart: unless-stopped
+    ports:
+      - "${PHASE10_PORT:-8086}:8080"
+    volumes:
+      - phase10-data:/data
+
+volumes:
+  phase10-data:

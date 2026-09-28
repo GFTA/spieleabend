@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Phase 10">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<!-- ARTIFACT-START -->
+<title>Phase 10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<style>
+:root{--cr:#e0393e;--cy:#e8b21c;--cg:#2f9a55;--cb:#2d6fd6;--felt:#1f1a38;--sea:#1f2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="felt"]{--felt:#123424;--sea:#10363a}
+:root[data-table="ocean"]{--felt:#12233c;--sea:#123057}
+:root[data-table="light"]{--felt:#dde3ee;--sea:#cfe0f3}
+:root[data-table="blossom"]{--felt:#f5d5e2;--sea:#e6d9f4}
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn.small{padding:9px 12px;font-size:14px;border-radius:11px}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+.hero .fan{display:flex;justify-content:center;padding:18px 0 6px}
+.hero .fan .card{--cw:62px;margin:0 -10px;box-shadow:0 10px 20px rgba(0,0,0,.4)}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.prow .kind{flex:none;border:0;border-radius:12px;padding:0 10px;height:48px;min-width:92px;font-weight:800;font-size:13px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.prow .kind svg{width:18px;height:18px}
+.prow .kind[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 0 0 1.5px var(--blue);background:var(--sea)}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+.phaselist{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.phaselist li::marker{font-weight:800;color:var(--muted)}
+/* ---------- cards ---------- */
+.card{--cw:58px;--cc:var(--surface);position:relative;flex:none;display:block;width:var(--cw);aspect-ratio:2/3;border:0;padding:0;border-radius:calc(var(--cw)*.14);
+  background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);color:var(--cc);font-family:var(--display);line-height:1;overflow:hidden;user-select:none;-webkit-user-select:none}
+.card::before{content:"";position:absolute;inset:calc(var(--cw)*.06);border-radius:calc(var(--cw)*.1);background:var(--cc)}
+.card .num{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*.52);color:#fff;text-shadow:calc(var(--cw)*.03) calc(var(--cw)*.03) 0 rgba(0,0,0,.35)}
+.card .cor{position:absolute;top:calc(var(--cw)*.1);left:calc(var(--cw)*.12);font-size:calc(var(--cw)*.2);color:#fff}
+.card .cor.br{top:auto;left:auto;bottom:calc(var(--cw)*.1);right:calc(var(--cw)*.12);transform:rotate(180deg)}
+.card.c-r{--cc:var(--cr)} .card.c-y{--cc:var(--cy)} .card.c-g{--cc:var(--cg)} .card.c-b{--cc:var(--cb)}
+.card.c-w::before{background:conic-gradient(from 45deg,var(--cr) 0 25%,var(--cb) 0 50%,var(--cy) 0 75%,var(--cg) 0)}
+.card.two .num{font-size:calc(var(--cw)*.42);letter-spacing:-.04em}
+.card.c-w .num{text-shadow:calc(var(--cw)*.03) calc(var(--cw)*.03) 0 #1b1325}
+.card.c-s{--cc:#3a2f55}
+.card.c-s .num svg{width:calc(var(--cw)*.56);height:calc(var(--cw)*.56)}
+.card.back::before{background:repeating-linear-gradient(45deg,#2d2150 0 6px,#231a3d 6px 12px)}
+.card.back::after{content:"10";position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*.36);color:var(--accent)}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.plates{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:6px 6px 2px 0}
+.plates::-webkit-scrollbar{display:none}
+.plate{position:relative;flex:1 0 104px;max-width:190px;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.plate.away{opacity:.55}
+.plate .pav{font-size:24px;line-height:1;flex:none}
+.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-right:10px}
+.plate .pname{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate .pmeta{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate .pmeta .ok{color:var(--green)}
+.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
+.plate.active .pwins{background:var(--accent);color:#231a05}
+.plate .stamp{position:absolute;inset:0;display:grid;place-items:center;border-radius:14px;background:rgba(224,57,62,.88);color:#fff;font-family:var(--display);font-size:13px;letter-spacing:.04em;pointer-events:none}
+.plate .stamp.hit{animation:stamp .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{from{transform:scale(1.8);opacity:0}to{transform:none;opacity:1}}
+.plate.bump{animation:bump .35s ease-out}
+@keyframes bump{40%{transform:scale(1.08)}}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 16px}
+.piles{display:flex;align-items:flex-start;justify-content:center;gap:28px}
+.pile{display:flex;flex-direction:column;align-items:center;gap:6px}
+.pile .card{--cw:calc(clamp(64px,19vw,88px) * var(--cs))}
+.pile button{border:0;padding:0;background:none;border-radius:12px}
+.pile .cap{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.pile.can .card{box-shadow:0 0 0 3px var(--accent),0 0 22px -4px var(--accent);animation:glow 1.4s ease-in-out infinite}
+.pile.drop .card{box-shadow:0 0 0 3px #fff,0 0 22px -4px #fff}
+@keyframes glow{50%{box-shadow:0 0 0 3px var(--accent),0 0 6px -4px var(--accent)}}
+.pile .empty{width:calc(clamp(64px,19vw,88px) * var(--cs));aspect-ratio:2/3;border-radius:12px;box-shadow:inset 0 0 0 2px var(--line)}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+/* the melds on the table, per player */
+.melds{width:100%;max-width:720px;display:flex;flex-direction:column;gap:10px}
+.mrow{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:var(--felt);box-shadow:inset 0 0 0 1.5px var(--line)}
+.mrow .who{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
+.mrow .who small{color:var(--muted);font-weight:700}
+.mgroups{display:flex;flex-wrap:wrap;gap:8px}
+.meld{--cw:calc(clamp(34px,9.5vw,46px) * var(--cs));display:flex;align-items:center;padding:6px;border:0;border-radius:12px;background:rgba(0,0,0,.18);box-shadow:inset 0 0 0 1.5px transparent;transition:box-shadow .2s,transform .2s}
+.meld .card + .card{margin-left:calc(var(--cw) * -.45)}
+.meld .card{box-shadow:1px 0 4px rgba(0,0,0,.35)}
+.meld .mlabel{font-size:11px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
+.meld.fits{box-shadow:inset 0 0 0 2.5px var(--accent);cursor:pointer;transform:translateY(-2px)}
+.meld.fresh{animation:meldin .5s ease-out}
+@keyframes meldin{from{box-shadow:inset 0 0 0 3px #fff}}
+.nomelds{font-size:13px;color:var(--muted);text-align:center}
+/* dock with the hand */
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.dock .who{display:flex;align-items:center;gap:10px}
+.dock .who .wav{font-size:28px;line-height:1;flex:none}
+.dock .who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.dock .who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:2px}
+.myphase{font-size:13px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.myphase .tag{padding:3px 8px;border-radius:8px;background:var(--surface);font-weight:800}
+.myphase .tag.done{background:var(--green);color:#fff}
+.groups{display:flex;gap:6px;flex-wrap:wrap}
+.groups button{border:0;border-radius:10px;padding:7px 10px;font-weight:800;font-size:13px;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
+.groups button[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--accent)}
+.groups button.full{background:var(--green);color:#fff}
+.groups .g1{border-bottom:3px solid #7fd1ff} .groups .g2{border-bottom:3px solid #ff9ad5}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts .btn{flex:1;padding:11px 10px;font-size:15px;min-width:0}
+.hand{--cw:calc(clamp(56px,16vw,82px) * var(--cs));--step:calc(var(--cw) + 6px);display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;padding:16px 4px 4px;scrollbar-width:none;min-height:calc(var(--cw) * 1.5 + 22px)}
+.hand::-webkit-scrollbar{display:none}
+.hand::before,.hand::after{content:"";flex:1 0 0}
+.hand .card{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.hand .card + .card{margin-left:calc(var(--step) - var(--cw))}
+.hand .card.sel{transform:translateY(-14px);box-shadow:0 0 0 3px var(--accent),0 10px 18px rgba(0,0,0,.5)}
+.hand .card.fresh{transform:translateY(-8px);box-shadow:0 0 0 3px #fff,0 8px 16px rgba(0,0,0,.5)}
+.hand .card[data-g]::after{content:attr(data-g);position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-family:var(--ui);font-size:12px;font-weight:800;background:#7fd1ff;color:#0d2233}
+.hand .card[data-g="2"]::after{background:#ff9ad5;color:#33101f}
+.hand .card[data-g]{transform:translateY(-10px)}
+.hand .card.hidden-card{visibility:hidden}
+.hand.shake{animation:shake .35s}
+@keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
+.flyer{position:fixed;left:0;top:0;z-index:40;pointer-events:none;margin:0!important}
+.clock{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.clock .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.clock i{display:block;height:100%;width:100%;background:var(--accent);border-radius:4px}
+.clock.urgent i{background:var(--red)}
+.clock.urgent{color:var(--red);animation:blink .5s steps(2) infinite}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+#roundEnd .sheet{max-width:560px}
+#handoff{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+#handoff .pass{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#handoff .name{font-family:var(--display);font-size:clamp(34px,11vw,60px);line-height:1.05;text-align:center;word-break:break-word;text-wrap:balance}
+#handoff .meta{color:var(--muted);text-align:center;max-width:36ch}
+#handoff .btn{max-width:440px}
+#hoAvatar{font-size:64px;line-height:1}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:440px}
+.log li{background:var(--bg2);border-radius:12px;padding:9px 12px;font-size:14px;box-shadow:inset 0 0 0 1px var(--line)}
+.log li:last-child{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.targets{display:flex;flex-direction:column;gap:8px}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores li small.ok{color:var(--green);font-weight:800}
+.scores b{font-weight:800;flex:none}
+.scores .pen{color:var(--red);font-weight:800;margin-right:8px}
+.hist{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
+.hist th,.hist td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line)}
+.hist th:first-child,.hist td:first-child{text-align:left}
+.hist td.ok{color:var(--green);font-weight:800}
+.histwrap{overflow-x:auto}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+.rules-list .toggle{align-items:flex-start}
+.rules-list .toggle input{margin-top:2px}
+.toggle:has(input:disabled){cursor:default;opacity:.9}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+#flash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
+#flash span{font-family:var(--display);font-size:min(15vw,100px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:bang .9s ease-out forwards;text-align:center;line-height:.95}
+#flash span.blue{color:var(--accent)}
+#flash small{display:block;font-size:.26em;color:#fff;text-shadow:2px 2px 0 #1b1325;margin-top:.3em}
+@keyframes bang{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.35) rotate(-4deg);opacity:0}}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .hand .card:hover{transform:translateY(-6px)}
+  .hand .card.sel:hover{transform:translateY(-14px)}
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  #game{padding:0 24px 16px}
+  .topbar{padding:14px 0 4px;gap:12px;width:100%;max-width:1100px;align-self:center}
+  .roundinfo{display:block}
+  .plate .pav{font-size:28px}
+  .dock{width:100%;max-width:1000px;align-self:center;border-radius:22px;padding:14px 18px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
+  .dock .keys{display:block}
+}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <div class="fan" id="heroFan" aria-hidden="true"></div>
+      <h1>Phase <span>10</span></h1>
+      <p class="tagline">Zehn Phasen, eine nach der anderen: Drillinge, Folgen, eine Farbe. Wer zuerst alle schafft, gewinnt.</p>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Jeder sein Handy</button>
+      <button type="button" data-tab="local" aria-pressed="false">Ein Gerät für alle</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <label class="label" for="myName">Dein Name</label>
+      <div class="row">
+        <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+        <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+      </div>
+      <div class="avgrid" id="avatarGrid" hidden></div>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Spiellänge, Hausregeln und Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Jeder sein Handy“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem Mini-PC zu Hause. Öffne dann dessen Adresse, etwa <b>http://192.168.178.20:8086</b>. Hier geht nur „Ein Gerät für alle“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="label">Spieler</div>
+      <div class="plist" id="plist"></div>
+      <button class="btn btn-ghost" id="addPlayer" type="button">+ Spieler</button>
+      <p class="hint">Tippe auf <b>Mensch</b>, um daraus einen Computer-Gegner zu machen. Zwischen zwei Menschen wird das Gerät weitergegeben, keiner sieht die Karten des anderen.</p>
+      <div class="label">Spiellänge</div>
+      <div class="seg two" id="goalLocal" role="group" aria-label="Spiellänge"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke der Computer-Gegner"></div>
+      <details class="houserules">
+        <summary><span class="label">Hausregeln</span><span class="rules-sum" id="rulesLocalSum"></span></summary>
+        <div class="rules-list" id="rulesLocal"></div>
+      </details>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <details class="houserules">
+      <summary><span class="label">Die 10 Phasen</span></summary>
+      <ol class="phaselist" id="phaseListHome"></ol>
+    </details>
+    <details class="houserules">
+      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
+      <div class="look" id="lookHome"></div>
+    </details>
+    <div class="panel" id="statsPanel" hidden>
+      <div class="label">Bilanz auf diesem Gerät</div>
+      <ol class="scores" id="statsList"></ol>
+      <button class="btn btn-ghost" id="statsReset" type="button">Bilanz löschen</button>
+    </div>
+    <p class="hint">Zieh eine Karte, leg deine Phase aus, sobald du sie hast, leg danach Karten bei allen an und wirf eine ab. Wer keine Karten mehr hat, beendet die Runde. Wer seine Phase geschafft hat, geht zur nächsten.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Spiellänge</div>
+      <div class="seg two" id="goalOnline" role="group" aria-label="Spiellänge"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke der Computer-Gegner"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="piles">
+        <div class="pile" id="deckPile"><button id="deckBtn" type="button" aria-label="Vom Stapel ziehen"><span class="card back"></span></button><span class="cap" id="deckCap"></span></div>
+        <div class="pile" id="discardPile"><button id="discardBtn" type="button" aria-label="Ablage"></button><span class="cap" id="discardCap">Ablage</span></div>
+      </div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+      <div class="melds" id="melds"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
+      <div class="myphase" id="myPhase"></div>
+      <div class="groups" id="groups" hidden></div>
+      <div class="acts" id="acts"></div>
+      <div class="hand" id="hand"></div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="handoff" hidden>
+  <div class="pass">Gerät weitergeben an</div>
+  <div id="hoAvatar" aria-hidden="true"></div>
+  <div class="name" id="hoName"></div>
+  <div class="meta" id="hoMeta"></div>
+  <ul class="log" id="hoLog"></ul>
+  <button class="btn btn-primary btn-block" id="hoBtn" type="button"></button>
+</div>
+
+<div class="overlay" id="targetPick" hidden>
+  <div class="sheet">
+    <h2>Wer muss aussetzen?</h2>
+    <div class="targets" id="targets"></div>
+    <button class="btn btn-ghost btn-block" id="targetCancel" type="button">Doch nicht</button>
+  </div>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li>Jeder bekommt 10 Karten. Im Stapel sind die Zahlen 1 bis 12 in vier Farben (jede doppelt), 8 Joker und 4 Aussetzen.</li>
+          <li>Wer dran ist, zieht eine Karte: vom Stapel oder die oberste der Ablage (ein Aussetzen darf man nicht aufnehmen). Danach wirft man eine Karte ab.</li>
+          <li>Wer die Karten für seine Phase hat, legt sie vor dem Abwerfen aus. Tippe auf „Phase auslegen“ und dann auf die Karten, „Vorschlag“ sucht eine passende Aufteilung.</li>
+          <li>Liegt die eigene Phase, darfst du Karten anlegen, bei dir und bei allen anderen: gleiche Zahl an einen Drilling, die nächste Zahl an eine Folge, die gleiche Farbe an eine Farbgruppe. Karte antippen, dann die Gruppe.</li>
+          <li>Joker ersetzen jede Karte. Ein abgeworfenes Aussetzen lässt den Nächsten aussetzen (Hausregel: du suchst aus, wen).</li>
+          <li>Wer keine Karten mehr hat, beendet die Runde. Die anderen bekommen Strafpunkte: 1–9 je 5, 10–12 je 10, Aussetzen 15, Joker 25. Wer seine Phase ausgelegt hat, geht zur nächsten.</li>
+          <li>Wer zuerst Phase 10 (bzw. 5) schafft, gewinnt. Schaffen es mehrere in derselben Runde, gewinnt, wer weniger Strafpunkte hat.</li>
+          <li>Am Computer: <b>D</b> zieht vom Stapel, <b>A</b> von der Ablage, <b>←</b>/<b>→</b> wählt eine Karte, <b>Enter</b> wirft sie ab, <b>P</b> legt die Phase aus.</li>
+        </ul>
+  </template>
+  <template data-slot="history"><div class="histwrap"><table class="hist" id="menuHist"></table></div></template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="flash" hidden><span id="flashText"></span></div>
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+<!-- ARTIFACT-BODY-END -->
+</body>
+</html>
