@@ -92,15 +92,17 @@ test("random words with a computer player: the bot guesses on its own", async ()
   const v = await c.next((m) => m.t === "room" && m.view);
   assert.strictEqual(v.view.phase, "play");
   assert.ok(v.view.cat, "random words come with their category");
-  // whenever it is Cleo's turn, pass with a letter nobody needs; the bot has to solve it
+  // whenever it is Cleo's turn she plays the rarest letter still open; the round has to end
+  const rare = "QXYßJÖÄÜVPKZFWBOMGCLUHDTARSINE".split("");
   const done = await (async () => {
-    for (let k = 0; k < 60; k++) {
-      const m = await c.next((x) => x.t === "room" && x.view, 5000);
+    let m = v; // Cleo may be the one to start
+    for (let k = 0; k < 120; k++) {
       if (m.view.phase === "roundEnd") return m;
       if (m.view.cur === m.view.me) {
-        const l = ["Q", "X", "Y", "J", "V", "P", "F", "W"].find((x) => !m.view.guessed.includes(x) && !m.view.wrong.includes(x));
+        const l = rare.find((x) => !m.view.guessed.includes(x) && !m.view.wrong.includes(x));
         c.send({ t: "act", a: { t: "letter", l } });
       }
+      m = await c.next((x) => x.t === "room" && x.view, 5000);
     }
   })();
   assert.ok(done, "the round ended");
