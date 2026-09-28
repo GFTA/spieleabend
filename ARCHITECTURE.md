@@ -287,6 +287,22 @@ für alle schließen“ als Icon-Knöpfe (`.iconact`, Name in `aria-label` und
 `title`). Die Spielerzahl im Start-Knopf (`.cnt`) fällt unter 360px Breite
 weg, damit nichts abgeschnitten wird.
 
+Der Warteraum ist in allen Spielen gleich aufgebaut: Raum-Code, dann
+Spieler, dann Einstellungen, Hausregeln und Spielregeln. Auf breiten
+Bildschirmen stehen Code und Spieler links und der Rest rechts
+(`.cols` > `.col`; in Vier gewinnt heißen die Brett-Spalten auch `.col`,
+daher dort `#lobby .col`).
+
+Das **Spielmenü** ist ebenfalls überall gleich: Punktestand mit einer Zeile zu
+Spielziel und Hausregeln, dann die aufklappbaren Bereiche Spielregeln,
+Spielverlauf und Einstellungen (Aussehen, Töne, bei Schiffe die Zielhilfe).
+Danach kommen Aktionen für die eigene Person (`#menuActions`, z. B.
+Aufgeben) und der eingeklappte Bereich „Als Host“ (`#hostActions`:
+Überspringen, Computer übernimmt, Spiel für alle beenden, Raum schließen).
+Dieser Bereich geht von selbst auf, wenn jemand offline ist. Ganz unten steht
+eine Zeile mit „Weiterspielen“ sowie Icons für „Raum verlassen“
+(`#menuLeave`, zweimal tippen) und die Startseite.
+
 Client-seitig (`app.js`, WS-Message-Handler):
 
 ```js

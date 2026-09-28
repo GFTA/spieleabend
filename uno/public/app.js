@@ -1194,6 +1194,7 @@
     $("#menuLog").innerHTML = V ? V.log.slice().reverse().map((l) => `<li>${esc(l)}</li>`).join("") : "";
     renderLook();
     const box = $("#menuActions"); box.innerHTML = "";
+    const hb = $("#hostActions"); hb.innerHTML = ""; // host-only actions, folded away
     if (mode === "local") {
       box.append(
         armed(`${L.players[localViewer()].name}: Runde aufgeben`, () => doAct({ t: "surrender" }, localViewer())),
@@ -1206,23 +1207,34 @@
         b.type = "button"; b.className = "btn btn-block"; b.textContent = "Zurück in den Warteraum";
         b.addEventListener("click", () => { watching = false; $("#menu").hidden = true; render(); });
         box.append(b);
-        if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-        box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+        if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       } else {
 if (R.you === R.host && V && (V.phase === "play" || V.phase === "drawn") && V.cur !== V.me)
-        box.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
+        hb.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
       if (V && V.phase !== "roundEnd" && !(V.players[V.me] || {}).out)
         box.append(armed("Runde aufgeben", () => wsSend({ t: "act", a: { t: "surrender" } })));
       if (R.you === R.host && V) R.members.forEach((m, i) => {
-        if (!m.bot && !m.online) box.append(armed(`🤖 Computer spielt für ${m.name}`, () => wsSend({ t: "standIn", seat: i })));
+        if (!m.bot && !m.online) hb.append(armed(`🤖 Computer spielt für ${m.name}`, () => wsSend({ t: "standIn", seat: i })));
       });
-      if (R.you === R.host) box.append(armed("Spiel beenden, zurück in den Warteraum", () => wsSend({ t: "end" })));
-      if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-      box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+      if (R.you === R.host) hb.append(armed("Spiel für alle beenden", () => wsSend({ t: "end" })));
+      if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       }
     }
+    $("#hostBox").hidden = !hb.children.length;
+    $("#hostBox details").open = !!(R && R.members.some((m) => !m.bot && !m.online)); // someone dropped out: show what the host can do
+    $("#menuLeave").hidden = mode !== "online";
     $("#menu").hidden = false;
   });
+  // leave the room from the menu's bottom row: first tap turns it red, the second leaves
+  let leaveArm = null;
+  $("#menuLeave").addEventListener("click", () => {
+    const b = $("#menuLeave");
+    clearTimeout(leaveArm);
+    if (b.classList.contains("btn-danger")) { b.classList.remove("btn-danger"); $("#menu").hidden = true; wsSend({ t: "leave" }); return; }
+    b.classList.add("btn-danger"); toast("Nochmal tippen, dann verlässt du den Raum.");
+    leaveArm = setTimeout(() => b.classList.remove("btn-danger"), 3500);
+  });
+
   $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)

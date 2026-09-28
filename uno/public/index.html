@@ -371,6 +371,20 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
 .lobby-actions > .btn.iconact{flex:none!important;width:50px;padding:0;display:grid;place-items:center}
 .lobby-actions .iconact svg{width:22px;height:22px}
 @media (max-width:360px){.lobby-actions{gap:6px}.lobby-actions > .btn{padding:13px 8px;font-size:14px}.lobby-actions > .btn.iconact{width:44px}.lobby-actions .cnt{display:none}}
+/* waiting room: code and players left, settings right on wide screens (same as the other games) */
+.cols,.col{display:flex;flex-direction:column;gap:22px}
+@media (min-width:900px) and (min-height:700px){
+  #lobby{padding-inline:24px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+}
+/* in-game menu: one bottom row (continue, leave, start page), host actions folded */
+.menubar{display:flex;gap:8px;align-items:stretch}
+.menubar > .btn{margin:0}
+.menubar #menuClose{flex:1;width:auto}
+.menubar .iconact{flex:none;width:52px;padding:0;display:grid;place-items:center}
+.menubar .iconact svg{width:22px;height:22px}
+.hostacts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+#menuActions:empty{display:none}
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>
@@ -455,6 +469,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
   <!-- ===== lobby ===== -->
   <section id="lobby" class="screen" hidden aria-label="Warteraum">
     <div class="panel nowplaying" id="nowPlaying" hidden></div>
+    <div class="cols"><div class="col">
     <div class="panel">
       <div class="label" style="text-align:center">Raum-Code</div>
       <div class="roomcode" id="roomCode"></div>
@@ -462,6 +477,17 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
       <p class="hint" style="text-align:center" id="joinHint"></p>
       <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button></div>
     </div>
+    <div class="panel">
+      <div class="label" id="membersLabel"></div>
+      <ul class="members" id="members"></ul>
+      <button class="btn btn-ghost" id="addBot" type="button" hidden>+ Computer-Gegner hinzufügen</button>
+      <div class="panel" id="levelLobbyBox" hidden>
+        <div class="label">Stärke der Computer-Gegner</div>
+        <div class="seg" id="levelLobby"></div>
+      </div>
+      <p class="hint" id="lobbyHint"></p>
+    </div>
+    </div><div class="col">
     <div class="panel">
       <div class="label">Spielziel</div>
       <div class="seg" id="goalLobby" role="group" aria-label="Spielziel">
@@ -481,16 +507,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
       <summary><span class="label">Spielregeln</span></summary>
       <div class="panel gamerules" id="rulesHelpLobby"></div>
     </details>
-    <div class="panel">
-      <div class="label" id="membersLabel"></div>
-      <ul class="members" id="members"></ul>
-      <button class="btn btn-ghost" id="addBot" type="button" hidden>+ Computer-Gegner hinzufügen</button>
-      <div class="panel" id="levelLobbyBox" hidden>
-        <div class="label">Stärke der Computer-Gegner</div>
-        <div class="seg" id="levelLobby"></div>
-      </div>
-      <p class="hint" id="lobbyHint"></p>
-    </div>
+    </div></div>
     <div class="lobby-actions">
       <button class="btn btn-primary" id="readyBtn" type="button" hidden>Bereit</button>
       <button class="btn btn-primary" id="startOnline" type="button">Starten</button>
@@ -601,6 +618,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
   <div class="sheet">
     <h2>Punktestand</h2>
     <ol class="scores" id="menuScores"></ol>
+    <div class="hint" id="menuRules"></div>
     <div class="rules">
       <details>
         <summary>Spielregeln</summary>
@@ -619,20 +637,22 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
         </ul>
       </details>
     </div>
-    <div class="hint" id="menuRules"></div>
     <details class="rules">
       <summary>Spielverlauf</summary>
       <div class="histwrap"><table class="hist" id="menuHist"></table></div>
       <ol class="fulllog" id="menuLog"></ol>
     </details>
     <details class="rules">
-      <summary>Aussehen</summary>
-      <div class="look" id="lookMenu"></div>
+      <summary>Einstellungen</summary>
+      <div class="look" id="lookMenu"></div><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
     </details>
-    <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
     <div id="menuActions"></div>
-    <button class="btn btn-primary btn-block" id="menuClose" type="button">Weiterspielen</button>
-    <a class="btn btn-ghost btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Spieleabend-Startseite</a>
+    <div class="rules" id="hostBox" hidden><details><summary>Als Host</summary><div class="hostacts" id="hostActions"></div></details></div>
+    <div class="menubar">
+      <button class="btn btn-primary" id="menuClose" type="button">Weiterspielen</button>
+      <button class="btn iconact" id="menuLeave" type="button" hidden aria-label="Raum verlassen" title="Raum verlassen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg></button>
+      <a class="btn iconact" href="https://games.cool-kidz.net/" data-start-link aria-label="Zur Spieleabend-Startseite" title="Zur Spieleabend-Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+    </div>
   </div>
 </div>
 

@@ -1112,6 +1112,7 @@
     const goal = V ? `${V.goal === 1 ? "Wer zuerst fertig ist, gewinnt." : "Alle Plätze werden ausgespielt."}` : "";
     $("#menuRules").textContent = `${goal} ${on.length ? `Hausregeln: ${on.join(", ")}.` : "Keine Hausregeln."}`;
     const box = $("#menuActions"); box.innerHTML = "";
+    const hb = $("#hostActions"); hb.innerHTML = ""; // host-only actions, folded away
     if (mode === "local") {
       if (V && V.phase === "play" && !V.players[V.cur].bot && humans(V).length > 1)
         box.append(armed(`${V.players[V.cur].name} gibt auf`, () => doAct({ t: "giveup" })));
@@ -1125,21 +1126,32 @@
         b.type = "button"; b.className = "btn btn-block"; b.textContent = "Zurück in den Warteraum";
         b.addEventListener("click", () => { watching = false; $("#menu").hidden = true; render(); });
         box.append(b);
-        if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-        box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+        if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       } else {
 const host = R.you === R.host;
       if (host && V && V.phase === "play" && V.cur !== V.me && !V.players[V.cur].bot)
-        box.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
+        hb.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
       if (V && V.phase === "play" && V.me >= 0 && !V.players[V.me].out)
         box.append(armed("Aufgeben", () => wsSend({ t: "act", a: { t: "giveup" } })));
-      if (host) box.append(armed("Spiel beenden, zurück in den Warteraum", () => wsSend({ t: "end" })));
-      if (R.you === R.host) box.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-      box.append(armed("Raum verlassen", () => wsSend({ t: "leave" })));
+      if (host) hb.append(armed("Spiel für alle beenden", () => wsSend({ t: "end" })));
+      if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
       }
     }
+    $("#hostBox").hidden = !hb.children.length;
+    $("#hostBox details").open = !!(R && R.members.some((m) => !m.bot && !m.online)); // someone dropped out: show what the host can do
+    $("#menuLeave").hidden = mode !== "online";
     $("#menu").hidden = false;
   });
+  // leave the room from the menu's bottom row: first tap turns it red, the second leaves
+  let leaveArm = null;
+  $("#menuLeave").addEventListener("click", () => {
+    const b = $("#menuLeave");
+    clearTimeout(leaveArm);
+    if (b.classList.contains("btn-danger")) { b.classList.remove("btn-danger"); $("#menu").hidden = true; wsSend({ t: "leave" }); return; }
+    b.classList.add("btn-danger"); toast("Nochmal tippen, dann verlässt du den Raum.");
+    leaveArm = setTimeout(() => b.classList.remove("btn-danger"), 3500);
+  });
+
   $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)

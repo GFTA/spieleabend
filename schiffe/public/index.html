@@ -424,6 +424,14 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
 .lobby-actions > .btn.iconact{flex:none!important;width:50px;padding:0;display:grid;place-items:center}
 .lobby-actions .iconact svg{width:22px;height:22px}
 @media (max-width:360px){.lobby-actions{gap:6px}.lobby-actions > .btn{padding:13px 8px;font-size:14px}.lobby-actions > .btn.iconact{width:44px}.lobby-actions .cnt{display:none}}
+/* in-game menu: one bottom row (continue, leave, start page), host actions folded */
+.menubar{display:flex;gap:8px;align-items:stretch}
+.menubar > .btn{margin:0}
+.menubar #menuClose{flex:1;width:auto}
+.menubar .iconact{flex:none;width:52px;padding:0;display:grid;place-items:center}
+.menubar .iconact svg{width:22px;height:22px}
+.hostacts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+#menuActions:empty{display:none}
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>
@@ -631,6 +639,7 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
   <div class="sheet">
     <h2>Punktestand</h2>
     <ol class="scores" id="menuScores"></ol>
+    <div class="hint" id="menuRules"></div>
     <div class="rules">
       <details>
         <summary>Spielregeln</summary>
@@ -649,13 +658,14 @@ a.btn{display:block;text-align:center;text-decoration:none;color:var(--text)}
       </details>
     </div>
     <div class="rules"><details><summary>Spielverlauf</summary><ol class="history" id="menuLog"></ol></details></div>
-    <div class="hint" id="menuRules"></div>
-    <label class="toggle" for="aimHelp"><input type="checkbox" id="aimHelp"><span>Zielhilfe<small>Dunkelt Felder ab, auf denen kein übriges Schiff mehr liegen kann.</small></span></label>
-    <div class="rules"><details><summary>Aussehen</summary><div class="look" id="lookMenu"></div></details></div>
-    <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+    <div class="rules"><details><summary>Einstellungen</summary><div class="look" id="lookMenu"></div><label class="toggle" for="aimHelp"><input type="checkbox" id="aimHelp"><span>Zielhilfe<small>Dunkelt Felder ab, auf denen kein übriges Schiff mehr liegen kann.</small></span></label><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label></details></div>
     <div id="menuActions"></div>
-    <button class="btn btn-primary btn-block" id="menuClose" type="button">Weiterspielen</button>
-    <a class="btn btn-ghost btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Spieleabend-Startseite</a>
+    <div class="rules" id="hostBox" hidden><details><summary>Als Host</summary><div class="hostacts" id="hostActions"></div></details></div>
+    <div class="menubar">
+      <button class="btn btn-primary" id="menuClose" type="button">Weiterspielen</button>
+      <button class="btn iconact" id="menuLeave" type="button" hidden aria-label="Raum verlassen" title="Raum verlassen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></svg></button>
+      <a class="btn iconact" href="https://games.cool-kidz.net/" data-start-link aria-label="Zur Spieleabend-Startseite" title="Zur Spieleabend-Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></svg></a>
+    </div>
   </div>
 </div>
 
