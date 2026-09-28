@@ -435,10 +435,6 @@
     if (pick === i) { orient = 1 - orient; renderGame(); return; } // second tap turns it
     pickUp(i); buzz(8); renderGame();
   });
-  $("#readyBtn").addEventListener("click", () => {
-    if (!draft || draft.some((s) => !s.cells)) { toast("Erst alle Schiffe aufs Feld setzen."); return; }
-    doAct({ t: "place", ships: draft.map((s) => s.cells) }, mode === "local" ? shown : null);
-  });
   $("#editBtn").addEventListener("click", () => doAct({ t: "unready" }));
 
   // ---------- rendering ----------
@@ -476,7 +472,7 @@
       $("#handoff").hidden = true;
       const meM = R.members[R.you], waiting = !!(R.view && meM && meM.lobby);
       if (!waiting) watching = false;
-      if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); renderLobby(); renderReady(); $("#roundEnd").hidden = true; }
+      if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; }
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
       V = null;
@@ -1072,7 +1068,7 @@
         ? (yes === table.length ? "Zu wenige für eine Revanche, warte auf Mitspieler" : `Warte auf die anderen (${yes}/${table.length})`)
         : `Revanche (${yes}/${table.length} bereit)`;
       $("#reBtn").hidden = V.me < 0;
-      $("#reVotes").innerHTML = rematchStatus(n, votes);
+      $("#reVotes").innerHTML = UI.rematchStatus(n, votes);
     }
     $("#reVotes").hidden = !(mode === "online" && R && last.over);
     $("#reBtn").hidden = mode === "online" && V.me < 0;
@@ -1143,63 +1139,49 @@
     $("#addPlayer").hidden = players.length >= G.MAX_PLAYERS;
   }
 
-  function joinUrl() {
-    const local = /^(localhost|127\.|\[::1\])/.test(location.hostname);
-    const base = local && server && server.ips && server.ips.length && !/^172\.(1[6-9]|2\d|3[01])\./.test(server.ips[0])
-      ? `${location.protocol}//${server.ips[0]}:${location.port || server.port}/`
-      : location.origin + location.pathname;
-    return `${base}?r=${R.code}`;
-  }
 
-  let qrFor = null;
-  function renderLobby() {
-    $("#roomCode").textContent = R.code;
-    const url = joinUrl();
-    $("#joinUrl").textContent = url;
-    if (qrFor !== url) { qrFor = url; drawQr(url); }
-    const lan = /^http:\/\/(\d+\.){3}\d+[:/]/.test(url);
-    $("#joinHint").textContent = "Die anderen scannen den QR-Code oder öffnen den Link und geben den Code ein." + (lan ? " Alle müssen im selben WLAN sein." : "");
-    const host = R.you === R.host;
-    $("#closeLobby").hidden = !host;
-    const teams = R.rules.teams && R.members.length === 4;
-    const watching = R.you < 0, seen = R.watchers || [];
-    $("#membersLabel").textContent = `Spieler (${R.members.length}/${G.MAX_PLAYERS})` + (seen.length ? ` · ${seen.length} ${seen.length === 1 ? "schaut" : "schauen"} zu` : "");
-    $("#sitBtn").hidden = !watching || R.members.length >= G.MAX_PLAYERS;
-    $("#members").innerHTML = R.members.map((m, i) =>
-      `<li class="${i === R.you ? "me" : ""}">${m.bot ? `<span class="botico">${ICON.bot}</span>` : `<span class="on${m.online ? "" : " off"}"></span>`}` +
-      (i === R.you ? `<button class="av" type="button" data-myav aria-label="Avatar wechseln">${m.avatar}</button>` : `<span class="av" aria-hidden="true">${m.avatar || ""}</span>`) +
-      `<span class="nm">${esc(m.name)}</span>` +
-      `${teams ? `<span class="tag team t${i % 2}">${i % 2 ? "Team Rot" : "Team Blau"}</span>` : ""}` +
-      `${i === R.host ? '<span class="tag">Host</span>' : ""}${i === R.you ? '<span class="tag">du</span>' : ""}${m.bot ? '<span class="tag">Computer</span>' : ""}` +
-      `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("");
-    $("#addBot").hidden = !host || R.members.length >= G.MAX_PLAYERS;
-    $("#startOnline").hidden = !host;
-    $("#startOnline").disabled = R.members.length < 2;
-    $("#startOnline").textContent = R.members.length < 2 ? "Warte auf Mitspieler …" : "Spiel starten";
-    $("#sizeHintOnline").textContent = fleetDesc(R.size);
-    for (const [id, list, cur] of [["#sizeOnline", SIZES, R.size], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
-      const el = $(id), k = cur + ":" + host;
-      if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = segHTML(list, cur); for (const b of el.children) b.disabled = !host; }
+
+  // ---------- waiting room and menu: shared (room-ui.js), plus this game's own parts ----------
+  const UI = window.RoomUI({
+    room: () => R, view: () => V, mode: () => mode, server: () => server,
+    watching: (v) => (v === undefined ? watching : (watching = v)),
+    send: wsSend, toast, render: () => render(), maxPlayers: G.MAX_PLAYERS, watchers: true,
+    cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
+    memberExtra: (m, i) => (R.rules.teams && R.members.length === 4 ? `<span class="tag team t${i % 2}">${i % 2 ? "Team Rot" : "Team Blau"}</span>` : ""),
+    // board size, goal, computer strength and house rules; the host picks, everyone sees it
+    renderSettings(host) {
+      $("#sizeHintOnline").textContent = fleetDesc(R.size);
+      for (const [id, list, cur] of [["#sizeOnline", SIZES, R.size], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
+        const el = $(id), k = cur + ":" + host;
+        if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = segHTML(list, cur); for (const b of el.children) b.disabled = !host; }
+      }
+      const rl = $("#rulesLobby"), key = JSON.stringify(R.rules) + host;
+      if (rl.dataset.k !== key) { rl.dataset.k = key; rl.innerHTML = rulesHTML(R.rules || {}, host, "o"); }
+      const onR = activeNames(R.rules);
+      $("#rulesLobbySum").textContent = onR.length ? onR.join(", ") : "keine";
+      $("#rulesLobbyHint").textContent = host ? "Tippe an, was gelten soll. Alle sehen deine Auswahl." : `${R.members[R.host].name} legt die Regeln fest.`;
+    },
+    menu: {
+      open() {
+        renderLook();
+        scoreList($("#menuScores"), []);
+        $("#aimHelp").checked = aimHelp;
+        const on = activeNames(V ? V.rules : {});
+        const size = V ? `Spielfeld ${V.size}×${V.size}, ${V.goal === 1 ? "eine Runde" : `bis ${V.goal} Siege`}.` : "";
+        $("#menuRules").textContent = `${size} ${on.length ? `Hausregeln: ${on.join(", ")}.` : "Keine Hausregeln."}`;
+      },
+      local(box) {
+        box.append(
+          UI.armed("Runde neu starten", () => { L.round--; G.startRound(L); shown = -1; hidden = true; peek = false; draftKey = null; store.set(K.local, L); render(); scheduleBot(); }),
+          UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; clearTimeout(botT); render(); })
+        );
+      },
+      player(box) {
+        if (V && V.phase === "play" && V.me >= 0 && !V.players[V.me].out)
+          box.append(UI.armed("Aufgeben", () => wsSend({ t: "act", a: { t: "giveup" } })));
+      },
+      skip: (v) => v.phase === "play" && v.cur !== v.me && !v.players[v.cur].bot
     }
-    const rl = $("#rulesLobby"), key = JSON.stringify(R.rules) + host;
-    if (rl.dataset.k !== key) { rl.dataset.k = key; rl.innerHTML = rulesHTML(R.rules || {}, host, "o"); }
-    const onR = activeNames(R.rules);
-    $("#rulesLobbySum").textContent = onR.length ? onR.join(", ") : "keine";
-    $("#rulesLobbyHint").textContent = host ? "Tippe an, was gelten soll. Alle sehen deine Auswahl." : `${R.members[R.host].name} legt die Regeln fest.`;
-    const humansOn = R.members.filter((m) => !m.bot && m.online).length, humansAll = R.members.filter((m) => !m.bot).length;
-    $("#lobbyHint").textContent = watching
-      ? (R.members.length >= G.MAX_PLAYERS ? "Du schaust zu. Der Raum ist voll, wird ein Platz frei, kannst du mitspielen." : "Du schaust zu. Tippe auf „Mitspielen“, um einen freien Platz zu nehmen.")
-      : host
-      ? (R.members.length < 2 ? "Warte auf Mitspieler, oder hol dir einen Computer-Gegner dazu." : `${humansOn} von ${humansAll} Menschen online.${R.rules.teams && !teams ? " Teams gibt es nur zu viert." : ""}`)
-      : `Warte, bis ${R.members[R.host].name} das Spiel startet.`;
-  }
-  $("#members").addEventListener("click", (e) => { const b = e.target.closest("[data-unbot]"); if (b) wsSend({ t: "unbot", i: +b.dataset.unbot }); });
-  $("#addBot").addEventListener("click", () => wsSend({ t: "bot" }));
-  $("#sitBtn").addEventListener("click", () => wsSend({ t: "sit" }));
-  $("#members").addEventListener("click", (e) => {
-    if (!e.target.closest("[data-myav]")) return;
-    myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar);
-    wsSend({ t: "avatar", avatar: myAvatar });
   });
 
   // avatar picker in the online form
@@ -1241,20 +1223,6 @@
   $("#goalOnline").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b && R && R.you === R.host) wsSend({ t: "settings", goal: +b.dataset.v }); });
   $("#levelOnline").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b && R && R.you === R.host) wsSend({ t: "settings", level: +b.dataset.v }); });
 
-  function drawQr(url) {
-    const box = $("#qr");
-    const paint = () => {
-      try {
-        const q = window.qrcode(0, "M"); q.addData(url); q.make();
-        box.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-        box.hidden = false;
-      } catch (e) { box.hidden = true; }
-    };
-    if (window.qrcode) return paint();
-    const s = document.createElement("script");
-    s.src = "vendor/qrcode.js"; s.onload = paint; s.onerror = () => { box.hidden = true; };
-    document.head.appendChild(s);
-  }
 
   // connection pill: only after a short grace period, phones drop sockets all the time
   let netT = null;
@@ -1409,88 +1377,14 @@
     startLocal(s);
   });
 
-  $("#startOnline").addEventListener("click", () => wsSend({ t: "start" }));
-  // rules to read in the waiting room: the same text as in the game menu, copied once
-  {
-    const src = [...document.querySelectorAll("#menu summary")].find((s) => /Spielregeln/.test(s.textContent));
-    if (src) $("#rulesHelpLobby").innerHTML = [...src.parentElement.children].filter((e) => e !== src).map((e) => e.outerHTML).join("");
-  }
-  // back to the Spieleabend start page: games.cool-kidz.net behind the tunnel, port 8090 of the same box in the LAN
-  if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
-    for (const a of document.querySelectorAll("[data-start-link]")) a.href = `${location.protocol}//${location.hostname}:8090/`;
   // ---------- waiting room: ready up, or watch the game that runs ----------
-  function renderReady() {
-    const me = R.members[R.you], host = R.you === R.host, run = R.view;
-    const over = !!(run && run.phase === "roundEnd" && run.last && run.last.over);
-    const n = run ? run.players.length : 0, playing = (i) => !!run && i < n && !R.members[i].lobby;
-    const btn = $("#readyBtn"), start = $("#startOnline"), box = $("#nowPlaying");
-    btn.hidden = !me || me.bot;
-    if (run && !over) { btn.dataset.act = "watch"; btn.textContent = "Zuschauen"; btn.classList.add("btn-primary"); }
-    else {
-      btn.dataset.act = "ready";
-      btn.textContent = me && me.ready ? (over ? "Bei der Revanche dabei ✓" : "Bereit ✓") : (over ? "Bei der Revanche mitspielen" : "Bereit");
-      btn.classList.toggle("btn-primary", !(me && me.ready) && !(host && !run)); // the host's main button is "Starten"
-    }
-    box.hidden = !run;
-    if (run) {
-      const names = R.members.filter((m, i) => playing(i)).map((m) => esc(m.name)).join(", ");
-      box.innerHTML = over
-        ? `<b>Das Spiel ist vorbei.</b> ${names} stimmen gerade über eine Revanche ab. Willst du mitspielen, tippe auf „Bei der Revanche mitspielen“.`
-        : `<b>Gerade läuft ein Spiel:</b> ${names}. Du kannst zuschauen. Ist es vorbei, kannst du bei der Revanche einsteigen.`;
-    }
-    const go = R.members.filter((m, i) => m.bot || (m.online && (m.ready || i === R.host)));
-    start.hidden = !host || !!run;
-    start.disabled = go.length < 2;
-    start.innerHTML = go.length < 2 ? "Starten" : `Starten<span class="cnt"> (${go.length})</span>`;
-    start.title = go.length < 2 ? "Warte, bis jemand bereit ist" : `Spiel mit ${go.length} Spielern starten`;
-    // who is ready, who plays, who waits
-    [...document.querySelectorAll("#members > li")].forEach((li, i) => {
-      const m = R.members[i];
-      if (!m || m.bot) return;
-      const t = run ? (playing(i) ? ["spielt", ""] : m.ready ? ["dabei", "ok"] : ["wartet", "wait"]) : m.ready ? ["bereit", "ok"] : null;
-      if (t) li.insertAdjacentHTML("beforeend", `<span class="tag ${t[1]}">${t[0]}</span>`);
-    });
-    if (run) for (const el of document.querySelectorAll("#lobby .seg button, #lobby .rules-list input")) el.disabled = true;
-    if (!me) return;
-    const people = R.members.filter((m) => !m.bot && m.online), ready = people.filter((m) => m.ready).length;
-    $("#lobbyHint").textContent = run
-      ? (over ? "" : "Wer im Warteraum ist, spielt die nächste Runde mit, wenn er sich bereit meldet.")
-      : (me.ready ? `Du bist bereit (${ready} von ${people.length}). Sind alle bereit, geht es los.` : `Tippe auf „Bereit“, wenn du mitspielen willst (${ready} von ${people.length} bereit).`) +
-        (host ? " Mit „Spiel starten“ geht es sofort los, wer nicht bereit ist, wartet dann hier." : "");
-  }
-  // after a game: who is in for the rematch, who is still deciding, who went back, who left
-  function rematchStatus(n, votes) {
-    const groups = { in: [], extra: [], wait: [], lobby: [], gone: [] };
-    R.members.forEach((m, i) => {
-      if (m.bot) return;
-      if (i < n && !m.lobby) groups[!m.online ? "gone" : votes.includes(i) ? "in" : "wait"].push(m);
-      else if (m.ready && m.online) groups.extra.push(m);
-      else if (i < n) groups[m.online ? "lobby" : "gone"].push(m);
-    });
-    return [["in", "Bereit"], ["extra", "Aus dem Warteraum dabei"], ["wait", "Überlegt noch"], ["lobby", "Zurück im Warteraum"], ["gone", "Gegangen"]]
-      .filter(([k]) => groups[k].length).map(([k, t]) => `<span><b>${t}:</b> ${groups[k].map((m) => esc(m.name)).join(", ")}</span>`).join(" · ");
-  }
   $("#readyBtn").addEventListener("click", () => {
     if ($("#readyBtn").dataset.act === "watch") { watching = true; render(); return; }
     const me = R && R.members[R.you];
     if (me) wsSend({ t: "ready", on: !me.ready });
   });
 
-  $("#leaveLobby").addEventListener("click", () => wsSend({ t: "leave" }));
   // host closes the room for everyone; tap twice, like the menu actions
-  let closeArm = null;
-  $("#closeLobby").addEventListener("click", (e) => {
-    const b = e.currentTarget, reset = () => { closeArm = null; b.classList.remove("btn-danger"); };
-    if (closeArm) { clearTimeout(closeArm); reset(); wsSend({ t: "close" }); return; }
-    b.classList.add("btn-danger"); toast("Nochmal tippen, dann ist der Raum für alle geschlossen.");
-    closeArm = setTimeout(reset, 3500);
-  });
-  $("#copyBtn").addEventListener("click", () => {
-    const url = $("#joinUrl").textContent;
-    const ok = () => toast("Link kopiert.");
-    const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#joinUrl")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Link markiert, jetzt kopieren."); };
-    try { navigator.clipboard.writeText(url).then(ok, fallback); } catch (e) { fallback(); }
-  });
 
   $("#reBtn").addEventListener("click", () => {
     if (mode === "local") { shown = -1; hidden = true; peek = false; }
@@ -1504,66 +1398,8 @@
     else wsSend({ t: "end" });
   });
 
-  // menu with in-page two-step confirmation
-  function armed(label, run) {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "btn btn-ghost btn-block"; b.textContent = label;
-    let t = null;
-    b.addEventListener("click", () => {
-      if (t) { clearTimeout(t); t = null; $("#menu").hidden = true; run(); return; }
-      b.textContent = "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
-      t = setTimeout(() => { t = null; b.textContent = label; b.classList.remove("btn-danger"); }, 3500);
-    });
-    return b;
-  }
-  $("#menuBtn").addEventListener("click", () => {
-    renderLook();
-    scoreList($("#menuScores"), []);
-    $("#menuLog").innerHTML = V ? V.log.slice().reverse().map((l) => `<li>${esc(l)}</li>`).join("") : "";
-    $("#aimHelp").checked = aimHelp;
-    const on = activeNames(V ? V.rules : {});
-    const size = V ? `Spielfeld ${V.size}×${V.size}, ${V.goal === 1 ? "eine Runde" : `bis ${V.goal} Siege`}.` : "";
-    $("#menuRules").textContent = `${size} ${on.length ? `Hausregeln: ${on.join(", ")}.` : "Keine Hausregeln."}`;
-    const box = $("#menuActions"); box.innerHTML = "";
-    const hb = $("#hostActions"); hb.innerHTML = ""; // host-only actions, folded away
-    if (mode === "local") {
-      box.append(
-        armed("Runde neu starten", () => { L.round--; G.startRound(L); shown = -1; hidden = true; peek = false; draftKey = null; store.set(K.local, L); render(); scheduleBot(); }),
-        armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; clearTimeout(botT); render(); })
-      );
-    } else if (mode === "online" && R) {
-      if (R.members[R.you] && R.members[R.you].lobby) { // watching from the waiting room: no player actions
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "btn btn-block"; b.textContent = "Zurück in den Warteraum";
-        b.addEventListener("click", () => { watching = false; $("#menu").hidden = true; render(); });
-        box.append(b);
-        if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-      } else {
-const host = R.you === R.host;
-      if (host && V && V.phase === "play" && V.cur !== V.me && !V.players[V.cur].bot)
-        hb.append(armed(`${V.players[V.cur].name} überspringen`, () => wsSend({ t: "act", a: { t: "skip" } })));
-      if (V && V.phase === "play" && V.me >= 0 && !V.players[V.me].out)
-        box.append(armed("Aufgeben", () => wsSend({ t: "act", a: { t: "giveup" } })));
-      if (host) hb.append(armed("Spiel für alle beenden", () => wsSend({ t: "end" })));
-      if (R.you === R.host) hb.append(armed("Raum für alle schließen", () => wsSend({ t: "close" })));
-      }
-    }
-    $("#hostBox").hidden = !hb.children.length;
-    $("#hostBox details").open = !!(R && R.members.some((m) => !m.bot && !m.online)); // someone dropped out: show what the host can do
-    $("#menuLeave").hidden = mode !== "online";
-    $("#menu").hidden = false;
-  });
   // leave the room from the menu's bottom row: first tap turns it red, the second leaves
-  let leaveArm = null;
-  $("#menuLeave").addEventListener("click", () => {
-    const b = $("#menuLeave");
-    clearTimeout(leaveArm);
-    if (b.classList.contains("btn-danger")) { b.classList.remove("btn-danger"); $("#menu").hidden = true; wsSend({ t: "leave" }); return; }
-    b.classList.add("btn-danger"); toast("Nochmal tippen, dann verlässt du den Raum.");
-    leaveArm = setTimeout(() => b.classList.remove("btn-danger"), 3500);
-  });
 
-  $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
   $("#aimHelp").addEventListener("change", (e) => { aimHelp = e.target.checked; store.set(K.help, aimHelp); if (V) renderGame(); });
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)

@@ -1,0 +1,64 @@
+/* Shared look of the waiting room and the in-game menu (see room-ui.js). Loaded before the
+   game's own <style>, so a game can still override single rules. Uses the palette variables
+   every game defines (--bg, --bg2, --surface, --line, --text, --muted, --accent, --green). */
+
+/* ---------- waiting room ---------- */
+.roomcode{font-family:var(--display);font-size:64px;line-height:1;letter-spacing:.12em;text-align:center;color:var(--accent)}
+.qr{align-self:center;width:188px;height:188px;padding:10px;border-radius:18px;background:#fff;display:grid;place-items:center}
+.qr svg{width:100%;height:100%;display:block}
+.link{display:flex;gap:8px;align-items:center;background:var(--bg2);border-radius:12px;padding:6px 6px 6px 12px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.link code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;-webkit-user-select:all;user-select:all}
+.link .btn{padding:8px 12px;font-size:14px}
+#lobby .cols,#lobby .col{display:flex;flex-direction:column;gap:22px}
+.members{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.members li{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);min-height:48px}
+.members li.me{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.members .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.members .tag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.members .tag.ok{background:var(--green);color:#fff}
+.members .tag.wait{background:var(--surface);color:var(--muted)}
+.members .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.members .rm{flex:none;width:34px;height:34px;margin:-6px -4px -6px 0;border-radius:10px;border:0;background:transparent;color:var(--muted);font-size:20px}
+.members .av{font-size:20px;line-height:1;border:0;background:transparent;padding:0;flex:none}
+.members button.av{cursor:pointer;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--accent);padding:3px}
+.botico{width:18px;height:18px;flex:none;color:var(--muted)}
+.botico svg{width:100%;height:100%;display:block}
+.nowplaying{display:block;padding:12px 14px;border-radius:14px;background:var(--bg2);font-size:14px;line-height:1.45;box-shadow:inset 0 0 0 1.5px var(--accent)}
+/* house rules and game rules, folded */
+.houserules summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.houserules summary::-webkit-details-marker{display:none}
+.houserules summary::after{content:"▾";color:var(--muted);transition:transform .2s}
+.houserules[open] summary::after{transform:rotate(180deg)}
+.houserules[open] summary{margin-bottom:8px}
+.rules-sum{flex:1;text-align:right;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gamerules ul,.gamerules ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45}
+/* the buttons stay reachable at the bottom on an opaque bar, in one row: main buttons, then small icon buttons */
+.lobby-actions{position:sticky;bottom:-32px;z-index:3;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;gap:8px;
+  margin:auto -16px -32px;padding:14px 16px 32px;background:var(--bg);box-shadow:0 -1px 0 var(--line),0 -16px 20px -8px var(--bg)}
+.lobby-actions > .btn{margin:0;width:auto;flex:1 1 auto;min-width:0;padding:13px 12px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lobby-actions > .btn.iconact{flex:none!important;width:50px;padding:0;display:grid;place-items:center}
+.lobby-actions .iconact svg{width:22px;height:22px}
+@media (max-width:360px){.lobby-actions{gap:6px}.lobby-actions > .btn{padding:13px 8px;font-size:14px}.lobby-actions > .btn.iconact{width:44px}.lobby-actions .cnt{display:none}}
+@media (min-width:900px) and (min-height:700px){
+  #lobby{padding-inline:24px}
+  #lobby .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  .lobby-actions{margin-inline:-24px;padding-inline:24px}
+}
+
+/* ---------- in-game menu ---------- */
+#menu .rules{font-size:14px;display:flex;flex-direction:column;gap:8px;-webkit-user-select:text;user-select:text}
+#menu .rules ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+#menu .rules summary{font-weight:800;cursor:pointer;padding:4px 0}
+.history{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;font-size:13px}
+.history li{padding:6px 10px;border-radius:10px;background:var(--bg)}
+#menuActions{display:flex;flex-direction:column;gap:8px}
+#menuActions:empty{display:none}
+.hostacts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.menubar{display:flex;gap:8px;align-items:stretch}
+.menubar > .btn{margin:0}
+.menubar #menuClose{flex:1;width:auto}
+.menubar .iconact{flex:none;width:52px;padding:0;display:grid;place-items:center}
+.menubar .iconact svg{width:22px;height:22px}
+/* after a game: who is in for the rematch */
+.revotes{text-align:center;font-size:13px;line-height:1.5;margin:0}
+.revotes span{white-space:nowrap}

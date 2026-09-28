@@ -331,6 +331,33 @@ Dieser Bereich geht von selbst auf, wenn jemand offline ist. Ganz unten steht
 eine Zeile mit „Weiterspielen“ sowie Icons für „Raum verlassen“
 (`#menuLeave`, zweimal tippen) und die Startseite.
 
+**Beides steht nur einmal im Repo: `shared/room-ui.js` + `shared/room-ui.css`.**
+Der Server liefert sie neben den Spieldateien aus (`room-ui.js?v=…`, im
+Versions-Hash enthalten), `sw.js` cached sie, `scripts/build-single.js` baut
+sie mit ein. `room-ui.js` wird vor `game.js`/`app.js` geladen und baut beim
+Laden das Markup von `#lobby` und `#menu`. Das Spiel liefert in `index.html` nur
+Platzhalter:
+
+```html
+<section id="lobby" class="screen" hidden aria-label="Warteraum">
+  <template data-slot="settings"><div class="panel">…Spielziel, Stärke, …</div></template>
+</section>
+<div class="overlay" id="menu" hidden [data-title="Siege" data-scores="ranking" data-rules-title="…"]>
+  <template data-slot="rules"><ul>…Spielregeln…</ul></template>        <!-- auch im Warteraum -->
+  <template data-slot="history">…optional über dem Spielverlauf…</template>
+  <template data-slot="settings">…optionale Schalter, z. B. Zielhilfe…</template>
+</div>
+```
+
+In `app.js` ruft das Spiel `const UI = RoomUI({...})` mit seinen Zuständen
+(`room`, `view`, `mode`, `server`, `watching`), `send`, `toast`, `render`,
+`maxPlayers`, `watchers` sowie den Haken `renderSettings(host)`,
+`memberExtra(m, i)` (Farbpunkt, Team), `cycleAvatar()` und `menu: { open,
+local, player, skip, standIn }` auf. Zurück kommen `UI.renderLobby()` (inkl.
+Bereit-Logik), `UI.rematchStatus()` und `UI.armed()` für eigene
+Zweimal-tippen-Aktionen. Neue Warteraum- oder Menü-Funktionen gehören **nur**
+dorthin.
+
 Client-seitig (`app.js`, WS-Message-Handler):
 
 ```js
@@ -387,8 +414,8 @@ landet auf dem neuen Index.
 Die Raum-Nachricht trägt pro Mitglied `lobby` und `ready` sowie
 `rematch: room.rematch || []`. Serverseitig ist das ein gemeinsamer Baustein
 (`inGame`, `seatPlayers`, `readyPlayers`, `startWith`, `autoStart`,
-`toLobby`, `checkRematch`), clientseitig `renderReady()` und
-`rematchStatus()`. Beides ist in allen Spielen gleich und nur an den Stellen
+`toLobby`, `checkRematch` in `shared/room-server.js`), clientseitig `renderReady()` und
+`rematchStatus()` in `shared/room-ui.js`. Beides ist in allen Spielen gleich und nur an den Stellen
 angepasst, an denen die Spiele ihren Zustand anlegen. Durchgetestet in
 `maedn/test/lobby.test.js`.
 

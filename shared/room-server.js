@@ -505,11 +505,16 @@ module.exports = function roomServer(g) {
 
   // Scripts get a content hash in their URL (app.js?v=1a2b3c4d), so a phone or a CDN
   // holding an old copy can never mix old and new files after an update.
-  const VERSION = crypto.createHash("sha1")
-    .update(fs.readFileSync(path.join(PUBLIC, "game.js")))
-    .update(fs.readFileSync(path.join(PUBLIC, "app.js")))
-    .digest("hex").slice(0, 10);
+  // The shared waiting room and menu (room-ui.js/.css) are served next to the game's files.
+  const SHARED = { "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css") };
+  const SCRIPTS = ["/room-ui.css", "/room-ui.js", "/game.js", "/app.js"];
+  const fileOf = (p) => SHARED[p] || path.join(PUBLIC, p);
+  const hash = crypto.createHash("sha1");
+  for (const p of SCRIPTS) hash.update(fs.readFileSync(fileOf(p)));
+  const VERSION = hash.digest("hex").slice(0, 10);
   const INDEX = fs.readFileSync(path.join(PUBLIC, "index.html"), "utf8")
+    .replace('<link rel="stylesheet" href="room-ui.css">', `<link rel="stylesheet" href="room-ui.css?v=${VERSION}">`)
+    .replace('<script src="room-ui.js"></script>', `<script src="room-ui.js?v=${VERSION}"></script>`)
     .replace('<script src="game.js"></script>', `<script src="game.js?v=${VERSION}"></script>`)
     .replace('<script src="app.js"></script>', `<script src="app.js?v=${VERSION}"></script>`)
     .replace("<head>", `<head>\n<meta name="${g.metaName || g.id + "-version"}" content="${VERSION}">`);
@@ -533,12 +538,12 @@ module.exports = function roomServer(g) {
       res.writeHead(200, { "content-type": TYPES[".html"], "cache-control": "no-store" });
       return res.end(INDEX);
     }
-    const file = path.normalize(path.join(PUBLIC, p));
-    if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
+    const file = SHARED[p] || path.normalize(path.join(PUBLIC, p));
+    if (!SHARED[p] && !file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
     fs.readFile(file, (e, data) => {
       if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
       const ext = path.extname(file);
-      const versioned = url.searchParams.get("v") === VERSION && (p === "/app.js" || p === "/game.js");
+      const versioned = url.searchParams.get("v") === VERSION && SCRIPTS.includes(p);
       res.writeHead(200, {
         "content-type": TYPES[ext] || "application/octet-stream",
         "cache-control": versioned ? "public, max-age=31536000, immutable"
