@@ -290,6 +290,35 @@ Client-seitig (`app.js`, WS-Message-Handler):
 }
 ```
 
+### Revanche nur, wenn alle wollen
+
+Ist ein Online-Spiel vorbei (`state.phase === "roundEnd" && state.last.over`),
+startet `{t:"act", a:{t:"next"}}` nicht sofort neu, sondern zählt als
+Stimme. Erst wenn jeder Mitspieler zugestimmt hat, geht das `next` an die
+Spiellogik. Computer-Gegner stimmen automatisch zu. Wer offline ist,
+blockiert nicht, und Zuschauer (`pid < 0`) stimmen nicht mit. „Nächste Runde“
+mitten in einem Spiel bleibt ohne Abstimmung.
+
+```js
+function rematchReady(room, pid) {
+  const on = online(room.code);
+  room.rematch = (room.rematch || []).filter((i) => i !== pid).concat(pid);
+  const ready = room.members.every((m, i) => m.bot || !on.has(i) || room.rematch.includes(i));
+  if (ready) room.rematch = null;
+  return ready;
+}
+// in case "act", direkt nach const a = msg.a || {};
+if (a.t === "next" && room.state.phase === "roundEnd" && room.state.last && room.state.last.over) {
+  if (ws.pid == null || ws.pid < 0) return;
+  if (!rematchReady(room, ws.pid)) { room.touched = Date.now(); broadcast(room); saveRooms(); return; }
+}
+```
+
+Die Raum-Nachricht trägt `rematch: room.rematch || []`, „Zurück in den
+Warteraum“ setzt `room.rematch = null`. Der Knopf zeigt den Stand:
+„Revanche (1/3 bereit)“ bzw. nach der eigenen Stimme „Warte auf die anderen
+(2/3)“. Gezählt werden alle menschlichen Mitspieler, die gerade online sind.
+
 ### Einstellungen im Warteraum
 
 Alles, was beim Erstellen gewählt wird (Spielziel/Runden, Hausregeln,

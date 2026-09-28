@@ -111,7 +111,7 @@ function broadcast(room, events) {
   for (const ws of sockets.get(room.code) || []) {
     if (ws.pid == null) continue;
     send(ws, {
-      t: "room", code: room.code, you: ws.pid, host: room.host, goal: room.goal, size: room.size, rules: room.rules, members,
+      t: "room", code: room.code, you: ws.pid, host: room.host, goal: room.goal, size: room.size, rules: room.rules, members, rematch: room.rematch || [],
       level: room.level || 2, watchers: seen, view: room.state ? Game.view(room.state, ws.pid) : null, events: events || []
     });
   }
@@ -272,6 +272,10 @@ function handle(ws, msg) {
     case "act": {
       if (!room || !room.state) return;
       const a = msg.a || {};
+      if (a.t === "next" && room.state.phase === "roundEnd" && room.state.last && room.state.last.over) { // rematch: everyone votes
+        if (ws.pid == null || ws.pid < 0) return; // spectators don't
+        if (!rematchReady(room, ws.pid)) { room.touched = Date.now(); broadcast(room); saveRooms(); return; }
+      }
       if (a.t === "skip" && !isHost) return err("Nur der Host kann Spieler überspringen.");
       const expired = Game.tick(room.state); // a turn clock that ran out goes first
       if (expired.length) { broadcast(room, expired); saveRooms(); }
@@ -290,6 +294,7 @@ function handle(ws, msg) {
     case "end": { // host closes the game and returns everyone to the waiting room
       if (!room || !isHost) return;
       room.state = null;
+      room.rematch = null;
       scheduleBot(room);
       broadcast(room); saveRooms();
       return;
@@ -375,6 +380,16 @@ setInterval(() => {
     if (Date.now() - r.touched > IDLE_TTL) closeRoom(code, "idle");
   }
 }, 25000).unref();
+
+// a rematch starts only once every player still at the table has asked for it;
+// computer players always want one, and whoever is offline can't hold it up
+function rematchReady(room, pid) {
+  const on = online(room.code);
+  room.rematch = (room.rematch || []).filter((i) => i !== pid).concat(pid);
+  const ready = room.members.every((m, i) => m.bot || !on.has(i) || room.rematch.includes(i));
+  if (ready) room.rematch = null;
+  return ready;
+}
 
 // close a room for good and tell everyone still in it why ("idle" or "closed" by the host)
 function closeRoom(code, reason) {

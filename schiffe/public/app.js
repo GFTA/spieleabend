@@ -1061,6 +1061,11 @@
     const box = $("#reFleets"), w = box.clientWidth || 300, cols = V.players.length > 2 ? 2 : V.players.length;
     box.style.setProperty("--fbs", Math.floor(Math.min(240, (w - (cols - 1) * 12) / cols)) + "px");
     $("#reBtn").textContent = last.over ? "Revanche" : "Nächste Runde";
+    if (mode === "online" && R && last.over) { // a rematch needs everyone at the table
+      const voters = R.members.map((m, i) => i).filter((i) => !R.members[i].bot && R.members[i].online);
+      const yes = voters.filter((i) => (R.rematch || []).includes(i)).length;
+      $("#reBtn").textContent = (R.rematch || []).includes(R.you) ? `Warte auf die anderen (${yes}/${voters.length})` : `Revanche (${yes}/${voters.length} bereit)`;
+    }
     $("#reBtn").hidden = mode === "online" && V.me < 0;
     const back = $("#reBack");
     if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }

@@ -26,7 +26,15 @@ function client(port) {
     };
     waiter = check; check();
   });
-  return { ws, next, send: (m) => ws.send(JSON.stringify(m)), open: new Promise((r) => ws.on("open", r)) };
+  // newest room state seen so far; empties the inbox so no stale state is read later
+  const latest = () => {
+    const err = inbox.find((m) => m.t === "error");
+    if (err) throw new Error(err.msg);
+    const last = inbox.filter((m) => m.t === "room" && m.view).pop();
+    inbox.length = 0;
+    return last;
+  };
+  return { ws, next, latest, send: (m) => ws.send(JSON.stringify(m)), open: new Promise((r) => ws.on("open", r)) };
 }
 
 test("rooms, avatars, spectators, a full game with computers over WebSockets", async () => {
@@ -73,16 +81,20 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   assert.deepStrictEqual(await a.next((m) => m.t === "react"), { t: "react", pi: -1, e: "Ärger dich nicht!", name: "Chris" });
 
   // Anna and Ben roll and take the first move; the computers play on their own
+  // (both inboxes get drained before every step and the newest state wins; reading one
+  // inbox while the other kept older states made the test act for the wrong player)
   const seat = [a, b];
   for (let k = 0; k < 12; k++) {
-    if (v.cur > 1) { v = (await a.next((m) => m.t === "room" && m.view && m.view.cur <= 1)).view; continue; }
-    const me = seat[v.cur], turn = v.turn, need = v.need;
-    if (need === "roll") me.send({ t: "act", a: { t: "roll" } });
+    await new Promise((r) => setTimeout(r, 60));
+    const la = a.latest(), lb = b.latest();
+    v = (la || lb || { view: v }).view;
+    if (v.phase !== "play" || v.cur > 1) continue; // the computers are on
+    const me = seat[v.cur];
+    if (v.need === "roll") me.send({ t: "act", a: { t: "roll" } });
     else me.send({ t: "act", a: { t: "move", k: v.moves[0].k } });
-    const got = await me.next((m) => m.t === "error" || (m.t === "room" && m.view && (m.view.turn > turn || m.view.need !== need || m.view.dice !== v.dice)));
-    assert.ok(got.view, got.msg);
-    v = got.view;
   }
+  await new Promise((r) => setTimeout(r, 60));
+  a.latest(); b.latest(); // a move that went wrong shows up here as an error
   // Ben leaves mid-game: a computer takes his seat and the game goes on
   b.send({ t: "leave" });
   await b.next((m) => m.t === "left");

@@ -539,6 +539,11 @@
       (last.over ? "" : ` Gespielt wird bis ${V.goal} Siege, als Nächstes beginnt ${V.players[V.nextStarter].name}.`);
     scoreList($("#reScores"), last.winners);
     $("#reBtn").textContent = last.over ? "Revanche" : "Nächste Runde";
+    if (mode === "online" && R && last.over) { // a rematch needs everyone at the table
+      const voters = R.members.map((m, i) => i).filter((i) => !R.members[i].bot && R.members[i].online);
+      const yes = voters.filter((i) => (R.rematch || []).includes(i)).length;
+      $("#reBtn").textContent = (R.rematch || []).includes(R.you) ? `Warte auf die anderen (${yes}/${voters.length})` : `Revanche (${yes}/${voters.length} bereit)`;
+    }
     $("#reBtn").hidden = mode === "online" && V.me < 0;
     const back = $("#reBack");
     if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }

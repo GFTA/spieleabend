@@ -787,6 +787,11 @@
     $("#reText").textContent = `${last.pts} Punkte aus den Karten der anderen.` + (V.goal > 0 && !last.over ? ` Gespielt wird bis ${V.goal}.` : "");
     scoreList($("#reScores"), last.winner);
     $("#reBtn").textContent = last.over ? "Revanche" : "Nächste Runde";
+    if (mode === "online" && R && last.over) { // a rematch needs everyone at the table
+      const voters = R.members.map((m, i) => i).filter((i) => !R.members[i].bot && R.members[i].online);
+      const yes = voters.filter((i) => (R.rematch || []).includes(i)).length;
+      $("#reBtn").textContent = (R.rematch || []).includes(R.you) ? `Warte auf die anderen (${yes}/${voters.length})` : `Revanche (${yes}/${voters.length} bereit)`;
+    }
     const back = $("#reBack");
     if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }
     else { back.hidden = R.host !== V.me; back.textContent = "Zurück in den Warteraum"; }
