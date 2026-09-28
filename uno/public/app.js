@@ -1045,6 +1045,14 @@
   $("#startOnline").addEventListener("click", () => wsSend({ t: "start" }));
   $("#addBot").addEventListener("click", () => wsSend({ t: "addBot" }));
   $("#members").addEventListener("click", (e) => { const b = e.target.closest("[data-rmbot]"); if (b) wsSend({ t: "removeBot", seat: +b.dataset.rmbot }); });
+  // rules to read in the waiting room: the same text as in the game menu, copied once
+  {
+    const src = [...document.querySelectorAll("#menu summary")].find((s) => /Spielregeln/.test(s.textContent));
+    if (src) $("#rulesHelpLobby").innerHTML = [...src.parentElement.children].filter((e) => e !== src).map((e) => e.outerHTML).join("");
+  }
+  // back to the Spieleabend start page: games.cool-kidz.net behind the tunnel, port 8090 of the same box in the LAN
+  if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
+    for (const a of document.querySelectorAll("[data-start-link]")) a.href = `${location.protocol}//${location.hostname}:8090/`;
   $("#leaveLobby").addEventListener("click", () => wsSend({ t: "leave" }));
   // host closes the room for everyone; tap twice, like the menu actions
   let closeArm = null;

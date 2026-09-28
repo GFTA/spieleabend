@@ -198,6 +198,16 @@ räumt die URL auf:
   sitzt (`top < 110px`), darunter (`.bubble.down`, Animation `floatdown`) —
   und klemmt sie horizontal in den Bildschirm. Nur kleine Bewegung (16px),
   2,8s sichtbar.
+- Zurück zur Startseite: oben auf dem Startbildschirm
+  `<div class="homebar"><a class="homelink" data-start-link>‹ Spieleabend</a></div>`
+  und im Spielmenü unter „Weiterspielen“ ein Link „Zur Spieleabend-Startseite“.
+  `href` ist `https://games.cool-kidz.net/`; wird das Spiel im WLAN über
+  IP:Port geöffnet, biegt `app.js` alle `[data-start-link]` auf Port 8090
+  desselben Rechners um.
+- Spielregeln stehen im Spielmenü (`<details>` mit „Spielregeln“ im
+  `summary`) und zusätzlich aufklappbar im Warteraum unter den Hausregeln
+  (`#rulesHelpLobby`). Der Warteraum-Block wird beim Laden aus dem Menü
+  kopiert, der Regeltext wird also nur an einer Stelle gepflegt.
 - Die Hauptaktion (Würfel, Karte ziehen, …) sitzt an **einem festen Ort** in
   der Dock-Leiste unten: auf dem Handy immer mit dem Daumen erreichbar, am
   Desktop immer an derselben Stelle. Ein Tipp darauf wird nie still
