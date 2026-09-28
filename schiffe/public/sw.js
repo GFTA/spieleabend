@@ -1,6 +1,6 @@
 // Offline cache for the app shell (only active when served over HTTPS).
 const CACHE = "schiffe-v1";
-const FILES = ["./", "index.html", "room-ui.css", "room-ui.js", "game.js", "app.js", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"];
+const FILES = ["./", "index.html", "kit.css", "room-ui.css", "kit.js", "room-ui.js", "game.js", "app.js", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

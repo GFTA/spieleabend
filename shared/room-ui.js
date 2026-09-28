@@ -282,10 +282,6 @@
     });
     $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
 
-    // back to the Spieleabend start page: games.cool-kidz.net behind the tunnel, port 8090 of the same box in the LAN
-    if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
-      for (const a of document.querySelectorAll("[data-start-link]")) a.href = `${location.protocol}//${location.hostname}:8090/`;
-
     return { renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, ICONS };
   };
 })();

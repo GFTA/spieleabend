@@ -505,14 +505,16 @@ module.exports = function roomServer(g) {
 
   // Scripts get a content hash in their URL (app.js?v=1a2b3c4d), so a phone or a CDN
   // holding an old copy can never mix old and new files after an update.
-  // The shared waiting room and menu (room-ui.js/.css) are served next to the game's files.
-  const SHARED = { "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css") };
-  const SCRIPTS = ["/room-ui.css", "/room-ui.js", "/game.js", "/app.js"];
+  // The shared base (kit.css/.js) and waiting room + menu (room-ui.css/.js) are served next to the game's files.
+  const SHARED = { "/kit.css": path.join(__dirname, "kit.css"), "/kit.js": path.join(__dirname, "kit.js"), "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css") };
+  const SCRIPTS = ["/kit.css", "/room-ui.css", "/kit.js", "/room-ui.js", "/game.js", "/app.js"];
   const fileOf = (p) => SHARED[p] || path.join(PUBLIC, p);
   const hash = crypto.createHash("sha1");
   for (const p of SCRIPTS) hash.update(fs.readFileSync(fileOf(p)));
   const VERSION = hash.digest("hex").slice(0, 10);
   const INDEX = fs.readFileSync(path.join(PUBLIC, "index.html"), "utf8")
+    .replace('<link rel="stylesheet" href="kit.css">', `<link rel="stylesheet" href="kit.css?v=${VERSION}">`)
+    .replace('<script src="kit.js"></script>', `<script src="kit.js?v=${VERSION}"></script>`)
     .replace('<link rel="stylesheet" href="room-ui.css">', `<link rel="stylesheet" href="room-ui.css?v=${VERSION}">`)
     .replace('<script src="room-ui.js"></script>', `<script src="room-ui.js?v=${VERSION}"></script>`)
     .replace('<script src="game.js"></script>', `<script src="game.js?v=${VERSION}"></script>`)

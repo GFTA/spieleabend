@@ -14,49 +14,15 @@
   const $ = (s) => document.querySelector(s);
   const K = { local: "vier.v1", players: "vier.players", online: "vier.online", me: "vier.me", rules: "vier.rules", size: "vier.size", goal: "vier.goal", sound: "vier.sound", level: "vier.level", stats: "vier.stats",
     avatar: "vier.avatar", avatars: "vier.avatars", look: "vier.look" };
-  const store = {
-    get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
-    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
-  };
+  const store = Spieleabend.store;
   const BOT_MS = 900;
 
   // ---------- look: table design and board size (applied before anything is drawn) ----------
-  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
-  const LOOK_SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
-  let look = Object.assign({ table: "night", size: "1" }, store.get(K.look) || {});
-  {
-    // came here from the games.cool-kidz.net start page with a design already picked there
-    const params = new URLSearchParams(location.search), qTable = params.get("table");
-    if (qTable && TABLES.some((x) => x[0] === qTable)) {
-      look.table = qTable; store.set(K.look, look);
-      params.delete("table");
-      history.replaceState(null, "", location.pathname + (params.toString() ? `?${params}` : ""));
-    }
-  }
-  function applyLook() {
-    const root = document.documentElement, t = TABLES.find((x) => x[0] === look.table) || TABLES[0];
-    if (t[0] === "night") delete root.dataset.table; else root.dataset.table = t[0];
-    root.style.setProperty("--cs", (LOOK_SIZES.find((x) => x[0] === look.size) || LOOK_SIZES[1])[0]);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", getComputedStyle(root).getPropertyValue("--bg").trim() || t[2]);
-  }
-  applyLook();
+  // ---------- look: table design and size (shared, kit.js), applied before anything is drawn ----------
+  const LOOK = Spieleabend.look({ key: K.look, sizeLabel: "Größe", onChange: () => { if (V && !$("#game").hidden) layoutBoard(); } });
 
   // ---------- avatars ----------
-  const randomAvatar = () => G.AVATARS[Math.floor(Math.random() * G.AVATARS.length)];
-  let myAvatar = G.AVATARS.includes(store.get(K.avatar)) ? store.get(K.avatar) : randomAvatar();
-  {
-    // name and avatar picked on the games.cool-kidz.net start page (same hand-off as ?table=)
-    const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
-    if (qa && G.AVATARS.includes(qa)) { myAvatar = qa; store.set(K.avatar, myAvatar); }
-    if (qn) store.set(K.me, qn);
-    if (q.has("name") || q.has("av")) {
-      q.delete("name"); q.delete("av");
-      history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
-    }
-  }
-  store.set(K.avatar, myAvatar);
+  let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
   let localAvatars = Array.isArray(store.get(K.avatars)) ? store.get(K.avatars) : [];
   const avatarFor = (i) => (G.AVATARS.includes(localAvatars[i]) ? localAvatars[i] : G.AVATARS[i % G.AVATARS.length]);
   const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
@@ -100,12 +66,7 @@
   const height = (c) => { let r = 0; while (r < V.rows && V.grid[c + r * V.cols] !== -1) r++; return r; };
   const ownBottom = (c) => V.grid[c] === V.cur;
 
-  let toastT;
-  function toast(msg) {
-    if (!msg) return;
-    const t = $("#toast"); t.textContent = msg; t.classList.remove("off");
-    clearTimeout(toastT); toastT = setTimeout(() => t.classList.add("off"), 2800);
-  }
+  const { toast, confetti, showBubble } = Spieleabend;
   function flash(text, sub, cls) {
     const f = $("#flash"), s = $("#flashText");
     s.className = cls || "";
@@ -322,7 +283,7 @@
     const W = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
     const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - 10 - 8;
     const wf = V.cols + 0.14 * (V.cols - 1) + 0.392, hf = V.rows + 0.14 * (V.rows - 1) + 0.392;
-    const cs = parseFloat((LOOK_SIZES.find((x) => x[0] === look.size) || LOOK_SIZES[1])[0]);
+    const cs = parseFloat(LOOK.get().size) || 1;
     const fit = Math.min(W / wf, H / hf, desktop.matches ? 86 : 64);
     const maxW = cs > 1 ? (arena.clientWidth - 8) / wf : W / wf; // big boards may use the side margins
     const cell = Math.max(18, Math.floor(Math.min(maxW, fit * cs)));
@@ -476,37 +437,10 @@
 
   // ---------- confetti ----------
   let confettiFor = null;
-  function confetti() {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const cv = $("#confetti"), ctx = cv.getContext("2d"), dpr = Math.min(2, devicePixelRatio || 1);
-    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; cv.hidden = false;
-    const cols = ["#e0393e", "#f2c230", "#2fa35b", "#2d6fd6", "#ffffff"];
-    const ps = Array.from({ length: 140 }, () => ({
-      x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.5, w: (6 + Math.random() * 6) * dpr, h: (10 + Math.random() * 8) * dpr,
-      vx: (Math.random() - 0.5) * 3 * dpr, vy: (2 + Math.random() * 4) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: cols[(Math.random() * 5) | 0]
-    }));
-    const t0 = performance.now();
-    (function frame(t) {
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      for (const p of ps) {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.05 * dpr; p.r += p.vr;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
-      }
-      if (t - t0 < 3200) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, cv.width, cv.height); cv.hidden = true; }
-    })(t0);
-  }
 
   // ---------- reactions (online) ----------
   // reactions float above everything (fixed), so the top edge of the screen or a scrolling
   // player strip can't clip them; near the top they show up below the player instead
-  function showBubble(host, b) {
-    const r = host.getBoundingClientRect(), down = r.top < 110;
-    b.style.top = (down ? r.bottom + 6 : r.top - 6) + "px";
-    if (down) b.classList.add("down");
-    document.body.appendChild(b);
-    const w = b.offsetWidth / 2 + 8;
-    b.style.left = Math.min(innerWidth - w, Math.max(w, r.left + r.width / 2)) + "px";
-  }
   function bubble(pi, e, who) {
     const host = pi >= 0 ? document.querySelector(`#plates [data-seat="${pi}"]`) : $("#dock");
     if (!host) return;
@@ -589,7 +523,7 @@
 
   function renderHome(force) {
     renderLocalRules();
-    renderLook();
+    LOOK.render();
     $("#myAvatar").textContent = myAvatar;
     renderStats();
     for (const b of document.querySelectorAll("#modeTabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
@@ -641,7 +575,7 @@
     },
     menu: {
       open() {
-        renderLook();
+        LOOK.render();
         scoreList($("#menuScores"), []);
         const on = activeNames(V ? V.rules : {});
         const size = V ? `Spielfeld ${V.cols}×${V.rows}, ${V.goal === 1 ? "eine Runde" : `bis ${V.goal} Siege`}.` : "";
@@ -664,34 +598,9 @@
   });
 
   // avatar picker in the online form
-  $("#myAvatar").addEventListener("click", () => {
-    const g = $("#avatarGrid");
-    g.innerHTML = G.AVATARS.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === myAvatar}">${a}</button>`).join("");
-    g.hidden = !g.hidden;
-  });
-  $("#avatarGrid").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-pick]"); if (!b) return;
-    myAvatar = b.dataset.pick; store.set(K.avatar, myAvatar);
-    $("#avatarGrid").hidden = true; $("#myAvatar").textContent = myAvatar;
-  });
+  Spieleabend.avatarPicker({ avatars: G.AVATARS, get: () => myAvatar, set: (a) => { myAvatar = a; store.set(K.avatar, a); } });
 
   // look settings on the start screen and in the menu
-  function renderLook() {
-    const html = `<div class="label">Tisch</div><div class="seg tables">${TABLES.map(([k, n, c]) =>
-      `<button type="button" data-table="${k}" aria-pressed="${look.table === k}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("")}</div>` +
-      `<div class="label">Größe</div><div class="seg three">${LOOK_SIZES.map(([k, n]) =>
-      `<button type="button" data-size="${k}" aria-pressed="${look.size === k}">${n}</button>`).join("")}</div>`;
-    for (const id of ["#lookHome", "#lookMenu"]) if ($(id).innerHTML !== html) $(id).innerHTML = html;
-    $("#lookSum").textContent = `${(TABLES.find((x) => x[0] === look.table) || TABLES[0])[1]} · ${(LOOK_SIZES.find((x) => x[0] === look.size) || LOOK_SIZES[1])[1]}`;
-  }
-  for (const id of ["#lookHome", "#lookMenu"]) $(id).addEventListener("click", (e) => {
-    const t = e.target.closest("[data-table]"), z = e.target.closest("[data-size]");
-    if (!t && !z) return;
-    if (t) look.table = t.dataset.table;
-    if (z) look.size = z.dataset.size;
-    store.set(K.look, look); applyLook(); renderLook();
-    if (V && !$("#game").hidden) layoutBoard();
-  });
   $("#statsReset").addEventListener("click", (e) => { // second tap within 3 s deletes
     const b = e.currentTarget;
     if (b.dataset.armed) { store.del(K.stats); delete b.dataset.armed; b.textContent = "Bilanz löschen"; b.classList.remove("btn-danger"); renderStats(); return; }

@@ -27,6 +27,22 @@ Renderer (`public/app.js`).
 
 ## Design-System
 
+**Gemeinsamer Teil im Browser (`shared/`, von jedem Spiel-Server mit ausgeliefert):**
+
+| Datei | Inhalt |
+|---|---|
+| `kit.css` | Basis-Palette, die fünf Tisch-Designs (nur Basisfarben) und alle Bausteine, die überall gleich aussehen (Knöpfe-Grundlagen, Felder, Panels, Segmente, Toggles, Toast, Avatar-Raster, Reaktionsblasen, Konfetti, Startseiten-Link …) |
+| `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (`?name=`/`?av=`-Übernahme, Start-Avatar), `avatarPicker()`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
+| `room-ui.css` / `room-ui.js` | Warteraum und Spielmenü (s. u.) |
+
+Reihenfolge in `index.html`: `kit.css`, `room-ui.css`, dann der eigene `<style>` (Spielfarben
+und alles Spielspezifische, darf gemeinsame Regeln überschreiben); Scripts `kit.js`,
+`room-ui.js`, `game.js`, `app.js`. Eine CSS-Regel gehört nur dann nach `kit.css`, wenn
+sie in allen Spielen gleich ist **und** keine Spielregel sie durch die neue Reihenfolge
+überschreiben würde (Beispiel: `.btn-primary` bleibt im Spiel, weil das Basis-`.btn` pro
+Spiel verschieden ist). Die Abschnitte unten beschreiben die Konventionen; die Code-Beispiele
+stehen so in `shared/kit.*`.
+
 ### Farben & Schrift (`public/index.html`, `<style>`-Block oben)
 
 Jedes Spiel definiert dieselbe Basis-Palette in `:root{}` und ergänzt nur
@@ -540,7 +556,7 @@ passenden Container danebenstellen.
 ## Checkliste: neues Spiel hinzufügen
 
 1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
-2. Design-System aus diesem Dokument übernehmen: Basis-`:root`-Palette, fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
+2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
 3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen
