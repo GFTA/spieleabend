@@ -1,0 +1,107 @@
+"use strict";
+// Galgenmännchen online: settings, a player picks the word, the others guess, the word stays hidden.
+const test = require("node:test");
+const assert = require("node:assert");
+const os = require("os");
+const path = require("path");
+const fs = require("fs");
+const WebSocket = require("ws");
+
+process.env.PORT = "0";
+process.env.BOT_MS = "20";
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "hangman-"));
+const { server, wss, rooms } = require("../server.js");
+test.after(() => { for (const ws of wss.clients) ws.terminate(); server.close(); });
+
+function client(port) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+  const inbox = [];
+  let waiter = null;
+  ws.on("message", (d) => { inbox.push(JSON.parse(d)); if (waiter) waiter(); });
+  const next = (pred, ms = 3000) => new Promise((res, rej) => {
+    const t = setTimeout(() => rej(new Error("timeout")), ms);
+    const check = () => {
+      const i = inbox.findIndex(pred);
+      if (i >= 0) { clearTimeout(t); waiter = null; res(inbox.splice(0, i + 1).pop()); }
+    };
+    waiter = check; check();
+  });
+  return { ws, next, send: (m) => ws.send(JSON.stringify(m)), open: new Promise((r) => ws.on("open", r)) };
+}
+
+test("a player picks the word, the other guesses, nobody else sees it", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const port = server.address().port;
+  const info = await (await fetch(`http://127.0.0.1:${port}/info`)).json();
+  assert.strictEqual(info.hangman, true);
+  assert.match(await (await fetch(`http://127.0.0.1:${port}/`)).text(), /Galgenmännchen/);
+
+  const anna = client(port), ben = client(port);
+  await Promise.all([anna.open, ben.open]);
+  anna.send({ t: "create", name: "Anna", pick: "player", goal: 3 });
+  const { code } = await anna.next((m) => m.t === "joined");
+  const lobby = await anna.next((m) => m.t === "room");
+  assert.strictEqual(lobby.pick, "player");
+  assert.strictEqual(lobby.goal, 3);
+  anna.send({ t: "settings", pick: "nonsense", rules: { hard: true } });
+  const set = await anna.next((m) => m.t === "room" && m.rules.hard);
+  assert.strictEqual(set.pick, "random", "unknown picks fall back to random words");
+  anna.send({ t: "settings", pick: "player" });
+  await anna.next((m) => m.t === "room" && m.pick === "player");
+
+  ben.send({ t: "join", code, name: "Ben" });
+  await ben.next((m) => m.t === "joined");
+  ben.send({ t: "ready", on: true });
+  await anna.next((m) => m.t === "room" && m.members.length === 2 && m.members[1].ready);
+  anna.send({ t: "start" });
+  const a1 = await anna.next((m) => m.t === "room" && m.view);
+  const chooser = a1.view.chooser, picker = chooser === 0 ? anna : ben, guesser = chooser === 0 ? ben : anna;
+  assert.strictEqual(a1.view.phase, "choose");
+  assert.strictEqual(a1.view.maxErrors, 6);
+
+  picker.send({ t: "act", a: { t: "word", word: "zwei Wörter" } });
+  assert.match((await picker.next((m) => m.t === "error")).msg, /Leerzeichen/);
+  picker.send({ t: "act", a: { t: "word", word: "Straße", hint: "draußen" } });
+  const pv = await picker.next((m) => m.t === "room" && m.view && m.view.phase === "play");
+  assert.strictEqual(pv.view.word, "STRAßE", "the picker sees the word");
+  const gv = await guesser.next((m) => m.t === "room" && m.view && m.view.phase === "play");
+  assert.strictEqual(gv.view.word, null, "the guesser does not");
+  assert.strictEqual(gv.view.hint, "draußen");
+  assert.ok(JSON.stringify(rooms.get(code).state).includes("STRAßE"));
+  assert.ok(!JSON.stringify(gv).includes("STRAßE"), "not anywhere in the guesser's message");
+
+  guesser.send({ t: "act", a: { t: "letter", l: "a" } });
+  const hit = await guesser.next((m) => m.t === "room" && m.view && m.view.guessed.includes("A"));
+  assert.deepStrictEqual(hit.view.mask, [null, null, null, "A", null, null]);
+  picker.send({ t: "act", a: { t: "letter", l: "S" } });
+  assert.match((await picker.next((m) => m.t === "error")).msg, /du rätst nicht mit/);
+  guesser.send({ t: "act", a: { t: "solve", word: "straße" } });
+  const end = await guesser.next((m) => m.t === "room" && m.view && m.view.phase === "roundEnd");
+  assert.strictEqual(end.view.word, "STRAßE");
+  assert.strictEqual(end.view.last.solver, end.view.me);
+});
+
+test("random words with a computer player: the bot guesses on its own", async () => {
+  const port = server.address().port;
+  const c = client(port); await c.open;
+  c.send({ t: "create", name: "Cleo", pick: "random", level: 3 });
+  await c.next((m) => m.t === "room");
+  c.send({ t: "bot" });
+  await c.next((m) => m.t === "room" && m.members.length === 2);
+  c.send({ t: "start" });
+  const v = await c.next((m) => m.t === "room" && m.view);
+  assert.strictEqual(v.view.phase, "play");
+  assert.ok(v.view.cat, "random words come with their category");
+  // whenever it is Cleo's turn, pass with a letter nobody needs; the bot has to solve it
+  const done = await (async () => {
+    for (let k = 0; k < 60; k++) {
+      const m = await c.next((x) => x.t === "room" && x.view, 5000);
+      if (m.view.phase === "roundEnd") return m;
+      if (m.view.cur === m.view.me) {
+        const l = ["Q", "X", "Y", "J", "V", "P", "F", "W"].find((x) => !m.view.guessed.includes(x) && !m.view.wrong.includes(x));
+        c.send({ t: "act", a: { t: "letter", l } });
+      }
+    }
+  })();
+  assert.ok(done, "the round ended");
+});

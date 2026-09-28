@@ -1,0 +1,17 @@
+services:
+  hangman:
+    build:
+      context: ..
+      dockerfile: hangman/Dockerfile
+      args:
+        GAME: hangman
+    image: hangman:latest
+    container_name: hangman
+    restart: unless-stopped
+    ports:
+      - "${HANGMAN_PORT:-8085}:8080"
+    volumes:
+      - hangman-data:/data
+
+volumes:
+  hangman-data:

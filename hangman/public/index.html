@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Galgenmännchen">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<!-- ARTIFACT-START -->
+<title>Galgenmännchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<style>
+:root{--wood:#b98a5a;--wood2:#8a623c;--rope:#d9c3a0;--slot:#140f1e;--sea:#1f2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="felt"]{--slot:#0a1f16;--sea:#10363a}
+:root[data-table="ocean"]{--slot:#0a1322;--sea:#123057}
+:root[data-table="light"]{--slot:#ffffff;--sea:#cfe0f3;--wood:#9a6b3e;--wood2:#7a522d;--rope:#8b6a3e}
+:root[data-table="blossom"]{--slot:#fff6f9;--sea:#e6d9f4;--wood:#d98aa9;--wood2:#b86689;--rope:#c78fa5}
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+.hero .gallows{width:150px;height:165px;transform:rotate(-4deg);filter:drop-shadow(0 10px 18px rgba(0,0,0,.4))}
+.hero .word{--slot-w:30px;margin-top:4px}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.prow .kind{flex:none;border:0;border-radius:12px;padding:0 10px;height:48px;min-width:92px;font-weight:800;font-size:13px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.prow .kind svg{width:18px;height:18px}
+.prow .kind[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 0 0 1.5px var(--blue);background:var(--sea)}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.plates{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:6px 6px 2px 0}
+.plates::-webkit-scrollbar{display:none}
+.plate{position:relative;flex:1 0 104px;max-width:190px;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.plate.away,.plate.out{opacity:.55}
+.plate .pav{font-size:24px;line-height:1;flex:none}
+.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-right:10px}
+.plate .pname{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate .pmeta{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
+.plate.active .pwins{background:var(--accent);color:#231a05}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:10px 16px}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+/* the gallows: parts appear one by one */
+.gallows{flex:none;width:calc(150px * var(--cs));height:calc(165px * var(--cs));max-height:30vh}
+.gallows .part{stroke-linecap:round;stroke-linejoin:round;fill:none;opacity:0;transition:opacity .25s}
+.gallows .part.on{opacity:1}
+.gallows .part.new{animation:draw .45s ease-out}
+.gallows .wood{stroke:var(--wood);stroke-width:7}
+.gallows .rope{stroke:var(--rope);stroke-width:3}
+.gallows .man{stroke:var(--text);stroke-width:5}
+.gallows .face{stroke:var(--text);stroke-width:2.5;opacity:0}
+.gallows.hanged .face{opacity:1}
+.gallows.hanged .man,.gallows.hanged .face{stroke:var(--red)}
+.gallows.saved .man{stroke:var(--green)}
+@keyframes draw{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.catline{font-size:13px;font-weight:700;color:var(--muted);text-align:center;letter-spacing:.02em}
+.catline b{color:var(--text)}
+/* the word: one slot per letter */
+.word{--slot-w:clamp(22px,calc((100vw - 48px) / var(--n) - 5px),calc(42px * var(--cs)));display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:100%}
+.slot{width:var(--slot-w);height:calc(var(--slot-w) * 1.25);display:grid;place-items:center;border-radius:8px;background:var(--slot);box-shadow:inset 0 -3px 0 var(--line);font-family:var(--display);font-size:calc(var(--slot-w) * .62);line-height:1;color:var(--text)}
+.slot.new{animation:flip .4s ease-out}
+.slot.missed{color:var(--red)}
+.word.win .slot{box-shadow:inset 0 -3px 0 var(--green)}
+@keyframes flip{from{transform:rotateX(90deg)}to{transform:none}}
+.wrong{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:22px;font-weight:800;font-size:15px;color:var(--red);letter-spacing:.04em}
+.wrong .cnt{color:var(--muted);font-size:13px;font-weight:700}
+.word.shake,.gallows.shake{animation:shake .35s}
+@keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
+/* choosing the word */
+.choose{width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:18px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.choose .row{gap:8px}
+.choose .field{text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.choose .field.hint{text-transform:none;letter-spacing:0;font-weight:600}
+.choose .btn-row{display:flex;gap:8px}
+.choose .btn-row .btn{flex:1}
+.waiting{font-size:15px;font-weight:700;color:var(--muted);text-align:center;max-width:32ch}
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:30px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:12px 12px;font-size:15px}
+/* the letter keyboard: A–Z, Ä, Ö, Ü, ß */
+.kbd{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.kbd button{border:0;border-radius:9px;height:42px;padding:0;min-width:0;font-weight:800;font-size:16px;background:var(--surface);box-shadow:inset 0 -3px 0 var(--line);color:var(--text)}
+.kbd button:disabled{cursor:default}
+.kbd button.ok{background:var(--green);color:#fff;box-shadow:none}
+.kbd button.no{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line);text-decoration:line-through}
+.kbd.off button:not(.ok):not(.no){opacity:.45}
+.solve{display:flex;gap:8px}
+.solve .field{flex:1;min-width:0;text-transform:uppercase;font-weight:800;letter-spacing:.06em}
+.clock{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.clock .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.clock i{display:block;height:100%;width:100%;background:var(--accent);border-radius:4px}
+.clock.urgent i{background:var(--red)}
+.clock.urgent{color:var(--red);animation:blink .5s steps(2) infinite}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+#roundEnd .sheet{max-width:560px}
+#roundEnd .word{--slot-w:clamp(20px,calc((100vw - 90px) / var(--n) - 5px),34px)}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.scores .gain{color:var(--green);font-weight:800;margin-right:8px}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+.rules-list .toggle{align-items:flex-start}
+.rules-list .toggle input{margin-top:2px}
+.toggle:has(input:disabled){cursor:default;opacity:.9}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+#flash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;pointer-events:none}
+#flash span{font-family:var(--display);font-size:min(15vw,100px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:bang .9s ease-out forwards;text-align:center;line-height:.95}
+#flash span.blue{color:var(--accent)}
+#flash small{display:block;font-size:.26em;color:#fff;text-shadow:2px 2px 0 #1b1325;margin-top:.3em}
+@keyframes bang{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.35) rotate(-4deg);opacity:0}}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .kbd button:not(:disabled):hover{filter:brightness(1.15)}
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  #game{display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
+  .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
+  .roundinfo{display:block}
+  .plate .pav{font-size:28px}
+  .plate .pname{font-size:15px}
+  .arena{padding:8px 0 0}
+  .gallows{width:calc(200px * var(--cs));height:calc(220px * var(--cs));max-height:40vh}
+  .word{--slot-w:clamp(24px,calc((100vw - 520px) / var(--n) - 6px),calc(52px * var(--cs)))}
+  .lastmove{font-size:14px}
+  .dock{align-self:start;margin-top:48px;border-radius:22px;padding:18px;gap:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
+  .who b{font-size:20px}
+  .kbd button{height:46px}
+  .dock .keys{display:block}
+}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <div id="heroGallows" aria-hidden="true"></div>
+      <div class="word" id="heroWord" aria-hidden="true"></div>
+      <h1>Galgen<span>männchen</span></h1>
+      <p class="tagline">Buchstabe für Buchstabe ein deutsches Wort erraten, bevor das Männchen hängt. Mit Zufallswörtern oder einem Wort, das sich einer von euch ausdenkt.</p>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Jeder sein Handy</button>
+      <button type="button" data-tab="local" aria-pressed="false">Ein Gerät für alle</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <label class="label" for="myName">Dein Name</label>
+      <div class="row">
+        <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+        <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+      </div>
+      <div class="avgrid" id="avatarGrid" hidden></div>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Wortwahl, Runden, Hausregeln und Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Jeder sein Handy“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem Mini-PC zu Hause. Öffne dann dessen Adresse, etwa <b>http://192.168.178.20:8085</b>. Hier geht nur „Ein Gerät für alle“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="label">Spieler</div>
+      <div class="plist" id="plist"></div>
+      <button class="btn btn-ghost" id="addPlayer" type="button">+ Spieler</button>
+      <p class="hint">Tippe auf <b>Mensch</b>, um daraus einen Computer-Gegner zu machen. Allein geht auch.</p>
+      <div class="label">Wort</div>
+      <div class="seg two" id="pickLocal" role="group" aria-label="Wer das Wort aussucht"></div>
+      <div class="label">Runden</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Runden"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke der Computer-Gegner"></div>
+      <details class="houserules">
+        <summary><span class="label">Hausregeln</span><span class="rules-sum" id="rulesLocalSum"></span></summary>
+        <div class="rules-list" id="rulesLocal"></div>
+      </details>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <details class="houserules">
+      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
+      <div class="look" id="lookHome"></div>
+    </details>
+    <div class="panel" id="statsPanel" hidden>
+      <div class="label">Bilanz auf diesem Gerät</div>
+      <ol class="scores" id="statsList"></ol>
+      <button class="btn btn-ghost" id="statsReset" type="button">Bilanz löschen</button>
+    </div>
+    <p class="hint">Wer dran ist, tippt einen Buchstaben. Kommt er vor, gibt es Punkte und du bist nochmal dran, sonst wächst der Galgen. Wer das Wort löst, bekommt einen Bonus. Nach den eingestellten Runden gewinnt, wer die meisten Punkte hat.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Wort</div>
+      <div class="seg two" id="pickOnline" role="group" aria-label="Wer das Wort aussucht"></div>
+      <p class="hint" id="pickHint"></p>
+      <div class="label">Runden</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Runden"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke der Computer-Gegner"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div id="gallows"></div>
+      <div class="catline" id="catLine"></div>
+      <div class="word" id="word"></div>
+      <div class="wrong" id="wrong"></div>
+      <form class="choose" id="choose" hidden autocomplete="off">
+        <div class="label" id="chooseLabel">Dein Wort</div>
+        <input class="field" id="chooseWord" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" placeholder="z. B. Regenschirm" aria-label="Dein Wort">
+        <input class="field hint" id="chooseHint" maxlength="40" autocomplete="off" enterkeyhint="done" placeholder="Hinweis für die anderen (optional)" aria-label="Hinweis">
+        <p class="hint" id="chooseNote">Ein deutsches Wort mit 3 bis 20 Buchstaben, Umlaute und ß gehen auch. Die anderen sehen es erst am Ende der Runde.</p>
+        <div class="btn-row">
+          <button class="btn" id="chooseRandom" type="button">Zufallswort</button>
+          <button class="btn btn-primary" id="chooseGo" type="submit">Los geht's</button>
+        </div>
+      </form>
+      <div class="waiting" id="waiting" hidden></div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
+      <div class="kbd" id="kbd"></div>
+      <form class="solve" id="solve" hidden autocomplete="off">
+        <input class="field" id="solveWord" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="send" placeholder="Das ganze Wort" aria-label="Das ganze Wort">
+        <button class="btn btn-primary" type="submit">Lösen</button>
+      </form>
+      <div class="acts">
+        <button class="btn" id="solveBtn" type="button" hidden>Wort lösen</button>
+        <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
+      </div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <div class="word" id="reWord"></div>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li>Jede Runde wird ein deutsches Wort gesucht: entweder ein <b>Zufallswort</b> aus der Wortliste (die Kategorie steht darüber) oder eines, das sich <b>ein Mitspieler</b> ausdenkt. Wer aussucht, wird zufällig bestimmt, jeder kommt etwa gleich oft dran, und rät in dieser Runde nicht mit.</li>
+          <li>Wer dran ist, tippt einen Buchstaben, auch Ä, Ö, Ü und ß. Kommt er vor, wird er überall aufgedeckt, du bekommst einen Punkt pro Vorkommen und bist nochmal dran.</li>
+          <li>Kommt er nicht vor, wächst der Galgen um ein Stück und der Nächste ist dran. Nach 10 Fehlern (Hausregel „Schwer“: 6) hängt das Männchen, dann bekommt, wer das Wort ausgesucht hat, 5 Punkte.</li>
+          <li>Mit „Wort lösen“ tippst du auf das ganze Wort: richtig gibt einen Punkt pro noch verdecktem Buchstaben plus 3 Bonuspunkte, falsch zählt als Fehler.</li>
+          <li>Nach 3, 5 oder 8 Runden gewinnt, wer die meisten Punkte hat.</li>
+          <li>Am Computer: einfach Buchstaben tippen, <b>Enter</b> öffnet „Wort lösen“, <b>Esc</b> schließt Fenster.</li>
+        </ul>
+  </template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="flash" hidden><span id="flashText"></span></div>
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+<!-- ARTIFACT-BODY-END -->
+</body>
+</html>

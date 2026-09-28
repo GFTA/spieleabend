@@ -43,5 +43,14 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://mensch.cool-kidz.net/",
     "status": "http://maedn:8080/info"
+  },
+  {
+    "id": "hangman",
+    "name": "Galgenmännchen",
+    "title": "Galgenmännchen",
+    "desc": "Deutsche Wörter Buchstabe für Buchstabe erraten, bevor das Männchen hängt. Zufallswörter oder einer denkt sich eins aus.",
+    "players": "1–8 Spieler + Zuschauer",
+    "url": "https://hangman.cool-kidz.net/",
+    "status": "http://hangman:8080/info"
   }
 ]
