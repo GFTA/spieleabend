@@ -276,9 +276,16 @@ case "close": { // host closes the room for everyone
 ```
 
 Im Client gibt es dafür einen Knopf „Raum für alle schließen“ nur für den
-Host — im Warteraum (`#closeLobby` unter „Raum verlassen“) und im Spielmenü
-(`armed(…)`-Aktion). Beide wollen zweimal getippt werden („Sicher? Nochmal
-tippen“), wie alle zerstörerischen Menü-Aktionen.
+Host — im Warteraum (`#closeLobby`) und im Spielmenü (`armed(…)`-Aktion).
+Beide wollen zweimal getippt werden, wie alle zerstörerischen Menü-Aktionen;
+im Warteraum färbt sich der Knopf beim ersten Tipp rot und ein Toast sagt
+„Nochmal tippen“.
+
+Die Knöpfe des Warteraums (`.lobby-actions`) stehen in **einer Zeile**:
+„Bereit“ und „Starten“ als Text, „Raum verlassen“ (`#leaveLobby`) und „Raum
+für alle schließen“ als Icon-Knöpfe (`.iconact`, Name in `aria-label` und
+`title`). Die Spielerzahl im Start-Knopf (`.cnt`) fällt unter 360px Breite
+weg, damit nichts abgeschnitten wird.
 
 Client-seitig (`app.js`, WS-Message-Handler):
 

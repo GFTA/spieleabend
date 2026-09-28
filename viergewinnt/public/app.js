@@ -896,7 +896,7 @@
     else {
       btn.dataset.act = "ready";
       btn.textContent = me && me.ready ? (over ? "Bei der Revanche dabei ✓" : "Bereit ✓") : (over ? "Bei der Revanche mitspielen" : "Bereit");
-      btn.classList.toggle("btn-primary", !(me && me.ready));
+      btn.classList.toggle("btn-primary", !(me && me.ready) && !(host && !run)); // the host's main button is "Starten"
     }
     box.hidden = !run;
     if (run) {
@@ -908,7 +908,8 @@
     const go = R.members.filter((m, i) => m.bot || (m.online && (m.ready || i === R.host)));
     start.hidden = !host || !!run;
     start.disabled = go.length < 2;
-    start.textContent = go.length < 2 ? "Warte, bis jemand bereit ist …" : `Spiel starten (${go.length} Spieler)`;
+    start.innerHTML = go.length < 2 ? "Starten" : `Starten<span class="cnt"> (${go.length})</span>`;
+    start.title = go.length < 2 ? "Warte, bis jemand bereit ist" : `Spiel mit ${go.length} Spielern starten`;
     // who is ready, who plays, who waits
     [...document.querySelectorAll("#members > li")].forEach((li, i) => {
       const m = R.members[i];
@@ -946,9 +947,9 @@
   // host closes the room for everyone; tap twice, like the menu actions
   let closeArm = null;
   $("#closeLobby").addEventListener("click", (e) => {
-    const b = e.currentTarget, reset = () => { closeArm = null; b.textContent = "Raum für alle schließen"; b.classList.remove("btn-danger"); };
+    const b = e.currentTarget, reset = () => { closeArm = null; b.classList.remove("btn-danger"); };
     if (closeArm) { clearTimeout(closeArm); reset(); wsSend({ t: "close" }); return; }
-    b.textContent = "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
+    b.classList.add("btn-danger"); toast("Nochmal tippen, dann ist der Raum für alle geschlossen.");
     closeArm = setTimeout(reset, 3500);
   });
   $("#copyBtn").addEventListener("click", () => {
