@@ -36,7 +36,7 @@ drei Kartengrößen, Stärke der Computer-Gegner (Einfach vergisst auch mal UNO)
 fliegen sichtbar vom Platz auf den Stapel, die Punkte jeder Runde stehen im Spielverlauf,
 und online gibt es neben Emojis auch kurze Sprüche.
 
-## Auf dem HP Mini installieren
+## Auf dem Server installieren
 
 Der Server ist ein einzelnes Node.js-Programm (`server.js`) ohne Datenbank. Spielstände
 landen in `data/rooms.json`, damit ein Neustart laufende Runden nicht verliert.
@@ -49,12 +49,12 @@ cd spieleabend/uno
 docker compose up -d --build
 ```
 
-Der Container startet nach einem Neustart des Mini-PCs von selbst
+Der Container startet nach einem Neustart des Servers von selbst
 (`restart: unless-stopped`). Aktualisieren: `git pull && docker compose up -d --build`.
 
 ### Über einen Cloudflare-Tunnel (von überall erreichbar, mit HTTPS)
 
-Läuft auf dem Mini-PC schon ein `cloudflared`-Container, hängt sich Uno in dessen
+Läuft auf dem Server schon ein `cloudflared`-Container, hängt sich Uno in dessen
 Docker-Netzwerk. Im Tunnel zeigt dann ein Hostname (hier `uno.cool-kidz.net`) auf
 `http://pass-uno:8080`.
 
@@ -63,7 +63,7 @@ echo "TUNNEL_NETWORK=<netzwerk-von-cloudflared>" > .env   # docker inspect cloud
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
 ```
 
-Ist Port 8080 auf dem Mini-PC schon belegt, zusätzlich `UNO_PORT=8088` in `.env`
+Ist Port 8080 auf dem Server schon belegt, zusätzlich `UNO_PORT=8088` in `.env`
 eintragen (betrifft nur den Zugriff direkt im WLAN).
 
 ### Ohne Docker (Linux mit systemd)
@@ -87,13 +87,13 @@ Beim Start schreibt der Server die Adresse ins Log (`docker compose logs`), etwa
 
 ```
 Uno läuft auf Port 8080
-  im WLAN öffnen: http://192.168.178.20:8080
+  im WLAN öffnen: http://192.168.1.50:8080
 ```
 
 Im Docker-Container steht dort die interne Container-Adresse; nimm stattdessen die
-IP des Mini-PCs (`hostname -I`). Diese Adresse auf dem ersten Handy öffnen, Raum
+IP des Servers (`hostname -I`). Diese Adresse auf dem ersten Handy öffnen, Raum
 erstellen, die anderen scannen den QR-Code. Alle Handys müssen im selben WLAN sein wie
-der Mini-PC. Tipp: im Router dem Mini-PC eine feste IP geben.
+der Server. Tipp: dem Server eine feste IP geben.
 
 Einstellungen über Umgebungsvariablen: `PORT` (Standard 8080), `HOST` (Standard
 0.0.0.0), `DATA_DIR` (Standard `./data`).
