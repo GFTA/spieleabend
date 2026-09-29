@@ -494,6 +494,22 @@ Parameter beim Laden wie ein gespeichertes Raum-Secret ab, das normale `UI.resum
 großer Party, bisher Mensch ärgere dich nicht wegen der geplanten 5–6/7–8-Bretter).
 `PARTY_SECRET` steht in der `.env` jedes Spiels und der Startseite (gleicher Wert, nicht im Repo).
 
+**Wiederverbinden nach Standby/Netzwechsel:** Ein Handy behält oft einen Socket, der offen aussieht,
+aber tot ist. Deshalb schickt `room-ui.js` bei `visibilitychange` (sichtbar), `online`, `pageshow`
+(bfcache) und alle 10 s, wenn 25 s nichts kam, ein `{t:"ping"}`; der Server antwortet `{t:"pong"}`
+(`room-server.js`, fasst den Raum nicht an, hält ihn also nicht künstlich am Leben). Kommt binnen 3 s
+nichts, wird der Socket verworfen und neu verbunden (`resume` mit dem Secret), danach „Wieder
+verbunden.“. Die Startseite öffnet nach ≥ 8 s im Hintergrund (oder bei `online`/`pageshow`) den
+Party-Stream neu, nach einem `act {t:"ping"}`, der bei 404 die Party vergisst.
+
+**Einladungs-Link (Discord & Co):** Der Start-Server ersetzt in `public/index.html` den Platzhalter
+`<!--embed-->` durch Open-Graph-Tags (`embed()` in `start/server.js`). `/?party=CODE` nennt den
+Host und wie viele schon dabei sind (`parties.peek()`: nur öffentliche Fakten, kein Secret, alles
+HTML-escaped); jeder andere Link bekommt den allgemeinen Text. Das Bild `public/og.png`
+(1200×630, statisch) muss ein PNG sein, Discord zeigt kein SVG. Basis-URL aus `X-Forwarded-Host/-Proto`
+oder `PUBLIC_URL`. Der Button „Einladung teilen“ nutzt `navigator.share` (auf dem Handy mit Discord
+in der Auswahl), sonst kopiert er Text + Link (nur unter https möglich).
+
 ## Deployment
 
 ### Dockerfile (wortidentisch in allen Spielen)

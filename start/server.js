@@ -15,6 +15,7 @@ const PUBLIC = path.join(__dirname, "public");
 const GAMES_FILE = process.env.GAMES_FILE || path.join(__dirname, "games.json");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png" };
 
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const games = () => JSON.parse(fs.readFileSync(GAMES_FILE, "utf8"));
 
 // status of all games, cached for a few seconds so a busy page does not hammer the servers
@@ -36,6 +37,27 @@ async function status() {
 }
 
 const parties = createParties({ games, secret: process.env.PARTY_SECRET || "" });
+
+// link preview tags: a plain link says what Spieleabend is, a party link names the party
+function embed(req, url) {
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const proto = req.headers["x-forwarded-proto"] || (/^(localhost|[\d.]+)(:\d+)?$/.test(host) ? "http" : "https");
+  const base = (process.env.PUBLIC_URL || `${proto}://${host}`).replace(/\/$/, "");
+  const code = String(url.searchParams.get("party") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const p = code.length === 4 ? parties.peek(code) : null;
+  const title = p ? `${p.host} lädt dich zum Spieleabend ein` : "Spieleabend";
+  const desc = p
+    ? `Party ${p.code} · ${p.count} ${p.count === 1 ? "Person ist" : "Leute sind"} schon dabei${p.game ? ` · gerade: ${p.game}` : ""}. Tippen und mitspielen, ohne Anmeldung.`
+    : "Brettspiele und Kartenspiele für den Spieleabend: Uno, Poker, Kniffel, Mensch ärgere dich nicht und mehr. Online mit Freunden, direkt im Browser.";
+  const link = p ? `${base}/?party=${p.code}` : `${base}/`;
+  return [
+    `<meta property="og:type" content="website">`, `<meta property="og:site_name" content="Spieleabend">`,
+    `<meta property="og:title" content="${esc(title)}">`, `<meta property="og:description" content="${esc(desc)}">`,
+    `<meta property="og:url" content="${esc(link)}">`, `<meta property="og:image" content="${esc(base)}/og.png">`,
+    `<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`,
+    `<meta name="twitter:card" content="summary_large_image">`, `<meta name="description" content="${esc(desc)}">`
+  ].join("\n");
+}
 
 const json = (res, code, obj) => { res.writeHead(code, { "content-type": TYPES[".json"], "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
 function readJson(req) {
@@ -86,6 +108,7 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(file, (e, body) => {
     if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
     const ext = path.extname(file);
+    if (p === "/index.html") body = Buffer.from(String(body).replace("<!--embed-->", () => embed(req, url)));
     res.writeHead(200, { "content-type": TYPES[ext] || "application/octet-stream", "cache-control": ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=86400" });
     res.end(body);
   });

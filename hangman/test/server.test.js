@@ -147,3 +147,11 @@ test("a party asks for a room: seats come pre-filled and resume, ready decides a
   assert.deepStrictEqual(small.seats.map((s) => s.name), ["A", "B"], "duplicate names are dropped");
   host.ws.close(); guest.ws.close();
 });
+
+test("ping is answered, so clients can tell a dead socket from a live one", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const c = client(server.address().port);
+  await c.open;
+  c.send({ t: "ping" });
+  assert.strictEqual((await c.next((m) => m.t === "pong")).t, "pong");
+});

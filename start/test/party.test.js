@@ -109,3 +109,11 @@ test("ready flag, kick, leave and host hand-over", async () => {
   await parties.act(code, b.secret, { t: "leave" });
   assert.strictEqual(parties.count(), 0, "an empty party disappears");
 });
+
+test("peek gives a link preview without anything that lets you in", () => {
+  const { parties } = setup();
+  const a = parties.create("Anna", "🦊");
+  parties.join(a.view.code, "Ben", "🐼");
+  assert.deepStrictEqual(parties.peek(a.view.code.toLowerCase()), { code: a.view.code, host: "Anna", avatar: "🦊", count: 2, game: null });
+  assert.strictEqual(parties.peek("ZZZZ"), null);
+});

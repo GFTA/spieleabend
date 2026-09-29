@@ -135,7 +135,7 @@
     const partyHref = () => startUrl(`?party=${R().party}`);
 
     // ---------- connection: one socket, reconnects on its own, rejoins with the stored secret ----------
-    let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null;
+    let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null, lastRx = 0, probeT = null, dropped = false;
     function connect() {
       if (ws && ws.readyState <= 1) return;
       // each socket only ever touches itself: a late close of an old socket must not wipe out the new one
@@ -143,7 +143,8 @@
       ws = sock;
       sock.onopen = () => {
         if (ws !== sock) { sock.close(); return; }
-        retry = 0; clearTimeout(giveUpT);
+        retry = 0; clearTimeout(giveUpT); lastRx = Date.now(); sock.wasOpen = true;
+        if (dropped) { dropped = false; app.toast("Wieder verbunden."); }
         if (app.on.opened) app.on.opened();
         const s = store.get(app.onlineKey);
         if (s && !queue.some((m) => m.t === "create" || m.t === "join"))
@@ -151,10 +152,11 @@
         for (const m of queue.splice(0)) sock.send(JSON.stringify(m));
         app.render();
       };
-      sock.onmessage = (e) => { if (ws !== sock) return; try { onMsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+      sock.onmessage = (e) => { if (ws !== sock) return; lastRx = Date.now(); try { onMsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
       sock.onclose = () => {
         if (ws !== sock) return;
         ws = null;
+        if (wantOnline && sock.wasOpen) dropped = true;
         if (wantOnline) setTimeout(connect, Math.min(8000, 400 * 2 ** retry++));
         app.render();
       };
@@ -179,9 +181,27 @@
     }
     // after a reload: back into the room stored in onlineKey
     function resume() { wantOnline = true; connect(); }
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && wantOnline && !(ws && ws.readyState <= 1)) { retry = 0; connect(); }
-    });
+    // a phone that slept or switched networks often keeps a socket that looks open but is dead:
+    // ask it, and replace it when nothing comes back
+    function probe() {
+      if (!wantOnline || probeT) return;
+      if (!(ws && ws.readyState <= 1)) { retry = 0; connect(); return; }
+      const sock = ws;
+      if (sock.readyState !== 1) return;
+      const sent = Date.now();
+      sock.send('{"t":"ping"}');
+      probeT = setTimeout(() => {
+        probeT = null;
+        if (ws !== sock || lastRx >= sent) return;
+        ws = null; sock.onclose = sock.onmessage = sock.onopen = null;
+        try { sock.close(); } catch (e) {}
+        dropped = true; retry = 0; connect(); app.render();
+      }, 3000);
+    }
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") probe(); });
+    window.addEventListener("online", probe);
+    window.addEventListener("pageshow", (e) => { if (e.persisted) probe(); });
+    setInterval(() => { if (document.visibilityState === "visible" && Date.now() - lastRx > 25000) probe(); }, 10000);
     function onMsg(m) {
       if (m.t === "watching" || m.t === "joined") {
         store.set(app.onlineKey, m.t === "watching" ? { code: m.code, watch: m.name } : { code: m.code, secret: m.secret });

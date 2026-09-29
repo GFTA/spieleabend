@@ -176,7 +176,15 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
   const timer = setInterval(sweep, 30000);
   timer.unref();
 
-  return { create, join, attach, act, count: () => parties.size };
+  // public facts for a link preview (Discord & co): nothing that lets you into the party
+  function peek(code) {
+    const p = find(code);
+    if (!p) return null;
+    const g = p.game && games().find((x) => x.id === p.game.id);
+    return { code: p.code, host: p.host.name, avatar: p.host.avatar, count: p.members.length, game: g ? g.name : null };
+  }
+
+  return { create, join, attach, act, peek, count: () => parties.size };
 }
 
 module.exports = { createParties, PartyError };

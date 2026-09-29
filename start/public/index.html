@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1a1426">
 <title>Spieleabend</title>
+<!--embed-->
 <link rel="icon" href="uno.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +107,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .plink{display:flex;gap:8px;align-items:center}
 .plink code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13px;box-shadow:inset 0 0 0 1.5px var(--line)}
 .plink .btn{padding:10px 14px;font-size:14px}
+.pshare{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .pmembers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .pmembers li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:var(--surface)}
 .pmembers .av{font-size:21px;line-height:1}
@@ -315,6 +317,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   const PK = "spieleabend.party", WK = "spieleabend.went"; // stored membership, last game room we were sent into
   const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const write = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const SHARE_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/></svg>';
   let unloading = false;
   addEventListener("pagehide", () => { unloading = true; });
   let party = null, saved = read(PK), es = null, msg = "", busy = false, prefill = "";
@@ -349,6 +352,19 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       setTimeout(() => { if (es === src && saved) connectParty(); }, 3000);
     };
   }
+  // back from standby or a network change: the event stream may be dead without saying so, so open a fresh one
+  let hiddenAt = 0;
+  async function wake() {
+    if (!saved) return;
+    try { await act({ t: "ping" }); } catch (e) { if (e.status === 404) return void leaveLocal("Diese Party gibt es nicht mehr."); }
+    if (saved) connectParty();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") hiddenAt = Date.now();
+    else if (saved && (Date.now() - hiddenAt > 8000 || !es || es.readyState !== 1)) wake();
+  });
+  addEventListener("online", wake);
+  addEventListener("pageshow", (e) => { if (e.persisted) { unloading = false; wake(); } });
   // the host started a game: everybody follows into it, once per room
   function maybeGo() {
     const g = party && party.game;
@@ -397,6 +413,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     box.innerHTML = `<h3>Deine Party</h3>
       <div class="pcode" aria-label="Party-Code">${esc(party.code)}</div>
       <div class="plink"><code>${esc(link)}</code><button class="btn" type="button" data-p="copy">Kopieren</button></div>
+      <button class="btn pshare" type="button" data-p="share">${SHARE_ICON}Einladung teilen</button>
       <ul class="pmembers">${party.members.map((m, i) => `<li><span class="dot${m.online ? "" : " off"}" title="${m.online ? "hier" : "gerade im Spiel oder weg"}"></span><span class="av avc${i === party.host ? " crown" : ""}" style="--avc:${esc(/^#[0-9a-f]{6}$/.test(m.color) ? m.color : "transparent")}">${esc(m.avatar)}</span><span class="nm">${esc(m.name)}</span>${m.ready ? '<span class="tag ok">Bereit</span>' : ""}${i === party.host ? '<span class="tag">Host</span>' : ""}${i === party.you ? '<span class="tag">du</span>' : ""}${host && i !== party.you ? `<button class="rm" type="button" data-kick="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("")}</ul>
       ${game}
       <p>${host ? "Du bist der Host: Wähl unten ein Spiel." : "Der Host wählt das Spiel, dann geht es für alle automatisch los."} „Bereit“ zeigt, wer mitspielen will, falls das Spiel zu wenige Plätze hat.</p>
@@ -419,6 +436,13 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         case "create": if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar, color: me.color }); break;
         case "ready": await act({ t: "ready", on: !party.members[party.you].ready }); break;
         case "leave": await act({ t: "leave" }); leaveLocal(""); break;
+        case "share": {
+          const url = `${location.origin}/?party=${party.code}`, text = `Komm in meine Spieleabend-Party! Code: ${party.code}`;
+          if (navigator.share) { try { await navigator.share({ title: "Spieleabend", text, url }); } catch (err) { if (err.name !== "AbortError") say("Teilen hat nicht geklappt."); } break; }
+          try { await navigator.clipboard.writeText(`${text}\n${url}`); b.lastChild.textContent = "Einladung kopiert, jetzt in Discord einfügen"; setTimeout(() => { b.lastChild.textContent = "Einladung teilen"; }, 2500); }
+          catch (err) { say("Teilen geht hier nicht. Kopier den Link von Hand."); }
+          break;
+        }
         case "copy":
           try { await navigator.clipboard.writeText(`${location.origin}/?party=${party.code}`); b.textContent = "Kopiert"; setTimeout(() => { b.textContent = "Kopieren"; }, 1500); }
           catch (err) { say("Kopieren geht hier nicht. Markier den Link und kopier ihn von Hand."); }

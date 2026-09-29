@@ -280,6 +280,7 @@ module.exports = function roomServer(g) {
     const isHost = !!room && ws.pid === room.host;
 
     switch (msg.t) {
+      case "ping": return send(ws, { t: "pong" }); // clients check that a socket that looks open is still alive
       case "create": {
         const name = cleanName(msg.name);
         if (!name) return err("Bitte gib deinen Namen ein.");
