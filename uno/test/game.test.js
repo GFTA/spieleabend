@@ -48,6 +48,9 @@ test("skip, reverse, +2 and +4 effects with the skip-after-draw rule", () => {
   const before = S.players[0].hand.length;
   S.players[1].hand = [card("r", "d2", 903), card("r", "1", 954), card("r", "2", 955)];
   G.act(S, 1, { t: "play", id: 903 });
+  assert.strictEqual(S.cur, 0);
+  assert.strictEqual(S.players[0].hand.length, before, "the victim draws by tapping the pile");
+  G.act(S, 0, { t: "draw" });
   assert.strictEqual(S.players[0].hand.length, before + 2);
   assert.strictEqual(S.cur, 3);
 
@@ -56,6 +59,7 @@ test("skip, reverse, +2 and +4 effects with the skip-after-draw rule", () => {
   assert.strictEqual(G.act(S, 3, { t: "play", id: 904 }).ok, false, "wild needs a color");
   G.act(S, 3, { t: "play", id: 904, color: "g" });
   assert.strictEqual(S.color, "g");
+  G.act(S, 2, { t: "draw" });
   assert.strictEqual(S.players[2].hand.length, b2 + 4);
   assert.strictEqual(S.cur, 1);
 });
@@ -106,20 +110,25 @@ test("playing the last card without having called UNO costs two cards", () => {
   assert.strictEqual(S.players[0].hand.length, 2);
 });
 
-test("+2 is drawn automatically and the victim plays on", () => {
+test("+2 waits until the victim draws it from the pile, then they play on", () => {
   const S = rig(3);
   S.cur = 0; S.dir = 1; S.discard = [card("r", "5", 900)]; S.color = "r";
   S.players[0].hand = [card("r", "d2", 901), card("r", "1", 950), card("r", "2", 951)];
   S.players[1].hand = [card("b", "d2", 902), card("y", "7", 953)];
-  const res = G.act(S, 0, { t: "play", id: 901 });
-  assert.strictEqual(S.players[1].hand.length, 4, "drawn right away");
+  G.act(S, 0, { t: "play", id: 901 });
+  assert.strictEqual(S.players[1].hand.length, 2, "nothing drawn by itself");
+  assert.strictEqual(S.pending, 2);
+  assert.strictEqual(S.cur, 1);
+  assert.strictEqual(G.act(S, 1, { t: "play", id: 953 }).ok, false, "the +2 has to be drawn (or countered)");
+  const res = G.act(S, 1, { t: "draw" });
+  assert.strictEqual(S.players[1].hand.length, 4);
   assert.ok(res.events.some((e) => e.t === "took" && e.pi === 1 && e.n === 2));
   assert.strictEqual(S.cur, 1, "no skipping by default");
   assert.strictEqual(S.pending, 0);
   assert.strictEqual(S.phase, "play");
 });
 
-test("stacking: counter or draw everything; auto-draw when nothing fits", () => {
+test("stacking: counter or draw everything; the pile has to be tapped when nothing fits", () => {
   const S = G.newGame(["a", "b", "c"], 0, { stack: true });
   S.cur = 0; S.dir = 1; S.discard = [card("r", "5", 900)]; S.color = "r";
   S.players[0].hand = [card("r", "d2", 901), card("r", "1", 950), card("r", "2", 951)];
@@ -133,7 +142,11 @@ test("stacking: counter or draw everything; auto-draw when nothing fits", () => 
   G.act(S, 1, { t: "play", id: 902 });
   assert.strictEqual(S.pending, 4);
   G.act(S, 2, { t: "play", id: 903, color: "g" });
-  // player 0 has no +4: the 8 cards are drawn automatically and it is still their turn
+  // player 0 has no +4: the 8 cards wait for their tap on the pile, then it is still their turn
+  assert.strictEqual(S.pending, 8);
+  assert.strictEqual(S.players[0].hand.length, 2);
+  const took = G.act(S, 0, { t: "draw" });
+  assert.ok(took.events.some((e) => e.t === "took" && e.pi === 0 && e.n === 8));
   assert.strictEqual(S.pending, 0);
   assert.strictEqual(S.players[0].hand.length, 2 + 8);
   assert.strictEqual(S.cur, 0);
@@ -166,9 +179,10 @@ test("a +2 as the winning card is still drawn before scoring", () => {
   S.cur = 0; S.discard = [card("r", "5", 900)]; S.color = "r";
   S.players[0].hand = [card("r", "d2", 901)];
   S.players[1].hand = [card("r", "3", 952)];
-  G.act(S, 0, { t: "play", id: 901 });
+  const res = G.act(S, 0, { t: "play", id: 901 });
   assert.strictEqual(S.phase, "roundEnd");
   assert.strictEqual(S.players[1].hand.length, 3);
+  assert.ok(res.events.some((e) => e.t === "took" && e.pi === 1 && e.n === 2), "the extra draw is announced");
 });
 
 test("draw until it fits", () => {

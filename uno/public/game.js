@@ -159,8 +159,8 @@
     beginTurn(S, S.cur, []);
   }
 
-  // Start player pi's turn. Pending +2/+4 cards are drawn right away unless the
-  // player can stack on them.
+  // Start player pi's turn. Pending +2/+4 cards wait until that player draws them from
+  // the pile on purpose (stacking on top is possible with the house rule).
   function beginTurn(S, pi, events) {
     S.cur = pi;
     S.phase = "play";
@@ -168,11 +168,9 @@
     S.turn++;
     if (!S.pending) return;
     const p = S.players[pi];
-    if (rulesOf(S).stack && p.hand.some((c) => stackable(S, c))) {
-      log(S, `${p.name} muss ${S.pending} Karten ziehen oder stapeln.`);
-      return;
-    }
-    takePending(S, pi, events);
+    log(S, rulesOf(S).stack && p.hand.some((c) => stackable(S, c))
+      ? `${p.name} muss ${S.pending} Karten ziehen oder stapeln.`
+      : `${p.name} muss ${S.pending} Karten ziehen.`);
   }
 
   function takePending(S, pi, events) {
@@ -188,10 +186,11 @@
     }
   }
 
-  function endRound(S, wi) {
+  function endRound(S, wi, events) {
     if (S.pending) { // a +2/+4 as the last card still has to be drawn
       const v = nextIdx(S, wi);
       draw(S, v, S.pending);
+      if (events) events.push({ t: "took", pi: v, n: S.pending });
       log(S, `${S.players[v].name} zieht noch ${S.pending} Karten.`);
       S.pending = 0;
     }
@@ -390,7 +389,7 @@
       }
       if (c.v === "d2" || c.v === "d4") S.pending = (S.pending || 0) + (c.v === "d2" ? 2 : 4);
 
-      if (p.hand.length === 0) { endRound(S, pi); return { ok: true, events }; }
+      if (p.hand.length === 0) { endRound(S, pi, events); return { ok: true, events }; }
       beginTurn(S, nextIdx(S, pi, steps), events);
       return { ok: true, events };
     }

@@ -399,6 +399,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
         <button class="btn small" id="hintBtn" type="button" hidden title="Tipp (H)">Tipp</button>
         <button class="btn small" id="sortBtn" type="button" title="Hand sortieren (S)"></button>
         <button class="btn" id="keepBtn" type="button" hidden>Behalten</button>
+        <button class="btn btn-primary small" id="reShow" type="button" hidden>Ergebnis</button>
       </div>
       <div class="hand" id="hand"></div>
     </div>
@@ -444,6 +445,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
     <div class="histwrap" id="reHistWrap"><table class="hist" id="reHist"></table></div>
     <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
     <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-ghost btn-block" id="reLook" type="button">Tisch ansehen</button>
     <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
   </div>
 </div>
@@ -455,7 +457,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
           <li>Passt nichts, zieh vom verdeckten Stapel eine Karte zu deiner Hand (oder tippe ihn an). Passt die neue Karte, darfst du sie sofort legen oder behalten. Sonst ist dein Zug vorbei.</li>
           <li><b>Aussetzen</b>: der nächste Spieler ist nicht dran. <b>Richtungswechsel</b>: die Reihenfolge dreht sich (zu zweit wirkt er wie Aussetzen). <b>+2</b>: der nächste zieht 2 und setzt aus. <b>+4</b>: du wählst die Farbe, der nächste zieht 4 und setzt aus.</li>
           <li>Legst du deine vorletzte Karte, erscheint ein großer <b>UNO!</b>-Knopf. Drück ihn innerhalb von 3 Sekunden, sonst ziehst du 2 Strafkarten.</li>
-          <li>Bekommst du eine +2 oder +4, werden die Karten automatisch gezogen und du spielst danach normal weiter (außer die Hausregel „Nach +2/+4 aussetzen“ ist an).</li>
+          <li>Bekommst du eine +2 oder +4, tippe den Stapel an: die Karten fliegen zu dir, und du spielst danach normal weiter (außer die Hausregel „Nach +2/+4 aussetzen“ ist an).</li>
           <li>Karte antippen hebt sie an, nochmal antippen legt sie. Am Computer: Karte anklicken oder ziehen, <b>D</b> zieht vom Stapel, <b>U</b> ruft UNO, <b>Esc</b> schließt Fenster.</li>
           <li><b>Computer-Gegner</b>: Online fügt der Host sie im Warteraum hinzu. Beim Spiel mit einem Handy machst du mit 🤖 aus jedem Platz einen Computer, so kannst du auch allein spielen. Fällt online jemand aus, kann der Host ihn durch den Computer ersetzen lassen, bis er zurück ist.</li>
           <li><b>Tipp</b> zeigt dir eine gute Karte. <b>Sortieren</b> ordnet deine Hand nach Farbe oder nach Zahl.</li>

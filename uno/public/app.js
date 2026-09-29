@@ -498,7 +498,7 @@
       else hint = V.hand.some(fits) ? "Zieh eine helle Karte auf den Ablagestapel." : "Nichts passt. Zieh eine Karte vom Stapel zu dir.";
     } else {
       who = `${V.players[V.cur].name} ist dran`;
-      hint = V.pending && V.cur !== V.me ? `${V.players[V.cur].name} muss ${V.pending} ziehen oder stapeln.` : "Warte auf deinen Zug.";
+      hint = V.pending && V.cur !== V.me ? `${V.players[V.cur].name} muss ${V.pending} Karten ziehen${rules().stack ? " oder stapeln" : ""}.` : "Warte auf deinen Zug.";
     }
     $("#whoName").textContent = who;
     $("#whoHint").textContent = hint;
@@ -546,7 +546,9 @@
     if (mode === "online" && mine && lastTurn !== key && lastTurn !== null) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = key;
 
-    $("#roundEnd").hidden = V.phase !== "roundEnd";
+    if (V.phase !== "roundEnd") reHidden = false;
+    $("#roundEnd").hidden = V.phase !== "roundEnd" || reHidden;
+    $("#reShow").hidden = !(V.phase === "roundEnd" && reHidden);
     if (V.phase === "roundEnd") {
       renderRoundEnd();
       const k = `${V.round}:${V.last.winner}:${V.players[V.last.winner].score}`;
@@ -659,7 +661,31 @@
     renderClock.t = setTimeout(() => { if (clockKey === key) { bar.classList.add("low"); if (myTurn()) { toast("Noch 10 Sekunden!"); buzz(80); } } }, Math.max(0, left - 10000));
   }
 
-  let prevHand = null, drawFx = false, playFrom = null;
+  let prevHand = null, drawFx = false, playFrom = null, reHidden = false;
+  // the result sheet can be moved aside to look at the table and the last card
+  $("#reLook").addEventListener("click", () => { reHidden = true; render(); });
+  $("#reShow").addEventListener("click", () => { reHidden = false; render(); });
+  // someone else draws: card backs travel from the pile to their seat
+  function flyToSeat(pi, n) {
+    const seat = document.querySelector(`#table .seat[data-seat="${pi}"] .sfan`), deck = $("#drawPile .card:last-child");
+    if (!seat || !deck || !deck.offsetWidth || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const d = deck.getBoundingClientRect(), s = seat.getBoundingClientRect(), sc = 0.4;
+    const dx = s.left + s.width / 2 - d.left - (d.width * sc) / 2, dy = s.top + s.height / 2 - d.top - (d.height * sc) / 2;
+    for (let k = 0; k < Math.min(n, 8); k++) {
+      const wrap = document.createElement("div");
+      wrap.className = "fly";
+      wrap.style.cssText = `left:${d.left}px;top:${d.top}px;width:${d.width}px;height:${d.height}px`;
+      const inner = document.createElement("div");
+      inner.className = "fly-inner";
+      const back = document.createElement("span");
+      back.className = "card card-back";
+      back.style.setProperty("--cw", d.width + "px");
+      inner.append(back); wrap.append(inner); document.body.append(wrap);
+      const a = wrap.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(${sc}) rotate(${k % 2 ? 12 : -12}deg)`, opacity: 0.85 }],
+        { duration: 480, delay: k * 120, easing: "cubic-bezier(.3,.7,.3,1)", fill: "backwards" });
+      a.onfinish = a.oncancel = () => wrap.remove();
+    }
+  }
   // someone else played: their card travels from their seat onto the pile
   function flyFromSeat(pi, el) {
     const seat = document.querySelector(`#table .seat[data-seat="${pi}"] .sfan`);
@@ -813,9 +839,11 @@
   // a room update from the server: sounds and notes for what just happened, then draw
   function onRoom(m) {
     R = m; mode = "online";
+    const flights = [];
     if (m.view) {
       const v = m.view;
       for (const ev of m.events || []) {
+        if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi !== v.me) { flights.push([ev.pi, ev.n || (ev.t === "penalty" ? 2 : 1)]); sfx("draw"); }
         if (ev.t === "played") { sfx("card"); playFrom = ev.pi; }
         if ((ev.t === "drew" || ev.t === "took") && ev.pi === v.me) sfx("draw");
         if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi === v.me) drawFx = true;
@@ -829,6 +857,7 @@
       }
     }
     render();
+    for (const [pi, n] of flights) flyToSeat(pi, n);
   }
 
   // ---------- events ----------
