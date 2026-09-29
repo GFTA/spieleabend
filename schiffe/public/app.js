@@ -1043,26 +1043,11 @@
 
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   const myName = () => {
     const n = $("#myName").value.trim();
     if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); }
     return n;
   };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, goal: goalLocal, size: sizeLocal, rules: localRules, level: levelLocal, avatar: myAvatar });
-  });
 
   function startLocal(state) {
     L = state; mode = "local"; shown = -1; focus = null; pref = null; peek = false; draftKey = null;
