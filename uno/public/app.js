@@ -773,22 +773,7 @@
     $("#reTitle").textContent = `${winnerName} ${last.over ? "das Spiel" : "die Runde"}!`;
     $("#reText").textContent = `${last.pts} Punkte aus den Karten der anderen.` + (V.goal > 0 && !last.over ? ` Gespielt wird bis ${V.goal}.` : "");
     scoreList($("#reScores"), last.winner);
-    $("#reBtn").textContent = last.over ? "Revanche" : "Nächste Runde";
-    if (mode === "online" && R && last.over) { // a rematch needs everyone still at the table
-      const n = V.players.length, votes = R.rematch || [];
-      const table = R.members.map((m, i) => i).filter((i) => i < n && !R.members[i].lobby && !R.members[i].bot && R.members[i].online);
-      const yes = table.filter((i) => votes.includes(i)).length;
-      $("#reBtn").textContent = votes.includes(R.you)
-        ? (yes === table.length ? "Zu wenige für eine Revanche, warte auf Mitspieler" : `Warte auf die anderen (${yes}/${table.length})`)
-        : `Revanche (${yes}/${table.length} bereit)`;
-      $("#reBtn").hidden = V.me < 0;
-      $("#reVotes").innerHTML = UI.rematchStatus(n, votes);
-    }
-    $("#reVotes").hidden = !(mode === "online" && R && last.over);
-    const back = $("#reBack");
-    if (mode === "local") { back.hidden = false; back.textContent = "Zurück zum Start"; }
-    else { back.hidden = R.host !== V.me; back.textContent = "Zurück in den Warteraum"; }
-    if (mode === "online" && last.over) back.hidden = !R.members[R.you]; // after a game everyone decides for themselves
+    UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
   }
 
   function renderHome() {

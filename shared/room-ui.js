@@ -365,6 +365,26 @@
         .filter(([k]) => groups[k].length).map(([k, t]) => `<span><b>${t}:</b> ${groups[k].map((m) => esc(m.name)).join(", ")}</span>`).join(" · ");
     }
 
+    // buttons of the round-end sheet: next round or rematch (with votes online), back to start / waiting room
+    function roundEndFooter({ over, next }) {
+      const r = R(), v = V(), mode = app.mode(), online = mode === "online" && !!r;
+      const btn = $("#reBtn"), votesEl = $("#reVotes"), back = $("#reBack");
+      btn.textContent = over ? "Revanche" : next;
+      if (online && over) { // a rematch needs everyone still at the table
+        const n = v.players.length, votes = r.rematch || [];
+        const table = r.members.map((m, i) => i).filter((i) => i < n && !r.members[i].lobby && !r.members[i].bot && r.members[i].online);
+        const yes = table.filter((i) => votes.includes(i)).length;
+        btn.textContent = votes.includes(r.you)
+          ? (yes === table.length ? "Zu wenige für eine Revanche, warte auf Mitspieler" : `Warte auf die anderen (${yes}/${table.length})`)
+          : `Revanche (${yes}/${table.length} bereit)`;
+        votesEl.innerHTML = rematchStatus(n, votes);
+      }
+      votesEl.hidden = !(online && over);
+      btn.hidden = mode === "online" && v.me < 0;
+      if (mode === "local") { back.hidden = false; back.textContent = "Zurück zum Start"; }
+      else { back.hidden = over ? !r.members[r.you] : r.host !== v.me; back.textContent = "Zurück in den Warteraum"; } // after a game everyone decides for themselves
+    }
+
     // waiting room buttons
     $("#readyBtn").addEventListener("click", () => {
       if ($("#readyBtn").dataset.act === "watch") { app.watching(true); app.render(); return; }
@@ -484,6 +504,6 @@
       return code;
     }
 
-    return { send, resume, update, renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, detectServer, roomCode, ICONS };
+    return { send, resume, update, renderLobby, renderReady, rematchStatus, roundEndFooter, armed, openMenu, joinUrl, detectServer, roomCode, ICONS };
   };
 })();
