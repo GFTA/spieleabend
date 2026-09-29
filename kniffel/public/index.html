@@ -162,7 +162,25 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 #reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;flex-wrap:wrap;justify-content:center;max-width:300px;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
 #reactBar .phrase{width:auto;height:36px;padding:0 10px;font-size:13px;font-weight:800;border-radius:10px;background:var(--bg2)}
 .bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
-  .pcard .die.mini{--dw:26px}
+/* wide desktop: dice and dock left, score sheet right */
+@media (min-width:1100px) and (min-height:700px){
+  #game:not([hidden]){display:grid;grid-template-columns:minmax(0,1fr) minmax(460px,46%);grid-template-rows:auto minmax(0,1fr) auto;column-gap:28px;padding-inline:24px}
+  .topbar{grid-column:1/-1;padding-inline:0}
+  .tray{grid-column:1;grid-row:2;justify-content:center;gap:18px;padding:8px 0}
+  .turn{font-size:22px}.turn .av{font-size:32px}
+  .pips i{width:44px;height:10px}
+  .felt{width:min(100%,clamp(520px,44vw,780px));padding:clamp(24px,4vh,48px) 20px clamp(30px,5vh,56px);border-radius:44px}
+  .dice{gap:clamp(10px,1.4vw,26px)}
+  .dice .die{--dw:calc(clamp(72px,min(12vh,7vw),140px) * var(--cs))}
+  .dock{grid-column:1;grid-row:3;width:100%;max-width:none;padding:18px 24px 22px;gap:14px;border-radius:22px;margin-bottom:18px}
+  .dock .status b{font-size:20px}.dock .status small{font-size:15px}
+  .acts .btn{padding:20px 12px;font-size:18px}
+  #sheetWrap{grid-column:2;grid-row:2/4;margin:6px 0 18px}
+  .sheet-tbl{font-size:clamp(14px,1.9vh,17px)}
+  .sheet-tbl th,.sheet-tbl td{height:calc(clamp(31px,4.6vh,48px) * var(--cs))}
+  .sheet-tbl td.pick b,.sheet-tbl td.just b{line-height:calc(clamp(25px,3.8vh,40px) * var(--cs))}
+  .sheet-tbl tr.total th,.sheet-tbl tr.total td{height:calc(clamp(38px,5.4vh,56px) * var(--cs));font-size:clamp(15px,2.1vh,19px)}
+  .sheet-tbl thead th .nm{max-width:120px}
 }
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 /* back to the Spieleabend start page, and the game rules in the waiting room */
@@ -231,10 +249,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
     </div>
 
-    <details class="fold">
-      <summary><span class="label">Aussehen</span><span class="fold-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
-    </details>
     <p class="hint">13 Runden, 13 Felder: In jeder Runde trägst du genau ein Feld ein, auch wenn es 0 Punkte gibt.</p>
   </section>
 

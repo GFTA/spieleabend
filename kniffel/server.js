@@ -43,7 +43,7 @@ module.exports = require("../shared/room-server.js")({
     return { key: `bot:${S.turn}:${S.phase}:${S.seq || 0}`, delay: (S.rolls ? 900 : 2400) + Math.random() * 700, pi: S.cur };
   },
   botMove(room, pi, { apply }) {
-    const a = Game.suggest(Game.view(room.state, pi), levelOf(room));
+    const a = Game.suggest(Game.view(room.state, pi), Game.botLevel(room.state, pi, levelOf(room)));
     return !!a && apply(room, pi, a).ok;
   },
   turnClock(room) {
