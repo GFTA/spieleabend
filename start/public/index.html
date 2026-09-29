@@ -147,9 +147,10 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .modes{align-self:center;width:min(100%,560px);display:flex;gap:6px;padding:5px;border-radius:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
 .modes button{flex:1;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-weight:800;background:transparent;color:var(--muted);cursor:pointer}
 .modes button[aria-pressed="true"]{color:var(--text);background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-.single #party,.single .partybox,.single .join,.single .how,.single .pill{display:none}
-/* in a party the host picks the game: no own start or room code on the cards */
-.inparty:not(.single) .game .actions{display:none}
+.single #party,.single .partybox,.single .how,.single .pill{display:none}
+/* multiplayer always goes through a party: the cards only have a start button in single-player mode */
+.game .actions{display:none}
+.single .game .actions{display:flex}
 .partybox:empty{display:none}
 .partybox .btn{width:100%}
 </style>
@@ -183,9 +184,9 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <section class="party" id="party" aria-label="Party"></section>
 
   <section class="how" aria-label="So geht's">
-    <div><b>Raum erstellen</b><p>Einer öffnet ein Spiel, wählt „Mehrspieler“ und erstellt einen Raum.</p></div>
-    <div><b>Beitreten</b><p>Die anderen scannen den QR-Code im Spiel oder tippen den Raum-Code hier beim Spiel ein.</p></div>
-    <div><b>Allein?</b><p>Oben „Einzelspieler“ wählen: dann geht es gegen den Computer, ohne Raum und ohne Code.</p></div>
+    <div><b>Party erstellen</b><p>Einer erstellt eine Party und teilt den Code oder den Einladungslink.</p></div>
+    <div><b>Beitreten</b><p>Die anderen tippen den Party-Code hier ein oder öffnen den Link. Der Host wählt das Spiel, dann landen alle im selben Raum.</p></div>
+    <div><b>Allein?</b><p>Oben „Einzelspieler“ wählen: dann geht es gegen den Computer, ohne Party und ohne Code.</p></div>
   </section>
   </aside>
 
@@ -305,27 +306,11 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         <div class="partybox" data-for="${esc(g.id)}"></div>
         <div class="actions">
           <a class="btn btn-primary" href="${esc(gameUrl(g.url))}" data-url="${esc(g.url)}" aria-label="${esc(g.name)} spielen">Spielen</a>
-          <form class="join" data-url="${esc(g.url)}">
-            <input id="code-${esc(g.id)}" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code für ${esc(g.name)}">
-            <button class="btn" type="submit">Beitreten</button>
-          </form>
         </div>
       </article>`;
     }).join("");
     renderPartyBoxes();
   }
-
-  // join a room straight from here: the game opens with the code filled in
-  $("#games").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const f = e.target.closest(".join"), input = f.querySelector("input");
-    const code = input.value.toUpperCase().replace(/[^A-Z]/g, "");
-    if (code.length !== 4) { input.focus(); input.select(); return; }
-    location.href = gameUrl(f.dataset.url, { r: code });
-  });
-  $("#games").addEventListener("input", (e) => {
-    if (e.target.matches(".join input")) e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
-  });
 
   let lastStatus = null;
   async function refresh() {
@@ -408,7 +393,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     document.body.classList.toggle("inparty", !!party);
     for (const box of document.querySelectorAll(".partybox")) {
       const g = games.find((x) => x.id === box.dataset.for);
-      if (!party || !g) { box.innerHTML = ""; continue; }
+      if (!g) { box.innerHTML = ""; continue; }
+      if (!party) { box.innerHTML = `<button class="btn btn-primary" type="button" data-newparty>Party erstellen</button>`; continue; }
       const host = party.you === party.host, hint = overHint(g);
       box.innerHTML = (hint ? `<div class="pnote">${esc(hint)}</div>` : "") +
         (host ? `<button class="btn btn-primary" type="button" data-launch="${esc(g.id)}"${busy ? " disabled" : ""}>${busy ? "Starte …" : "Mit der Party spielen"}</button>` : "");
@@ -484,6 +470,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   });
   $("#party").addEventListener("input", (e) => { if (e.target.id === "partyCode") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   $("#games").addEventListener("click", async (e) => {
+    const np = e.target.closest("[data-newparty]");
+    if (np) { if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar, color: me.color }); $("#party").scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
     const b = e.target.closest("[data-launch]"); if (!b || busy) return;
     busy = true; say(""); renderPartyBoxes();
     try { await act({ t: "launch", game: b.dataset.launch }); }
