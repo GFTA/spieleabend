@@ -25,7 +25,7 @@ Straßen zählen dann voll) · Zugzeit 30 Sekunden (nur online, danach wird das 
 Dazu Computer-Gegner in drei Stärken, Avatare, Tisch-Designs, Würfelgröße, Emoji-Reaktionen, Chat
 und Tastenkürzel am Computer (Leertaste würfeln, Enter eintragen, 1–5 behalten, H Tipp).
 
-## Installation auf dem Mini-PC
+## Installation auf dem Server
 
 ```sh
 cd spieleabend/kniffel
