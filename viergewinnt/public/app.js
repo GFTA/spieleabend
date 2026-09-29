@@ -26,7 +26,7 @@
   const avi = (a) => (a ? `<i class="av-i" aria-hidden="true">${a}</i>` : "");
 
   const SIZES = [[7, "7×6", "klassisch"], [8, "8×7", "größer"], [10, "10×8", "riesig"]];
-  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"]];
+  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"], [0, "Zufällig"]];
   const GOALS = [[1, "Eine Runde"], [2, "Bis 2 Siege"], [3, "Bis 3 Siege"]];
   const ICON = {
     person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
@@ -50,7 +50,7 @@
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let sizeLocal = G.normSize(store.get(K.size) || 7), goalLocal = G.normGoal(store.get(K.goal) || 1);
   let localRules = G.normRules(store.get(K.rules));
-  let levelLocal = G.normLevel(store.get(K.level) || 2);
+  let levelLocal = G.normLevel(store.get(K.level));
   let lastTurn = null;
 
   // ---------- helpers ----------
@@ -501,7 +501,7 @@
     memberExtra: (m, i) => `<i class="dot p${i}" title="${G.COLORS[i]}"></i>`,
     // board size, goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
-      for (const [id, list, cur] of [["#sizeOnline", SIZES, R.size], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
+      for (const [id, list, cur] of [["#sizeOnline", SIZES, R.size], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level == null ? 2 : R.level]]) {
         const el = $(id), k = cur + ":" + host;
         if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = segHTML(list, cur); for (const b of el.children) b.disabled = !host; }
       }

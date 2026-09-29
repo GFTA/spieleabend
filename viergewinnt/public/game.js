@@ -13,7 +13,7 @@
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip"];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
-  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
+  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi", 0: "Zufällig" };
   const CLOCK_MS = 15000, GRACE = 600;
 
   // House rules. Shared with the UI, which renders one switch per entry.
@@ -29,7 +29,9 @@
   }
   const normSize = (n) => (SIZES[+n] ? +n : 7);
   const normGoal = (n) => ([1, 2, 3].includes(+n) ? +n : 1);
-  const normLevel = (n) => (LEVELS[+n] ? +n : 2);
+  const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
+  // level 0 = random: every computer player got its own strength when the game started
+  const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
 
@@ -62,7 +64,7 @@
   // players: [{ name, bot, avatar }] (2); goal: wins needed; size: a key of SIZES; level: computer strength
   function newGame(players, goal, size, rules, level) {
     const S = {
-      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), wins: 0 })),
+      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), wins: 0 })),
       size: normSize(size), goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
       round: 0, turn: 0, starter: rand(2), draws: 0, log: [], last: null, lastMove: null, deadline: 0
     };
@@ -218,7 +220,7 @@
   }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const { cols, rows } = S, n = need(S), level = S.level || 2;
+    const { cols, rows } = S, n = need(S), level = lvOf(S, pi);
     const grid = S.grid.slice();
     const h = new Array(cols).fill(0).map((_, c) => height(S, c));
     const order = [...Array(cols).keys()].sort((a, b) => Math.abs(a - (cols - 1) / 2) - Math.abs(b - (cols - 1) / 2));
@@ -267,7 +269,7 @@
   function view(S, pi) {
     const me = S.players[pi] ? pi : -1;
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, size: S.size, level: S.level || 2,
+      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, size: S.size, level: S.level == null ? 2 : S.level,
       cols: S.cols, rows: S.rows, need: need(S), rules: S.rules, grid: S.grid.slice(), draws: S.draws || 0, nextStarter: S.starter % 2,
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => ({ name: p.name, bot: p.bot, avatar: avatarOf(p, i), wins: p.wins, moves: p.moves || 0 })),
