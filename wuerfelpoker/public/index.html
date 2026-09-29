@@ -155,6 +155,22 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .pcard{flex-basis:170px}
   .pcard .die.mini{--dw:26px}
 }
+/* wide desktop: bigger table and dice */
+@media (min-width:1100px) and (min-height:700px){
+  .topbar,.players{padding-inline:24px}
+  .players{gap:14px;padding-top:14px;justify-content:center}
+  .pcard{flex:1 0 230px;max-width:300px;padding:14px 16px;gap:8px}
+  .pcard .who{font-size:16px}.pcard .hand{font-size:14px}
+  .pcard .die.mini{--dw:34px}
+  .felt{width:min(100%,clamp(640px,62vw,1100px));padding:clamp(28px,5vh,56px) 24px clamp(40px,6vh,70px);border-radius:44px}
+  .dice{gap:clamp(12px,1.8vw,30px)}
+  .dice .die{--dw:calc(clamp(84px,min(14vh,9vw),170px) * var(--cs))}
+  .slot .keep{font-size:12px}
+  .handname{font-size:clamp(34px,6vh,60px)}
+  .handsub{font-size:16px}
+  .dock{padding:18px 28px 22px;gap:14px;width:100%;max-width:1200px;align-self:center}
+  .dock .status b{font-size:20px}.dock .status small{font-size:15px}
+}
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 /* back to the Spieleabend start page, and the game rules in the waiting room */
 /* waiting room: ready up, watch a running game, rematch status */
@@ -223,10 +239,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
     </div>
 
-    <details class="fold">
-      <summary><span class="label">Aussehen</span><span class="fold-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
-    </details>
     <p class="hint">Wer eine Runde mit der besten Hand gewinnt, bekommt einen Sieg. Bei Gleichstand gewinnen alle mit der gleichen Hand.</p>
   </section>
 

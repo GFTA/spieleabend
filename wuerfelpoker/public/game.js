@@ -11,7 +11,13 @@
   const TURN_MS = 30000;
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
-  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
+  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer", random: "Zufällig" };
+  // "random": every computer seat draws its own strength once per game
+  const botLevel = (S, pi, level) => {
+    if (level !== "random") return level;
+    const a = S.botLvls || (S.botLvls = []);
+    return a[pi] || (a[pi] = ["easy", "normal", "hard"][Math.floor(Math.random() * 3)]);
+  };
 
   // House rules; the UI renders one switch per entry.
   const RULES = [
@@ -250,5 +256,5 @@
     };
   }
 
-  return { DICE, MAX_ROLLS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, RULES, HANDS, normRules, evaluate, compare, newGame, startRound, act, tick, nextDeadline, suggest, view };
+  return { DICE, MAX_ROLLS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, normRules, evaluate, compare, newGame, startRound, act, tick, nextDeadline, suggest, view };
 });
