@@ -20,7 +20,7 @@ entscheiden die höheren Augen, danach die Beizahlen.
 Emoji-Reaktionen und Tastenkürzel am Computer (Leertaste würfeln, Enter fertig, 1–5 behalten,
 H Tipp).
 
-## Installation auf dem Mini-PC
+## Installation auf dem Server
 
 ```sh
 cd spieleabend/wuerfelpoker
