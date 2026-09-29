@@ -11,7 +11,7 @@
   const MAX_PLAYERS = 8;
   const TURN_MS = 30000;
   const RUNOUT_MS = 1700;   // pause between the streets when nobody can bet any more
-  const HAND_MS = 9000;     // online: how long a finished hand stays on the table
+  const HAND_MS = 11000;     // online: how long a finished hand stays on the table
   const BLIND_HANDS = 8;    // house rule: blinds double after this many hands
   const CHIPS = [1000, 2000, 5000];
   const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
@@ -446,6 +446,64 @@
     return { t: "fold" };
   }
 
+  // ---------- how good is my hand? ----------
+  // category of what the board alone shows (pairs, trips, quads, full house), by counting ranks
+  function boardCat(board) {
+    const cnt = {};
+    for (const id of board) cnt[rankOf(id)] = (cnt[rankOf(id)] || 0) + 1;
+    const v = Object.keys(cnt).map((k) => cnt[k]).sort((a, b) => b - a);
+    if (v[0] === 4) return 7;
+    if (v[0] === 3) return v[1] >= 2 ? 6 : 3;
+    if (v[0] === 2) return v[1] === 2 ? 2 : 1;
+    return 0;
+  }
+  // The hand of a player from the hole cards and what lies on the table (nothing yet before the flop).
+  // power is 1..5 (1-2 weak, 3 medium, 4-5 strong); tableOnly means the table makes this hand on its own.
+  function handInfo(hole, board) {
+    if (!hole || hole.length < 2) return null;
+    if (!board.length) {
+      const a = rankOf(hole[0]), b = rankOf(hole[1]);
+      const key = a === b ? [1, a] : [0, Math.max(a, b), Math.min(a, b)];
+      return { key, power: a === b ? 2 : 1, tableOnly: false };
+    }
+    const key = best(hole.concat(board)), cat = key[0];
+    let tableOnly = false;
+    if (cat === 1 || cat === 2 || cat === 3 || cat === 6 || cat === 7) tableOnly = cat <= boardCat(board);
+    else if (board.length === 5) tableOnly = cmpKey(best(board), key) === 0;
+    return { key, power: tableOnly ? 1 : [1, 2, 3, 3, 4, 4, 5, 5, 5][cat], tableOnly };
+  }
+
+  // chance of winning for each known hand ({ hole } list) with the board so far: exact when at most two
+  // cards are missing, simulated otherwise. Returns shares that add up to 1.
+  function equities(holes, board, samples) {
+    const known = new Set(board);
+    holes.forEach((h) => h.forEach((c) => known.add(c)));
+    const rest = [];
+    for (let i = 0; i < 52; i++) if (!known.has(i)) rest.push(i);
+    const miss = 5 - board.length, share = holes.map(() => 0);
+    let total = 0;
+    const score = (extra) => {
+      const b = board.concat(extra), keys = holes.map((h) => best(h.concat(b)));
+      let top = keys[0];
+      for (const k of keys) if (cmpKey(k, top) > 0) top = k;
+      const w = keys.map((k) => cmpKey(k, top) === 0);
+      const n = w.filter(Boolean).length;
+      w.forEach((x, i) => { if (x) share[i] += 1 / n; });
+      total++;
+    };
+    if (miss === 0) score([]);
+    else if (miss === 1) rest.forEach((c) => score([c]));
+    else if (miss === 2) { for (let i = 0; i < rest.length; i++) for (let j = i + 1; j < rest.length; j++) score([rest[i], rest[j]]); }
+    else {
+      for (let s = 0; s < (samples || 400); s++) {
+        const d = rest.slice();
+        for (let i = 0; i < miss; i++) { const j = i + rand(d.length - i); const t = d[i]; d[i] = d[j]; d[j] = t; }
+        score(d.slice(0, miss));
+      }
+    }
+    return share.map((x) => x / total);
+  }
+
   // ---------- what a player gets to see ----------
   function view(S, pi) {
     const P = S.players, me = P[pi];
@@ -461,7 +519,7 @@
       pot: inHand ? P.reduce((s, p) => s + p.total, 0) : 0, cbet: S.cbet, minRaise: S.minRaise, raises: S.raises,
       blinds: { sb: S.sb, bb: S.bb }, nextBlinds: S.rules.blindsUp ? BLIND_HANDS - ((S.hand - 1) % BLIND_HANDS) : 0,
       opts: pi === S.cur && S.phase === "play" ? options(S) : null,
-      handNow: me && me.hole.length && !me.folded && S.board.length ? best(me.hole.concat(S.board)) : null,
+      handNow: me && !me.folded && !me.out ? handInfo(me.hole, S.board) : null,
       nextIn: S.nextAt ? Math.max(0, S.nextAt - Date.now()) : 0, auto: S.auto,
       turn: S.turn, seq: S.seq, rules: S.rules, startChips: S.startChips,
       log: S.log.slice(-40), last: S.last
@@ -470,7 +528,7 @@
 
   return {
     MAX_PLAYERS, TURN_MS, RUNOUT_MS, HAND_MS, BLIND_HANDS, CHIPS, AVATARS, BOT_NAMES, BOT_LEVELS, RULES, HANDS, SUITS,
-    normRules, normChips, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity,
+    normRules, normChips, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity, equities, handInfo,
     newGame, act, tick, nextDeadline, suggest, view, options
   };
 });

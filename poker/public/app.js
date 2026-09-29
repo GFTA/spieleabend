@@ -74,11 +74,130 @@
     turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
     win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
     pop: () => tone(740, 0, 0.06, "sine", 0.12),
-    hint: () => tone(760, 0, 0.05, "sine", 0.1)
+    hint: () => tone(760, 0, 0.05, "sine", 0.1),
+    thump: () => { tone(75, 0, 0.14, "sine", 0.35); tone(75, 0.2, 0.16, "sine", 0.3); }
   };
   const sfx = (k, ...a) => { if (soundOn && document.visibilityState === "visible") try { SFX[k](...a); } catch (e) {} };
 
-  // ---------- shared device: whose cards are shown ----------
+  // ---------- animation helpers ----------
+  const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const seatEl = (i) => document.querySelector(`#players .pcard[data-seat="${i}"]`);
+  const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const coins = (amount) => Math.max(1, Math.min(9, Math.round(amount / (V ? V.blinds.bb : 20))));
+  // chips flying from one element to another
+  function fly(from, to, n, opts = {}) {
+    if (!from || !to || calm()) return;
+    const [x0, y0] = center(from), [x1, y1] = center(to);
+    for (let k = 0; k < n; k++) {
+      const c = document.createElement("span");
+      c.className = "flycoin"; document.body.append(c);
+      const jx = (Math.random() - 0.5) * 24, jy = (Math.random() - 0.5) * 14;
+      const a = c.animate([
+        { transform: `translate(${x0 + jx}px,${y0 + jy}px) scale(.5)`, opacity: 0 },
+        { transform: `translate(${x0 + jx}px,${y0 + jy}px) scale(1)`, opacity: 1, offset: 0.12 },
+        { transform: `translate(${(x0 + x1) / 2 + jx}px,${Math.min(y0, y1) - 30}px) scale(1.15)`, offset: 0.55 },
+        { transform: `translate(${x1 + jx * 0.4}px,${y1 + jy * 0.4}px) scale(.85)`, opacity: 1 }
+      ], { duration: (opts.dur || 620) + Math.random() * 160, delay: (opts.delay || 0) + k * 70, easing: "cubic-bezier(.35,.1,.3,1)", fill: "both" });
+      a.onfinish = () => c.remove();
+      if (opts.tick) setTimeout(() => sfx("chip"), (opts.delay || 0) + k * 70 + (opts.dur || 620) * 0.9);
+    }
+  }
+  // a card slides in from a point and turns face up while it lands
+  function dealFrom(el, pt, delay, dur = 480) {
+    if (!el || calm()) return;
+    const [x, y] = center(el);
+    el.animate([{ transform: `translate(${pt[0] - x}px,${pt[1] - y}px) rotate(-120deg) scale(.5)`, opacity: 0 }], { duration: dur, delay, easing: "cubic-bezier(.2,.8,.3,1)", fill: "backwards" });
+  }
+  function flipIn(el, delay, dur = 520) {
+    if (!el || calm()) return;
+    el.animate([{ transform: "perspective(500px) rotateY(90deg) translateY(-24px) scale(.9)", opacity: 0 }], { duration: dur, delay, easing: "cubic-bezier(.2,.8,.3,1)", fill: "backwards" });
+  }
+  // the folded cards sail toward the middle and disappear
+  function foldAway(pi) {
+    if (calm() || !V) return;
+    const cards = pi === V.me ? [...document.querySelectorAll("#hole .card")] : [...document.querySelectorAll(`#players .pcard[data-seat="${pi}"] .cards .card`)];
+    const [tx, ty] = center($("#felt"));
+    cards.forEach((el, k) => {
+      const r = el.getBoundingClientRect(), c = el.cloneNode(true);
+      c.classList.add("flycard");
+      Object.assign(c.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px" });
+      c.style.setProperty("--cw", r.width + "px");
+      document.body.append(c);
+      const a = c.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${tx - (r.left + r.width / 2)}px,${ty - (r.top + r.height / 2)}px) rotate(${(Math.random() - 0.5) * 200}deg) scale(.7)`, opacity: 0 }], { duration: 650, delay: k * 60, easing: "ease-in", fill: "forwards" });
+      a.onfinish = () => c.remove();
+    });
+  }
+  function shoveFx(pi) {
+    const el = seatEl(pi);
+    if (!el) return;
+    el.classList.remove("shove"); void el.offsetWidth; el.classList.add("shove");
+    const b = document.createElement("span");
+    b.className = "bubble text allin"; b.textContent = "ALL-IN!";
+    showBubble(el, b); setTimeout(() => b.remove(), 2200);
+    const f = $("#felt"); f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake");
+    buzz([60, 40, 90]);
+  }
+  // the animated count of a stack
+  let stackShown = {}, stackTok = {};
+  function syncStacks() {
+    V.players.forEach((p, i) => {
+      if (stackShown[i] == null) { stackShown[i] = p.chips; return; }
+      if (stackShown[i] === p.chips || (V.phase === "roundEnd" && waiting())) return;
+      const a = stackShown[i], b = p.chips, tok = (stackTok[i] = (stackTok[i] || 0) + 1), t0 = performance.now();
+      if (calm()) { stackShown[i] = b; return; }
+      const step = (now) => {
+        if (stackTok[i] !== tok) return;
+        const t = Math.min(1, (now - t0) / 800), v = t >= 1 ? b : Math.round(a + (b - a) * (1 - Math.pow(1 - t, 3)));
+        stackShown[i] = v;
+        const el = document.querySelector(`.sv[data-seat="${i}"]`);
+        if (el) el.textContent = money(v);
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  // ---------- the drama of a finished hand ----------
+  // the cards of the others are turned over one after another, then the pot goes to the winner
+  let suspenseUntil = 0, handTimer = null;
+  const revealing = new Set();
+  const waiting = () => Date.now() < suspenseUntil;
+  let afterRender = [];
+  function scheduleReveals(seats, start, step) {
+    seats.forEach((i, k) => {
+      revealing.add(i);
+      setTimeout(() => {
+        revealing.delete(i);
+        if (!V) return;
+        renderPlayers();
+        const el = seatEl(i);
+        if (el) el.querySelectorAll(".cards .card").forEach((c, j) => flipIn(c, j * 110, 560));
+        sfx("deal", 2);
+      }, start + k * step);
+    });
+  }
+  const unseen = (i) => !V || !V.players[i] || V.players[i].hole.length === 0 || V.players[i].hole[0] == null;
+  function payout(hand) {
+    if (!V || V.phase !== "roundEnd" || V.hand !== hand || !V.last) return;
+    const pay = V.last.kind === "show" ? V.last.hands.filter((h) => h.won).map((h) => [h.i, h.won]) : V.last.winners.map((i) => [i, V.last.pot]);
+    pay.forEach(([i, amount], k) => fly($("#potLine"), seatEl(i), coins(amount) + 2, { dur: 760, delay: k * 120, tick: true }));
+    sfx(pay.some(([i]) => i === V.me) ? "win" : "chip");
+  }
+  function handEnded(st) {
+    const last = st && st.last;
+    if (!last) return;
+    const show = last.kind === "show";
+    const seats = show ? last.hands.map((h) => h.i).filter((i) => i !== (V && V.me) && unseen(i)) : [];
+    scheduleReveals(seats, 500, 750);
+    // a little pause after the last card is turned, then the winner is announced
+    const wait = show ? 900 + 750 * Math.max(1, seats.length) : 450;
+    suspenseUntil = Date.now() + wait;
+    const hand = st.hand;
+    clearTimeout(handTimer);
+    handTimer = setTimeout(() => { payout(hand); render(); }, wait);
+  }
+
+
   // one person (with computers): always theirs; several: whoever is on, behind a hand-off screen
   let hidden = false, viewer = null;
   const lBot = (i) => !!(L && L.players[i] && L.players[i].bot);
@@ -143,19 +262,42 @@
     return false;
   }
 
-  // events: sounds, and which board cards are new
+  // events: sounds, chips that fly, cards that are dealt or turned over
   let confettiFor = null;
   function handleEvents(events) {
     for (const ev of events || []) {
-      if (ev.t === "deal") { sfx("deal", 4); raiseOpen = false; }
-      else if (ev.t === "board") sfx("deal", ev.n);
+      if (ev.t === "deal") {
+        sfx("deal", 4); raiseOpen = false; suspenseUntil = 0; revealing.clear(); clearTimeout(handTimer);
+        afterRender.push(dealAnimation);
+      } else if (ev.t === "board") sfx("deal", ev.n);
       else if (ev.t === "bet") {
-        if (ev.kind === "fold") sfx("fold");
+        if (ev.kind === "fold") { sfx("fold"); foldAway(ev.pi); }
         else if (ev.kind === "check") sfx("check");
-        else if (ev.kind === "allin") { sfx("allin"); buzz(40); }
-        else sfx("chip");
-      } else if (ev.t === "handEnd") setTimeout(() => sfx("pop"), 250);
+        else {
+          sfx(ev.kind === "allin" ? "allin" : "chip");
+          fly(seatEl(ev.pi), $("#potLine"), coins(ev.amount));
+          if (ev.kind === "allin") afterRender.push(() => shoveFx(ev.pi));
+        }
+      } else if (ev.t === "runout") {
+        const st = mode === "local" ? L : R && R.view;
+        const seats = st ? st.players.map((p, i) => i).filter((i) => !st.players[i].folded && !st.players[i].out && i !== (V && V.me) && unseen(i)) : [];
+        scheduleReveals(seats, 700, 450);
+        sfx("thump");
+      } else if (ev.t === "handEnd") handEnded(mode === "local" ? L : R && R.view);
     }
+    if (events && events.some((e) => e.t === "board") && ((mode === "local" ? L : R && R.view) || {}).phase === "runout") sfx("thump");
+  }
+
+  // the cards fly out of the middle to every seat, and the blinds go into the pot
+  function dealAnimation() {
+    if (!V || calm()) return;
+    const from = center($("#felt")), seats = V.players.map((p, i) => i).filter((i) => !V.players[i].out);
+    seats.forEach((i, k) => {
+      const el = seatEl(i);
+      if (el) el.querySelectorAll(".cards .card").forEach((c, j) => dealFrom(c, from, (j * seats.length + k) * 70));
+      if (i === V.me) document.querySelectorAll("#hole .card").forEach((c, j) => dealFrom(c, from, (j * seats.length + k) * 70, 560));
+    });
+    [V.sbSeat, V.bbSeat].forEach((i, k) => fly(seatEl(i), $("#potLine"), 1, { delay: seats.length * 140 + 200 + k * 120 }));
   }
 
   // ---------- the player's own moves ----------
@@ -212,10 +354,12 @@
       else { V = R.view; hidden = false; showScreen("game"); renderGame(); }
     } else {
       V = null; $("#roundEnd").hidden = true; $("#handoff").hidden = true;
-      clearTimeout(botT); clearTimeout(tickT); botKey = null;
+      clearTimeout(botT); clearTimeout(tickT); botKey = null; stackShown = {}; suspenseUntil = 0;
       showScreen("home"); renderHome();
     }
     UI.update();
+    const q = afterRender; afterRender = [];
+    if (V) q.forEach((f) => f());
   }
 
   let lastTurnKey = null, lastHand = null, lastBoard = 0, overReady = 0, overKey = null;
@@ -228,42 +372,61 @@
     renderPlayers();
     renderBoard();
     renderDock();
+    $("#felt").classList.toggle("tense", V.phase === "runout");
     const key = `${V.hand}:${V.turn}`;
     if (key !== lastTurnKey && lastTurnKey !== null && myTurn() && (mode === "online" || V.players.some((p) => p.bot))) { sfx("turn"); buzz([40, 60, 40]); }
     lastTurnKey = key;
     $("#handoff").hidden = !(mode === "local" && hidden);
     if (mode === "local" && hidden) renderHandoff();
     const over = V.phase === "roundEnd" && V.last && V.last.over;
-    if (over && overKey !== `${V.hand}:${V.turn}:${V.seq}`) { overKey = `${V.hand}:${V.turn}:${V.seq}`; overReady = Date.now() + 3200; setTimeout(render, 3300); }
+    if (over && overKey !== `${V.hand}:${V.turn}:${V.seq}`) { overKey = `${V.hand}:${V.turn}:${V.seq}`; overReady = Math.max(Date.now(), suspenseUntil) + 2800; setTimeout(render, overReady - Date.now() + 100); }
     const showEnd = !!over && Date.now() >= overReady;
     $("#roundEnd").hidden = !showEnd;
     if (showEnd) renderFinal();
   }
 
   const ACT = { fold: "Passt", check: "Check", call: "Mitgegangen", bet: "Setzt", raise: "Erhöht auf", allin: "All-in", sb: "Blind", bb: "Blind" };
+  let eqKey = "", eqVal = [];
   function renderPlayers() {
     const members = mode === "online" && R ? R.members : null;
-    const ended = V.phase === "roundEnd" && V.last;
+    const wait = V.phase === "roundEnd" && !!V.last && waiting();
+    const ended = V.phase === "roundEnd" && !!V.last && !wait;
     const winners = ended ? V.last.winners : [];
+    const hands = V.phase === "roundEnd" && V.last && V.last.hands ? V.last.hands : [];
     const won = {};
-    if (ended && V.last.hands) for (const h of V.last.hands) won[h.i] = h;
+    for (const h of hands) won[h.i] = h;
+    // all-in with the cards open: everybody's chance to win, updated with every card
+    let eq = {};
+    if (V.phase === "runout" && revealing.size === 0) {
+      const inHand = V.players.map((p, i) => i).filter((i) => !V.players[i].folded && !V.players[i].out && V.players[i].hole[0] != null);
+      if (inHand.length >= 2) {
+        const key = inHand.join() + "|" + V.board.join() + "|" + inHand.map((i) => V.players[i].hole.join()).join(";");
+        if (key !== eqKey) { eqKey = key; eqVal = G.equities(inHand.map((i) => V.players[i].hole), V.board, 500); }
+        inHand.forEach((i, k) => { eq[i] = eqVal[k]; });
+      }
+    }
     $("#players").innerHTML = V.players.map((p, i) => {
       const active = V.phase === "play" && i === V.cur;
       const away = members && members[i] && !members[i].online && !p.bot;
-      let act = "", good = false;
+      let act = "", cls = "";
       if (p.out) act = `ausgeschieden${p.place ? `, Platz ${p.place}` : ""}`;
-      else if (ended && won[i]) { act = G.HANDS[won[i].cat] + (won[i].won ? ` · +${money(won[i].won)}` : ""); good = winners.includes(i); }
-      else if (ended && winners.includes(i)) { act = `+${money(V.last.pot)}`; good = true; }
+      else if (ended && won[i]) { act = G.HANDS[won[i].cat] + (won[i].won ? ` · +${money(won[i].won)}` : ""); if (winners.includes(i)) cls = " good"; }
+      else if (ended && winners.includes(i)) { act = `+${money(V.last.pot)}`; cls = " good"; }
+      else if (wait && won[i] && !revealing.has(i)) act = G.HANDS[won[i].cat];
+      else if (eq[i] != null) { act = `${Math.round(eq[i] * 100)} % Chance`; cls = ` eq ${eq[i] >= 0.5 ? "hi" : "lo"}`; }
       else if (active) act = "ist dran";
       else if (p.act) act = ACT[p.act] + (p.act === "bet" || p.act === "raise" ? ` ${money(p.actTo)}` : "");
       const tags = (i === V.dealer ? '<span class="tag" title="Dealer">D</span>' : "") + (i === V.sbSeat && !p.out ? '<span class="tag blind">SB</span>' : "") + (i === V.bbSeat && !p.out ? '<span class="tag blind">BB</span>' : "");
-      const cards = p.hole.map((c) => cardHTML(c, "mini" + (p.folded ? " dim" : ""))).join("");
-      return `<div class="pcard${active ? " active" : ""}${winners.includes(i) && ended ? " win" : ""}${p.folded && !p.out ? " fold" : ""}${p.out ? " out" : ""}" data-seat="${i}" style="${away ? "opacity:.5" : ""}">` +
+      const faces = revealing.has(i) ? [null, null] : p.hole;
+      const cards = faces.map((c) => cardHTML(c, "mini" + (p.folded ? " dim" : ""))).join("");
+      const shown = stackShown[i] == null ? p.chips : stackShown[i];
+      return `<div class="pcard${active ? " active" : ""}${ended && winners.includes(i) ? " win" : ""}${p.folded && !p.out ? " fold" : ""}${p.out ? " out" : ""}" data-seat="${i}" style="${away ? "opacity:.5" : ""}">` +
         `<div class="who"><span class="av">${p.avatar || (p.bot ? "🤖" : "")}</span><span class="nm">${esc(i === V.me && mode === "online" ? `${p.name} (du)` : p.name)}</span><span class="tags">${tags}</span></div>` +
-        `<div class="stack"><span class="coin"></span>${money(p.chips)}</div>` +
-        `<div class="cards">${cards}</div><div class="act${good ? " good" : ""}">${esc(act)}</div>` +
+        `<div class="stack"><span class="coin"></span><span class="sv" data-seat="${i}">${money(shown)}</span></div>` +
+        `<div class="cards">${cards}</div><div class="act${cls}">${esc(act)}</div>` +
         (p.bet ? `<span class="bet">${money(p.bet)}</span>` : "") + `</div>`;
     }).join("");
+    syncStacks();
     const act = $("#players .pcard.active");
     if (act) { const box = $("#players"); box.scrollLeft = act.offsetLeft - (box.clientWidth - act.offsetWidth) / 2; }
   }
@@ -271,26 +434,30 @@
   const STREET = { pre: "Vor dem Flop", flop: "Flop", turn: "Turn", river: "River" };
   function renderBoard() {
     const box = $("#board");
-    if (box.children.length !== 5) box.innerHTML = Array.from({ length: 5 }, () => `<span class="card slot"></span>`).join("");
+    if (box.children.length !== 5) box.innerHTML = Array.from({ length: 5 }, () => `<span class="card slot" data-w="slot"></span>`).join("");
     const new0 = V.board.length > lastBoard ? lastBoard : V.board.length;
-    // the cards that just came out get a small deal animation
     const hit = new Set();
-    if (V.phase === "roundEnd" && V.last && V.last.kind === "show") {
+    if (V.phase === "roundEnd" && V.last && V.last.kind === "show" && !waiting()) {
       // highlight the five cards of the first winner's hand
       const h = (V.last.hands || []).find((x) => x.i === V.last.winners[0]);
       if (h) bestFive(h.hole.concat(V.board)).forEach((c) => hit.add(c));
     }
-    [...box.children].forEach((el, i) => {
-      const id = V.board[i];
-      const want = id == null ? "slot" : `${id}`;
-      if (el.dataset.w !== want) {
-        el.outerHTML = id == null ? `<span class="card slot" data-w="slot"></span>` : cardHTML(id, i >= new0 ? "fresh" : "").replace("<span ", `<span data-w="${id}" `);
-      }
-    });
-    [...box.children].forEach((el) => { el.classList.toggle("hit", hit.has(+el.dataset.id)); el.classList.toggle("dim", hit.size > 0 && !hit.has(+el.dataset.id) && el.dataset.w !== "slot"); });
+    for (let i = 0; i < 5; i++) {
+      const el = box.children[i], id = V.board[i], want = id == null ? "slot" : `${id}`;
+      if (el.dataset.w === want) continue;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = id == null ? `<span class="card slot"></span>` : cardHTML(id);
+      const ne = tmp.firstElementChild;
+      ne.dataset.w = want;
+      box.replaceChild(ne, el);
+      // the flop drops in together, turn and river are turned slowly (more so when everybody is all-in)
+      if (id != null && i >= new0) flipIn(ne, (i - new0) * 170, V.phase === "runout" && i >= 3 ? 1000 : 520);
+    }
+    [...box.children].forEach((el) => { el.classList.toggle("hit", hit.has(+el.dataset.id)); el.classList.toggle("dim", hit.size > 0 && el.dataset.w !== "slot" && !hit.has(+el.dataset.id)); });
     lastBoard = V.board.length;
-    $("#potLine").innerHTML = V.pot ? `<span><span class="coin"></span>Pot ${money(V.pot)}</span>` : V.phase === "roundEnd" ? `<small>Hand ${V.hand} beendet</small>` : "";
-    $("#streetLine").textContent = V.phase === "runout" ? "Alle All-in: Karten werden aufgedeckt …" : V.phase === "roundEnd" ? "" : STREET[V.street];
+    const potNow = V.phase === "roundEnd" && V.last && waiting() ? V.last.pot : V.pot;
+    $("#potLine").innerHTML = potNow ? `<span><span class="coin"></span>Pot ${money(potNow)}</span>` : V.phase === "roundEnd" ? `<small>Hand ${V.hand} beendet</small>` : "";
+    $("#streetLine").textContent = V.phase === "runout" ? "Alle All-in: Karten werden aufgedeckt …" : V.phase === "roundEnd" ? (waiting() ? "Showdown" : "") : STREET[V.street];
   }
   // the five cards of the best hand, for highlighting
   function bestFive(ids) {
@@ -311,10 +478,20 @@
     // own cards
     $("#hole").innerHTML = spectator ? "" : hidden ? cardHTML(null) + cardHTML(null) : V.hole.map((c) => cardHTML(c, p && p.folded ? "dim" : "")).join("");
     $("#hole").hidden = spectator;
-    $("#handNow").textContent = !spectator && !hidden && V.handNow && !(p && p.folded) && V.phase !== "roundEnd" ? G.label(V.handNow) : "";
+    const hi = V.handNow, live = !spectator && !hidden && hi && !(p && (p.folded || p.out)) && (V.phase === "play" || V.phase === "runout");
+    $("#handNow").textContent = live ? G.label(hi.key) + (hi.tableOnly ? " · liegt am Tisch" : "") : "";
+    const meter = $("#meter");
+    meter.hidden = !live;
+    if (live) {
+      meter.style.setProperty("--mc", hi.power >= 4 ? "var(--green)" : hi.power === 3 ? "var(--accent)" : "var(--red)");
+      [...meter.children].forEach((d, k) => { d.style.transitionDelay = `${k * 70}ms`; d.classList.toggle("on", k < hi.power); });
+      meter.title = `Handstärke ${hi.power} von 5`;
+    }
     let who_, hint;
-    const ended = V.phase === "roundEnd" && V.last;
-    if (ended) {
+    const wait = V.phase === "roundEnd" && !!V.last && waiting();
+    const ended = V.phase === "roundEnd" && !!V.last && !wait;
+    if (wait) { who_ = "Showdown"; hint = "Die Karten werden aufgedeckt …"; }
+    else if (ended) {
       const w = V.last.winners, nm = (i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name);
       const total = V.last.pots.reduce((s, x) => s + x.amount, 0);
       const first = V.last.pots[0];
@@ -332,7 +509,7 @@
 
     // buttons
     const canAct = !spectator && !ended && V.phase === "play";
-    $("#actsPlay").hidden = !!ended || spectator;
+    $("#actsPlay").hidden = !!(ended || wait) || spectator;
     $("#actsNext").hidden = !ended || V.last.over || spectator;
     const o = V.opts;
     const fb = $("#foldBtn"), cb = $("#callBtn"), rb = $("#raiseBtn");
