@@ -1,0 +1,19 @@
+services:
+  @@ID@@:
+    build:
+      context: ..
+      dockerfile: @@ID@@/Dockerfile
+      args:
+        GAME: @@ID@@
+    image: @@ID@@:latest
+    container_name: @@ID@@
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${@@ENVPORT@@:-@@PORT@@}:8080"
+    volumes:
+      - @@ID@@-data:/data
+
+volumes:
+  @@ID@@-data:

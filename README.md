@@ -4,12 +4,12 @@ Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 
 - **Jeder sein Handy**: Einer erstellt einen Raum, die anderen scannen den QR-Code.
   Dafür läuft ein kleiner Node.js-Server, z. B. zu Hause auf einem Mini-PC.
-- **Ein Handy für alle**: Das Handy wird herumgereicht, zwischen den Zügen kommt ein
-  Sichtschutz. Geht auch ganz ohne Server.
+- **Einzelspieler**: allein gegen Computer-Gegner, geht auch ganz ohne Server.
 
 Alle Spiele teilen sich ein einheitliches Design- und Server-System (Tisch-Designs,
 Avatare, Raum-Verwaltung, Deployment) — beschrieben in [`ARCHITECTURE.md`](ARCHITECTURE.md).
-Das ist der Bauplan für jedes neue Spiel in diesem Repo.
+Das ist der Bauplan für jedes neue Spiel in diesem Repo. Ein neues Spiel legt
+`scripts/new-game <id> "<Titel>"` aus einer lauffähigen Vorlage an.
 
 | Spiel | Ordner | Details |
 | --- | --- | --- |

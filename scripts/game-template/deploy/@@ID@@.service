@@ -1,0 +1,21 @@
+# systemd unit for running @@TITLE@@ without Docker.
+# Copy ~/spieleabend/@@ID@@ to /opt/@@ID@@, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/@@ID@@/deploy/@@ID@@.service /etc/systemd/system/
+#   sudo systemctl enable --now @@ID@@
+[Unit]
+Description=@@TITLE@@ game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/@@ID@@
+ExecStart=/usr/bin/node server.js
+Environment=PORT=@@PORT@@
+Environment=DATA_DIR=/var/lib/@@ID@@
+StateDirectory=@@ID@@
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -594,6 +594,16 @@ passenden Container danebenstellen.
 
 ## Checkliste: neues Spiel hinzufügen
 
+**Kurzweg:** `scripts/new-game <id> "<Titel>" [--port N] [--sub name] [--max N] [--desc "…"] [--dry-run]`
+legt aus `scripts/game-template/` einen lauffähigen Ordner an (kleines Würfelspiel „Pig“ mit
+Engine, Server-Adapter, Oberfläche, Tests, Dockerfile, Compose, systemd, Icons), kopiert die `.env` eines
+anderen Spiels, wählt den nächsten freien Port und trägt `start/games.json`, `start/public/<id>.svg` und
+die README-Tabelle ein (Punkte 1, 2, 4 und 5 unten sind damit erledigt). Danach nur noch die Regeln in
+`game.js`/`app.js`/`index.html` ersetzen. Die Vorlage hat eigene Tests (`test/`), die im Generat mitlaufen.
+Übrig bleiben Punkt 6 (Tunnel-Ingress, DNS, Start) und Committen.
+
+Die einzelnen Schritte, falls man ohne Generator arbeitet:
+
 1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
 2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
 3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
