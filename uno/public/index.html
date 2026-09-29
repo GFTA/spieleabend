@@ -279,20 +279,9 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
     <!-- online -->
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
-      <div class="label">Raum beitreten</div>
-      <div class="row">
-        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
-        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
-      </div>
-      <div class="or">oder</div>
-      <div class="label">Neuen Raum erstellen</div>
-      <div class="seg" id="goalOnline" role="group" aria-label="Spielziel">
-        <button type="button" data-goal="500" aria-pressed="true">500 Punkte</button>
-        <button type="button" data-goal="250" aria-pressed="false">250 Punkte</button>
-        <button type="button" data-goal="0" aria-pressed="false">Eine Runde</button>
-      </div>
-      <p class="hint">Spielziel und Hausregeln kannst du danach im Warteraum noch ändern.</p>
-      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+      <div class="label">Mehrspieler</div>
+      <p class="hint">Mehrspieler läuft über eine Party: Alle treten derselben Party bei, der Host wählt das Spiel, und ihr landet automatisch im selben Raum.</p>
+      <a class="btn btn-primary btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Party</a>
     </div>
     <div class="panel" id="onlineOff" hidden>
       <p class="hint">Für „Mehrspieler“ muss Uno auf einem Server laufen, zum Beispiel auf deinem eigenen Server. Öffne dann dessen Adresse, etwa <b>http://192.168.1.50:8080</b>. Hier geht nur „Einzelspieler“.</p>

@@ -34,7 +34,7 @@
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "passuno.opp", max: 10, botNames: G.BOT_NAMES, onChange: () => renderHome() });
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
-  let goalLocal = 500, goalOnline = 500;
+  let goalLocal = 500;
   let localLevel = G.BOT_LEVELS[store.get("passuno.level")] ? store.get("passuno.level") : "normal";
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: "passuno.avatar", avatars: G.AVATARS });
   let lastTurn = null;
@@ -787,7 +787,6 @@
     sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …"
       : "Unter dieser Adresse antwortet kein Uno-Server. Du kannst es trotzdem versuchen, „Einzelspieler“ geht immer.";
     $("#localPanel").hidden = tab !== "local";
-    for (const b of document.querySelectorAll("#goalOnline button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalOnline));
     for (const b of document.querySelectorAll("#goalLocal button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalLocal));
 
     const saved = store.get(K.local);
@@ -834,7 +833,6 @@
   // ---------- events ----------
   $("#fan").innerHTML = [{ id: -1, c: "r", v: "7" }, { id: -2, c: "y", v: "skip" }, { id: -3, c: "g", v: "d2" }, { id: -4, c: "w", v: "d4" }].map((c) => cardHTML(c)).join("");
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
-  $("#goalOnline").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalOnline = +b.dataset.goal; renderHome(); } });
   $("#goalLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalLocal = +b.dataset.goal; renderHome(); } });
   // ---------- waiting room and menu: shared (room-ui.js), plus this game's own parts ----------
   const UI = window.RoomUI({
@@ -894,26 +892,11 @@
 
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   const myName = () => {
     const n = $("#myName").value.trim();
     if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); }
     return n;
   };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, goal: goalOnline, rules: localRules, avatar: myAvatar });
-  });
 
   $("#startLocal").addEventListener("click", () => {
     const { names, bots } = HOME.roster($("#myName").value);
