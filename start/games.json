@@ -50,6 +50,16 @@
     "status": "http://kniffel:8080/info"
   },
   {
+    "id": "poker",
+    "name": "Poker",
+    "title": "Poker (Texas Hold’em)",
+    "desc": "Zwei Karten auf die Hand, fünf auf den Tisch, No Limit. Turnier bis einer alle Chips hat, mit Blinds, Side Pots und Computer-Gegnern in drei Stufen.",
+    "players": "2–8 Spieler + Zuschauer",
+    "url": "https://poker.cool-kidz.net/",
+    "max": 8,
+    "status": "http://poker:8080/info"
+  },
+  {
     "id": "maedn",
     "name": "Mensch ärgere dich nicht",
     "title": "Mensch ärgere dich nicht",
