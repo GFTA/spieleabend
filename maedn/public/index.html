@@ -236,6 +236,16 @@ button.die:disabled{cursor:default}
 }
 .keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
 .keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+/* wide desktop: board in the middle, dice and status as a side panel */
+@media (min-width:1200px) and (min-height:700px){
+  #game:not([hidden]){display:grid;grid-template-columns:minmax(0,940px) 380px;justify-content:center;grid-template-rows:auto minmax(0,1fr);column-gap:28px}
+  #game .topbar{grid-column:1/-1;max-width:none}
+  #game .arena{grid-column:1;grid-row:2}
+  #game .dock{grid-column:2;grid-row:2;align-self:center;width:100%;max-width:none;flex-direction:column;flex-wrap:nowrap;align-items:stretch;padding:24px 22px;gap:16px}
+  .dock .who{flex:none}
+  .dock .die{--ds:120px;align-self:center}
+  .dock .keys{text-align:left}
+}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
@@ -301,10 +311,6 @@ button.die:disabled{cursor:default}
       </details>
       <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
     </div>
-    <details class="houserules">
-      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
-    </details>
     <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
     <p class="hint">Mit einer 6 kommst du aus dem Haus, dann geht es einmal ums Brett und in dein Ziel. Wer auf einer fremden Figur landet, wirft sie raus. Wer zuerst alle vier Figuren im Ziel hat, gewinnt.</p>
   </section>

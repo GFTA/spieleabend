@@ -14,7 +14,7 @@
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Bit-Berta", "Dr. Würfel", "Turbo-Tina", "Sir Sechs", "Kicker Kalle"];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
-  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
+  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi", 0: "Zufällig" };
   const GOALS = { 1: "Wer zuerst fertig ist", 2: "Alle Plätze ausspielen" };
   const CLOCK_MS = 20000, GRACE = 600;
   const OUT = -2; // piece: -1 in the yard, 0..track-1 steps from its start, track..track+3 goal, -2 gave up (the track has 10 fields per arm: 40, 60 or 80)
@@ -41,7 +41,9 @@
     return o;
   }
   const normGoal = (n) => (GOALS[+n] ? +n : 1);
-  const normLevel = (n) => (LEVELS[+n] ? +n : 2);
+  const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
+  // level 0 = random: every computer player got its own strength when the game started
+  const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
 
@@ -133,7 +135,7 @@
   function newGame(players, goal, rules, level) {
     const list = players.slice(0, MAX_PLAYERS);
     const S = {
-      players: list.map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), wins: 0 })),
+      players: list.map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), wins: 0 })),
       goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
       arms: armsFor(list.length), track: armsFor(list.length) * 10,
       round: 0, turn: 0, starter: rand(list.length), log: [], last: null, lastMove: null, deadline: 0
@@ -382,14 +384,14 @@
   }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    return S.need === "roll" ? { t: "roll" } : pickMove(S, pi, S.level || 2);
+    return S.need === "roll" ? { t: "roll" } : pickMove(S, pi, lvOf(S, pi));
   }
 
   // Everything on the board is public; pi only marks who "me" is.
   function view(S, pi) {
     const me = S.players[pi] ? pi : -1, play = S.phase === "play";
     return {
-      me, arms: S.arms || 4, track: trk(S), phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level || 2, rules: S.rules,
+      me, arms: S.arms || 4, track: trk(S), phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level == null ? 2 : S.level, rules: S.rules,
       need: S.need, dice: S.dice, tries: S.tries || 0, streak: S.streak || 0, nextStarter: S.starter % S.players.length,
       owner: play ? owner(S, S.cur) : -1, moves: play && S.need === "move" ? legalMoves(S, S.cur, S.dice) : [],
       three: play && S.need === "roll" && S.rules.three && stuck(S, owner(S, S.cur)),
