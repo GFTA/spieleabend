@@ -43,7 +43,7 @@ module.exports = require("../shared/room-server.js")({
   },
   botMove(room, pi, { apply }) {
     const S = room.state;
-    const a = Game.suggest(Game.view(S, pi), levelOf(room));
+    const a = Game.suggest(Game.view(S, pi), Game.botLevel(S, pi, levelOf(room)));
     if (a && apply(room, pi, a).ok) return true;
     // never get stuck on a move that was not allowed
     const o = Game.options(S);

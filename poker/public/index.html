@@ -173,6 +173,25 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .pcard{flex-basis:150px}
   .hole .card{--cw:60px}
 }
+/* wide desktop: big table, big hole cards */
+@media (min-width:1100px) and (min-height:700px){
+  .topbar,.players{padding-inline:24px}
+  .players{gap:14px;padding-top:14px;justify-content:center}
+  .pcard{flex:1 0 210px;max-width:290px;padding:12px 14px 11px;gap:7px}
+  .pcard .who{font-size:16px}.pcard .stack{font-size:18px}.pcard .act{font-size:13px}
+  .pcard .cards .card{--cw:calc(36px * var(--cs))}
+  .potline{font-size:clamp(24px,3.4vh,36px)}
+  .felt{width:min(100%,clamp(640px,62vw,1100px));padding:clamp(24px,4vh,48px) 24px;border-radius:48px}
+  .board{gap:clamp(10px,1.4vw,22px)}
+  .board .card{--cw:calc(clamp(84px,min(14vh,9vw),170px) * var(--cs))}
+  .streetline{font-size:16px}
+  .dock{padding:18px 28px 22px;gap:14px;width:100%;max-width:1200px;align-self:center}
+  .mine{gap:22px;min-height:0}
+  .hole{gap:12px}
+  .hole .card{--cw:calc(clamp(96px,14vh,150px) * var(--cs))}
+  .mine .txt b{font-size:22px}.mine .txt small{font-size:15px}.mine .txt .hand{font-size:16px}
+  .acts .btn{padding:20px 12px;font-size:18px}
+}
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
 /* back to the Spieleabend start page, and the game rules in the waiting room */
 /* waiting room: ready up, watch a running game, rematch status */
@@ -241,10 +260,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
     </div>
 
-    <details class="fold">
-      <summary><span class="label">Aussehen</span><span class="fold-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
-    </details>
     <p class="hint">Alle starten mit gleich vielen Chips. Wer keine mehr hat, scheidet aus, bis einer alles hat.</p>
   </section>
 

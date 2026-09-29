@@ -16,7 +16,13 @@
   const CHIPS = [1000, 2000, 5000];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
-  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
+  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer", random: "Zufällig" };
+  // "random": every computer seat draws its own strength once per game
+  const botLevel = (S, pi, level) => {
+    if (level !== "random") return level;
+    const a = S.botLvls || (S.botLvls = []);
+    return a[pi] || (a[pi] = ["easy", "normal", "hard"][Math.floor(Math.random() * 3)]);
+  };
   const SUITS = ["♠", "♥", "♦", "♣"];
 
   // House rules; the UI renders one switch per entry.
@@ -441,13 +447,8 @@
     }
     if (canRaise && e > Math.min(0.85, strong + 0.12) && Math.random() < 0.8) return raiseBy(frac + 0.2);
     if (canRaise && Math.random() < bluff * 0.5 && e > odds * 0.6) return raiseBy(0.75);
-    // before the flop, equity against everybody at once is small: judge cheap calls against an average hand, big raises against damped pot odds
-    if (v.street === "pre") {
-      const cheap = o.call <= v.blinds.bb * 2 && o.call <= me.chips * 0.1;
-      const need = cheap ? fair * (level === "easy" ? 0.7 : 0.8) : Math.max(fair * 1.1, odds * 0.7);
-      if (e > need) return { t: "call" };
-      return { t: "fold" };
-    }
+    // computer players never fold before the flop
+    if (v.street === "pre") return { t: "call" };
     if (e > odds + (level === "easy" ? -0.04 : 0.02)) return { t: "call" };
     if (level === "hard" && Math.random() < bluff && o.call <= v.pot * 0.35) return { t: "call" };
     return { t: "fold" };
@@ -534,7 +535,7 @@
   }
 
   return {
-    MAX_PLAYERS, TURN_MS, RUNOUT_MS, HAND_MS, BLIND_HANDS, CHIPS, AVATARS, BOT_NAMES, BOT_LEVELS, RULES, HANDS, SUITS,
+    MAX_PLAYERS, TURN_MS, RUNOUT_MS, HAND_MS, BLIND_HANDS, CHIPS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, SUITS,
     normRules, normChips, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity, equities, handInfo,
     newGame, act, tick, nextDeadline, suggest, view, options
   };

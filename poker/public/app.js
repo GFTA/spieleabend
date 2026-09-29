@@ -201,7 +201,7 @@
     botT = setTimeout(() => {
       botKey = null;
       if (mode !== "local" || !L || L.phase !== "play" || !lBot(L.cur)) return;
-      const a = G.suggest(G.view(L, L.cur), localLevel);
+      const a = G.suggest(G.view(L, L.cur), G.botLevel(L, L.cur, localLevel));
       if (!a || !doAct(a, L.cur)) { const o = G.options(L); doAct({ t: o && o.canCheck ? "check" : "call" }, L.cur) || doAct({ t: "fold" }, L.cur); }
     }, 900 + Math.random() * 900);
   }
