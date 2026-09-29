@@ -25,7 +25,7 @@
   const avi = (a) => (a ? `<i class="av-i" aria-hidden="true">${a}</i>` : "");
 
   const PICKS = [["random", "Zufallswort", "aus der Wortliste"], ["player", "Ein Mitspieler", "denkt sich eins aus"]];
-  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"]];
+  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"], [0, "Zufällig"]];
   const GOALS = [[3, "3 Runden"], [5, "5 Runden"], [8, "8 Runden"]];
   const ICON = {
     person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
@@ -48,7 +48,7 @@
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let pickLocal = G.normPick(store.get(K.pick)), goalLocal = G.normGoal(store.get(K.goal) || 5);
   let localRules = G.normRules(store.get(K.rules));
-  let levelLocal = G.normLevel(store.get(K.level) || 2);
+  let levelLocal = G.normLevel(store.get(K.level));
   let lastTurn = null, lastErrors = 0;
 
   // ---------- helpers ----------
@@ -505,7 +505,7 @@
     avatars: G.AVATARS, setAvatar: (a) => { myAvatar = a; store.set(K.avatar, a); },
     // who picks the word, rounds, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
-      for (const [id, list, cur] of [["#pickOnline", PICKS, R.pick || "random"], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
+      for (const [id, list, cur] of [["#pickOnline", PICKS, R.pick || "random"], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level == null ? 2 : R.level]]) {
         const el = $(id), k = cur + ":" + host;
         if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = segHTML(list, cur); for (const b of el.children) b.disabled = !host; }
       }

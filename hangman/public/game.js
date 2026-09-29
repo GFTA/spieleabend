@@ -10,7 +10,7 @@
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Lexi Logik", "Bit Bert", "Wortwurm", "Ada Algo", "Byte Bea", "Kalle Kabel"];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
-  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
+  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi", 0: "Zufällig" };
   const GOALS = [3, 5, 8];                      // rounds per game
   const PICKS = { random: "Zufallswort", player: "Ein Mitspieler" };
   const CLOCK_MS = 20000, CHOOSE_MS = 60000, GRACE = 600;
@@ -53,7 +53,9 @@
   }
   const normGoal = (n) => (GOALS.includes(+n) ? +n : 5);
   const normPick = (p) => (PICKS[p] ? p : "random");
-  const normLevel = (n) => (LEVELS[+n] ? +n : 2);
+  const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
+  // level 0 = random: every computer player got its own strength when the game started
+  const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
 
@@ -79,7 +81,7 @@
   // players: [{ name, bot, avatar }]; goal: rounds; pick: "random" | "player"; level: computer strength
   function newGame(players, goal, pick, rules, level) {
     const S = {
-      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), score: 0, chose: 0, words: 0, out: false })),
+      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), score: 0, chose: 0, words: 0, out: false })),
       goal: normGoal(goal), pick: normPick(pick), rules: normRules(rules), level: normLevel(level),
       round: 0, turn: 0, starter: rand(Math.max(1, players.length)), log: [], last: null, deadline: 0
     };
@@ -311,14 +313,14 @@
   };
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const v = view(S, pi), cfg = BOT[S.level] || BOT[2];
+    const v = view(S, pi), lv = lvOf(S, pi), cfg = BOT[lv] || BOT[2];
     const open = ALPHABET.filter((l) => !v.guessed.includes(l) && !v.wrong.includes(l));
     const byFreq = FREQ.filter((l) => open.includes(l));
     const shown = v.mask.filter(Boolean).length / v.mask.length;
     const cand = shown >= cfg.think ? [...new Set(candidates(v))] : [];
     const left = S.maxErrors - S.errors;
     if (cand.length === 1 && shown >= cfg.solve) return { t: "solve", word: cand[0] };
-    if (cand.length === 2 && shown >= Math.max(cfg.solve, 0.7) && left > 3 && S.level === 3) return { t: "solve", word: cand[rand(2)] };
+    if (cand.length === 2 && shown >= Math.max(cfg.solve, 0.7) && left > 3 && lv === 3) return { t: "solve", word: cand[rand(2)] };
     if (cand.length && Math.random() >= cfg.careless) { // the letter in the most fitting words
       let best = null, bestN = -1;
       for (const l of byFreq) {
@@ -336,7 +338,7 @@
     const me = S.players[pi] ? pi : -1;
     const reveal = S.phase === "roundEnd" || (me >= 0 && me === S.chooser);
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, pick: S.pick, level: S.level || 2, rules: S.rules,
+      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, pick: S.pick, level: S.level == null ? 2 : S.level, rules: S.rules,
       chooser: S.chooser, cat: S.cat, hint: S.hint, word: reveal ? S.word : null,
       mask: [...S.word].map((c) => (S.guessed.includes(c) ? c : null)),
       guessed: S.guessed.slice(), wrong: S.wrong.slice(), errors: S.errors, maxErrors: S.maxErrors, lastGuess: S.lastGuess,

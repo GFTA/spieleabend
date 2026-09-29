@@ -14,7 +14,7 @@ module.exports = require("../shared/room-server.js")({
   reactions: ["👍", "😂", "😱", "😡", "🎉", "🙈", "Na warte!", "Glück gehabt!", "Knapp daneben!", "Gut gespielt!"],
 
   newRoom: (msg) => ({ goal: Game.normGoal(msg.goal), pick: Game.normPick(msg.pick), rules: Game.normRules(msg.rules), level: Game.normLevel(msg.level) }),
-  roomFields: (room) => ({ goal: room.goal, pick: room.pick, rules: room.rules, level: room.level || 2 }),
+  roomFields: (room) => ({ goal: room.goal, pick: room.pick, rules: room.rules, level: room.level == null ? 2 : room.level }),
   settings(room, msg) { // rounds, who picks the word, house rules and computer strength
     if (msg.rules) room.rules = Game.normRules(msg.rules);
     if (msg.goal != null) room.goal = Game.normGoal(msg.goal);
