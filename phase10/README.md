@@ -36,12 +36,12 @@ Die Phasen: 2 Drillinge · Drilling + 4er-Folge · Vierling + 4er-Folge · 7er-F
 - **Am Computer**: D zieht vom Stapel, A von der Ablage, ←/→ wählt eine Karte, Enter
   wirft sie ab, P legt die Phase aus, S sortiert.
 
-## Auf dem Mini-PC installieren
+## Auf dem Server installieren
 
 Vom Repo-Ordner aus (der Build braucht `../shared`):
 
     cd phase10
-    echo TUNNEL_NETWORK=proxy > .env
+    echo TUNNEL_NETWORK=<netzwerk-von-cloudflared> > .env
     docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
 
 Läuft dann auf Port 8086 (`PHASE10_PORT` in `.env` ändert das) und im Tunnel als
