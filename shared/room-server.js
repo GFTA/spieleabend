@@ -199,7 +199,7 @@ module.exports = function roomServer(g) {
     const seen = watchers(room.code), fields = g.roomFields(room);
     for (const ws of sockets.get(room.code) || []) {
       if (ws.pid == null) continue;
-      send(ws, Object.assign({ t: "room", code: room.code, you: ws.pid, host: room.host }, fields, {
+      send(ws, Object.assign({ t: "room", code: room.code, you: ws.pid, host: room.host, party: room.party || null }, fields, {
         members, rematch: room.rematch || [], watchers: seen,
         turnLeft: clock ? Math.max(0, clock.ends - Date.now()) : 0,
         view: room.state ? Game.view(room.state, ws.pid >= 0 && ws.pid < room.state.players.length ? ws.pid : -1) : null, events: events || []
@@ -240,6 +240,35 @@ module.exports = function roomServer(g) {
     else if (room.host === pid) room.host = Math.max(0, room.members.findIndex((m) => !m.bot));
   }
 
+  // A party (start page group) asks for a room with everyone already seated, host first. More
+  // people than seats: only those who got ready play (the host always), the rest watch if the game
+  // has watchers. Each seat gets its secret, the phones open the game with it and resume that seat.
+  function partyRoom(body) {
+    const seen = new Set(), list = [];
+    for (const m of (Array.isArray(body.members) ? body.members : []).slice(0, 40)) {
+      const name = cleanName(m && m.name);
+      if (!name || seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      list.push({ name, avatar: avatarOf(m.avatar), ready: !!m.ready });
+    }
+    if (!list.length) return { error: "Die Party ist leer." };
+    if (rooms.size >= MAX_ROOMS) return { error: "Der Server ist voll." };
+    const seated = list.length <= MAX_PLAYERS ? list : list.filter((m, i) => i === 0 || m.ready).slice(0, MAX_PLAYERS);
+    const rest = list.filter((m) => !seated.includes(m));
+    const watch = MAX_WATCHERS ? rest.slice(0, MAX_WATCHERS) : [];
+    const r = Object.assign({ code: newCode(), host: 0, party: String(body.party || "").replace(/[^A-Z]/g, "").slice(0, 8) || null }, g.newRoom({}), {
+      members: seated.map((m) => ({ name: m.name, secret: crypto.randomUUID(), avatar: m.avatar, ready: m.ready })), state: null, touched: Date.now()
+    });
+    rooms.set(r.code, r); saveRooms();
+    return { code: r.code, max: MAX_PLAYERS, seats: r.members.map((m) => ({ name: m.name, secret: m.secret })),
+      watch: watch.map((m) => m.name), out: rest.filter((m) => !watch.includes(m)).map((m) => m.name) };
+  }
+  const PARTY_SECRET = process.env.PARTY_SECRET || "";
+  const sameSecret = (a) => {
+    const h = (x) => crypto.createHash("sha256").update(String(x || "")).digest();
+    return !!PARTY_SECRET && crypto.timingSafeEqual(h(a), h(PARTY_SECRET));
+  };
+
   // what a game's hooks may use
   const ctx = { rooms, sockets, online, broadcast, saveRooms, apply, schedule, send, BOT_MS };
 
@@ -273,9 +302,9 @@ module.exports = function roomServer(g) {
           if ((m.bot && !m.standIn) || online(r.code).has(same)) return err(`Der Name „${name}“ ist schon vergeben.`);
           attach(ws, r, same); broadcast(r); return;
         }
-        if (r.members.length >= MAX_PLAYERS) {
+        if (r.members.length >= MAX_PLAYERS || (msg.watch && MAX_WATCHERS)) {
           if (!MAX_WATCHERS) return err(`Der Raum ist voll (${MAX_PLAYERS} Spieler).`);
-          // full room: watch instead
+          // full room (or asked to only watch): watch instead
           if (watchers(r.code).length >= MAX_WATCHERS) return err("Der Raum ist voll, auch zum Zuschauen.");
           ws.watchAvatar = avatarOf(msg.avatar);
           return watch(ws, r, name);
@@ -544,6 +573,21 @@ module.exports = function roomServer(g) {
     if (url.pathname === "/info" || url.pathname === (g.legacyPath || `/${g.id}-server`)) {
       res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
       return res.end(JSON.stringify({ [g.id]: true, version: VERSION, ips: lanIps(), port: PORT, rooms: rooms.size }));
+    }
+    if (url.pathname === "/party-room") { // only for the start page's party server, which knows PARTY_SECRET
+      const reply = (code, obj) => { res.writeHead(code, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
+      if (req.method !== "POST") return reply(405, { error: "POST" });
+      if (!PARTY_SECRET) return reply(503, { error: "Party-Räume sind hier nicht eingerichtet." });
+      if (!sameSecret(req.headers["x-party-secret"])) return reply(403, { error: "Nicht erlaubt." });
+      let raw = "";
+      req.on("data", (c) => { raw += c; if (raw.length > 16384) req.destroy(); });
+      req.on("end", () => {
+        let body;
+        try { body = JSON.parse(raw); } catch (e) { return reply(400, { error: "Kein JSON." }); }
+        const out = partyRoom(body || {});
+        reply(out.error ? 400 : 200, out);
+      });
+      return;
     }
     if (url.pathname === "/vendor/qrcode.js") {
       return fs.readFile(QR_LIB, (e, data) => {

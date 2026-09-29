@@ -4,6 +4,8 @@ services:
     image: spiele-start:latest
     container_name: spiele-start
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${START_PORT:-8090}:8080"
     # read live from the repo: after `git pull` a new game shows up without a rebuild

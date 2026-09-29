@@ -8,6 +8,8 @@ services:
     image: wuerfelpoker:latest
     container_name: wuerfelpoker
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${WUERFEL_PORT:-8083}:8080"
     volumes:

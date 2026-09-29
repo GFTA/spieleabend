@@ -122,10 +122,13 @@
 
   // back to the Spieleabend start page: games.cool-kidz.net behind the tunnel, port 8090 of the
   // same box in the LAN (after all scripts ran, so the menu's link exists too)
+  const startUrl = (search = "") =>
+    (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname)
+      ? `${location.protocol}//${location.hostname}:8090/` : "https://games.cool-kidz.net/") + search;
   document.addEventListener("DOMContentLoaded", () => {
     if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
-      for (const a of document.querySelectorAll("[data-start-link]")) a.href = `${location.protocol}//${location.hostname}:8090/`;
+      for (const a of document.querySelectorAll("[data-start-link]")) a.href = startUrl();
   });
 
-  window.Spieleabend = { $, esc, store, TABLES, look, identity, avatarPicker, toast, confetti, showBubble };
+  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble };
 })();

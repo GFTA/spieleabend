@@ -8,6 +8,8 @@ services:
     image: pass-uno:latest
     container_name: pass-uno
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${UNO_PORT:-8080}:8080"
     volumes:

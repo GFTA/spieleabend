@@ -8,6 +8,8 @@ services:
     image: viergewinnt:latest
     container_name: viergewinnt
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${VIER_PORT:-8082}:8080"
     volumes:

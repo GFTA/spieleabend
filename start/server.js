@@ -1,11 +1,13 @@
 // Spieleabend start page: serves the game overview and a small status endpoint that asks
 // every game server (inside the Docker network) whether it is up and how many rooms are open.
-// Start with `node server.js`; PORT, HOST and GAMES_FILE are optional env vars.
+// It also runs the party groups (see party.js). Start with `node server.js`; PORT, HOST and
+// GAMES_FILE are optional env vars, PARTY_SECRET lets parties open rooms on the game servers.
 "use strict";
 
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { createParties, PartyError } = require("./party.js");
 
 const PORT = process.env.PORT ? +process.env.PORT : 8080;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -33,8 +35,40 @@ async function status() {
   return data;
 }
 
+const parties = createParties({ games, secret: process.env.PARTY_SECRET || "" });
+
+const json = (res, code, obj) => { res.writeHead(code, { "content-type": TYPES[".json"], "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (c) => { raw += c; if (raw.length > 4096) { reject(new PartyError("Zu viele Daten.")); req.destroy(); } });
+    req.on("end", () => { try { resolve(JSON.parse(raw || "{}")); } catch (e) { reject(new PartyError("Kein JSON.")); } });
+    req.on("error", reject);
+  });
+}
+async function partyRoute(req, res, url) {
+  try {
+    if (url.pathname === "/party/events" && req.method === "GET") {
+      const detach = parties.attach(url.searchParams.get("code"), url.searchParams.get("secret"), res);
+      const beat = setInterval(() => res.write(": ping\n\n"), 20000);
+      req.on("close", () => { clearInterval(beat); detach(); });
+      return;
+    }
+    if (req.method !== "POST") return json(res, 405, { error: "POST" });
+    const b = await readJson(req);
+    if (url.pathname === "/party/create") return json(res, 200, parties.create(b.name, b.avatar));
+    if (url.pathname === "/party/join") return json(res, 200, parties.join(b.code, b.name, b.avatar));
+    if (url.pathname === "/party/act") return json(res, 200, await parties.act(b.code, b.secret, b));
+    return json(res, 404, { error: "Nicht gefunden" });
+  } catch (e) {
+    if (e instanceof PartyError) return json(res, e.status, { error: e.message });
+    console.error(e); json(res, 500, { error: "Serverfehler" });
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
+  if (url.pathname.startsWith("/party/")) return partyRoute(req, res, url);
   if (url.pathname === "/status.json") {
     res.writeHead(200, { "content-type": TYPES[".json"], "cache-control": "no-store" });
     return res.end(JSON.stringify(await status()));

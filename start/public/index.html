@@ -85,6 +85,34 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0;cursor:pointer}
 .avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
 .me .hint{margin:0;color:var(--muted);font-size:13px}
+
+/* party: play together, the host picks the game */
+.party{align-self:center;width:min(100%,560px);display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:20px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.party h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px}
+.party p{margin:0;color:var(--muted);font-size:13px}
+.party .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.party .row .btn{flex:1 1 140px;padding:12px 16px;font-size:15px}
+.party .join{flex:1 1 200px}
+.pcode{font-family:var(--display);font-size:34px;letter-spacing:.2em;text-align:center;line-height:1}
+.plink{display:flex;gap:8px;align-items:center}
+.plink code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.plink .btn{padding:10px 14px;font-size:14px}
+.pmembers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pmembers li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:var(--surface)}
+.pmembers .av{font-size:24px;line-height:1}
+.pmembers .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
+.pmembers .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--green)}
+.pmembers .dot.off{background:var(--muted);opacity:.6}
+.tag{flex:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.tag.ok{background:var(--green);color:#fff}
+.pmembers .rm{flex:none;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px}
+.pgame{padding:12px;border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.pgame b{font-size:15px}
+.pnote{color:var(--muted);font-size:13px;padding:8px 10px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
+.perr{color:#ff8a8f;font-size:13px;min-height:0}
+.partybox{display:flex;flex-direction:column;gap:8px}
+.partybox:empty{display:none}
+.partybox .btn{width:100%}
 </style>
 </head>
 <body>
@@ -105,6 +133,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     <div class="avgrid" id="avatarGrid" hidden></div>
     <p class="hint">Name, Avatar und Design nimmst du in jedes Spiel mit, das du von hier aus öffnest.</p>
   </section>
+
+  <section class="party" id="party" aria-label="Party"></section>
 
   <section class="games" id="games" aria-label="Spiele"></section>
 
@@ -197,6 +227,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
           <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}</div></div>
         </div>
         <p>${esc(g.desc)}</p>
+        <div class="partybox" data-for="${esc(g.id)}"></div>
         <div class="actions">
           <a class="btn btn-primary" href="${esc(gameUrl(g.url))}" data-url="${esc(g.url)}" aria-label="${esc(g.name)} spielen">Spielen</a>
           <form class="join" data-url="${esc(g.url)}">
@@ -206,6 +237,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         </div>
       </article>`;
     }).join("");
+    renderPartyBoxes();
   }
 
   // join a room straight from here: the game opens with the code filled in
@@ -231,7 +263,147 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       card.textContent = s.online ? `Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}` : "Gerade nicht erreichbar";
     }
   }
-  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((g) => { games = g; render(null); refresh(); setInterval(refresh, 15000); })
+  // ---------- party ----------
+  const PK = "spieleabend.party", WK = "spieleabend.went"; // stored membership, last game room we were sent into
+  const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const write = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  let unloading = false;
+  addEventListener("pagehide", () => { unloading = true; });
+  let party = null, saved = read(PK), es = null, msg = "", busy = false, prefill = "";
+
+  async function api(path, body) {
+    let r;
+    try { r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); }
+    catch (e) { throw new Error("Keine Verbindung zum Server."); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.error || "Das hat nicht geklappt."), { status: r.status });
+    return j;
+  }
+  const act = (body) => api("party/act", Object.assign({ code: saved.code, secret: saved.secret }, body));
+  function say(text) { msg = text || ""; const e = $("#partyErr"); if (e) e.textContent = msg; }
+
+  function leaveLocal(text) {
+    if (es) { es.close(); es = null; }
+    party = null; saved = null; write(PK, null); busy = false;
+    renderParty(); renderPartyBoxes(); say(text);
+  }
+  function connectParty() {
+    if (es) es.close();
+    if (!saved) return;
+    const src = new EventSource(`party/events?code=${encodeURIComponent(saved.code)}&secret=${encodeURIComponent(saved.secret)}`);
+    es = src;
+    src.onmessage = (e) => { if (es !== src) return; party = JSON.parse(e.data); busy = false; renderParty(); renderPartyBoxes(); maybeGo(); };
+    src.addEventListener("kicked", () => { if (es === src) leaveLocal("Du wurdest aus der Party entfernt."); });
+    // a closed stream (a dropped one reconnects on its own) may mean the party is gone: ask before forgetting it
+    src.onerror = async () => {
+      if (es !== src || unloading || src.readyState !== 2) return;
+      try { await act({ t: "ping" }); } catch (e) { if (e.status === 404) return void leaveLocal("Diese Party gibt es nicht mehr."); }
+      setTimeout(() => { if (es === src && saved) connectParty(); }, 3000);
+    };
+  }
+  // the host started a game: everybody follows into it, once per room
+  function maybeGo() {
+    const g = party && party.game;
+    if (!g || !g.params || read(WK) === g.room) return;
+    const def = games.find((x) => x.id === g.id);
+    if (!def) return;
+    write(WK, g.room);
+    location.href = gameUrl(def.url, g.params);
+  }
+  const overHint = (g) => {
+    const n = party ? party.members.length : 0;
+    if (!g.max || n <= g.max || g.hint === false) return "";
+    return `Die Party hat ${n} Leute, ${g.name} hat ${g.max} Plätze. Es spielen der Host und alle, die „Bereit“ gedrückt haben${g.watch ? ", die anderen schauen zu." : ". Die anderen können hier nicht zuschauen."}`;
+  };
+  function renderPartyBoxes() {
+    for (const box of document.querySelectorAll(".partybox")) {
+      const g = games.find((x) => x.id === box.dataset.for);
+      if (!party || !g) { box.innerHTML = ""; continue; }
+      const host = party.you === party.host, hint = overHint(g);
+      box.innerHTML = (hint ? `<div class="pnote">${esc(hint)}</div>` : "") +
+        (host ? `<button class="btn btn-primary" type="button" data-launch="${esc(g.id)}"${busy ? " disabled" : ""}>${busy ? "Starte …" : "Mit der Party spielen"}</button>` : "");
+    }
+  }
+  function renderParty() {
+    const box = $("#party");
+    if (!party) {
+      box.innerHTML = `<h3>Party</h3>
+        <p>Zusammen spielen: Der Host wählt das Spiel, alle landen automatisch im selben Raum.</p>
+        <div class="row"><button class="btn btn-primary" type="button" data-p="create">Party erstellen</button>
+        <form class="join" data-p="join"><input id="partyCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Party-Code" value="${esc(prefill)}"><button class="btn" type="submit">Beitreten</button></form></div>
+        <div class="perr" id="partyErr" role="alert">${esc(msg)}</div>`;
+      return;
+    }
+    const host = party.you === party.host, mine = party.members[party.you], g = party.game && games.find((x) => x.id === party.game.id);
+    const link = `${location.origin}/?party=${party.code}`;
+    let game = "";
+    if (g) {
+      const r = party.game;
+      game = `<div class="pgame"><b>Läuft gerade: ${esc(g.name)}</b>` +
+        (r.params ? `<a class="btn btn-primary" href="${esc(gameUrl(g.url, r.params))}">${r.role === "watch" ? "Zuschauen" : "Zurück ins Spiel"}</a>`
+          : r.role === "out" ? `<span class="pnote">Für dich war kein Platz frei, und ${esc(g.name)} hat keine Zuschauer.</span>`
+          : `<span class="pnote">Du bist erst nach dem Start dazugekommen.</span>`) +
+        (r.watching || r.out ? `<span class="pnote">${r.playing} spielen${r.watching ? `, ${r.watching} schauen zu` : ""}${r.out ? `, ${r.out} ohne Platz` : ""}.</span>` : "") + `</div>`;
+    }
+    box.innerHTML = `<h3>Deine Party</h3>
+      <div class="pcode" aria-label="Party-Code">${esc(party.code)}</div>
+      <div class="plink"><code>${esc(link)}</code><button class="btn" type="button" data-p="copy">Kopieren</button></div>
+      <ul class="pmembers">${party.members.map((m, i) => `<li><span class="dot${m.online ? "" : " off"}" title="${m.online ? "hier" : "gerade im Spiel oder weg"}"></span><span class="av">${esc(m.avatar)}</span><span class="nm">${esc(m.name)}</span>${m.ready ? '<span class="tag ok">Bereit</span>' : ""}${i === party.host ? '<span class="tag">Host</span>' : ""}${i === party.you ? '<span class="tag">du</span>' : ""}${host && i !== party.you ? `<button class="rm" type="button" data-kick="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("")}</ul>
+      ${game}
+      <p>${host ? "Du bist der Host: Wähl unten ein Spiel." : "Der Host wählt das Spiel, dann geht es für alle automatisch los."} „Bereit“ zeigt, wer mitspielen will, falls das Spiel zu wenige Plätze hat.</p>
+      <div class="row"><button class="btn${mine.ready ? "" : " btn-primary"}" type="button" data-p="ready">${mine.ready ? "Nicht bereit" : "Bereit"}</button><button class="btn" type="button" data-p="leave">Party verlassen</button></div>
+      <div class="perr" id="partyErr" role="alert">${esc(msg)}</div>`;
+  }
+  function needName() { if (me.name.trim()) return false; say("Trag oben deinen Namen ein."); $("#myName").focus(); return true; }
+  async function enter(path, body) {
+    try {
+      const r = await api(path, body);
+      saved = { code: r.view.code, secret: r.secret }; write(PK, saved); party = r.view; prefill = ""; say("");
+      renderParty(); renderPartyBoxes(); connectParty();
+    } catch (e) { say(e.message); }
+  }
+  $("#party").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-p],[data-kick]"); if (!b) return;
+    try {
+      if (b.dataset.kick) return void await act({ t: "kick", index: +b.dataset.kick });
+      switch (b.dataset.p) {
+        case "create": if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar }); break;
+        case "ready": await act({ t: "ready", on: !party.members[party.you].ready }); break;
+        case "leave": await act({ t: "leave" }); leaveLocal(""); break;
+        case "copy":
+          try { await navigator.clipboard.writeText(`${location.origin}/?party=${party.code}`); b.textContent = "Kopiert"; setTimeout(() => { b.textContent = "Kopieren"; }, 1500); }
+          catch (err) { say("Kopieren geht hier nicht. Markier den Link und kopier ihn von Hand."); }
+          break;
+      }
+    } catch (err) { say(err.message); }
+  });
+  $("#party").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = $("#partyCode"), code = input.value.toUpperCase().replace(/[^A-Z]/g, "");
+    if (code.length !== 4) { input.focus(); input.select(); return; }
+    if (needName()) { prefill = code; return; }
+    enter("party/join", { code, name: me.name.trim(), avatar: me.avatar });
+  });
+  $("#party").addEventListener("input", (e) => { if (e.target.id === "partyCode") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
+  $("#games").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-launch]"); if (!b || busy) return;
+    busy = true; say(""); renderPartyBoxes();
+    try { await act({ t: "launch", game: b.dataset.launch }); }
+    catch (err) { busy = false; renderPartyBoxes(); say(err.message); const p = $("#party"); p.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  });
+
+  // a ?party=CODE link (a friend's invitation, or "back to the party" from a game)
+  const qParty = new URLSearchParams(location.search).get("party");
+  if (qParty) {
+    const code = qParty.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+    if (saved && saved.code !== code) prefill = code; // already in another party: show the join form with this code
+    else if (!saved) prefill = code;
+    history.replaceState(null, "", location.pathname);
+  }
+  renderParty();
+  connectParty();
+
+  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((g) => { games = g; render(null); renderParty(); maybeGo(); refresh(); setInterval(refresh, 15000); })
     .catch(() => { $("#games").innerHTML = '<p class="tagline">Die Spieleliste ließ sich nicht laden. Bitte die Seite neu laden.</p>'; });
 })();
 </script>

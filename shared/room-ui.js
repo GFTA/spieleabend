@@ -47,6 +47,7 @@
       <button class="btn btn-ghost" id="addBot" type="button">+ Computer-Gegner</button>
       <button class="btn btn-primary" id="sitBtn" type="button" hidden>Mitspielen</button>
       <p class="hint" id="lobbyHint"></p>
+      <a class="btn btn-ghost btn-block" id="partyLobby" hidden>Zurück zur Party</a>
     </div>
     <div class="panel chatpanel">
       <div class="label">Chat</div>
@@ -110,7 +111,19 @@
   // returns { send, resume, update, renderLobby, rematchStatus, armed, ... }; update() runs on every render
   window.RoomUI = function (app) {
     const R = () => app.room(), V = () => app.view();
-    const store = window.Spieleabend.store;
+    const store = window.Spieleabend.store, startUrl = window.Spieleabend.startUrl;
+
+    // ---------- party hand-off: the start page opens the game with ?pr=ROOM and ?ps=SEAT-SECRET (or ?pw=NAME to watch) ----------
+    // it lands in the same place a reload would: the stored room, which the game's own start code resumes
+    (function partyBoot() {
+      const q = new URLSearchParams(location.search), code = (q.get("pr") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+      if (!code || !(q.get("ps") || q.get("pw"))) return;
+      store.set(app.onlineKey, q.get("ps") ? { code, secret: q.get("ps") } : { code, watch: q.get("pw").slice(0, 18) });
+      for (const n of ["pr", "ps", "pw", "r"]) q.delete(n);
+      history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
+    })();
+    // "back to the party" links in the waiting room and the menu, only in rooms a party made
+    const partyHref = () => startUrl(`?party=${R().party}`);
 
     // ---------- connection: one socket, reconnects on its own, rejoins with the stored secret ----------
     let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null;
@@ -125,7 +138,7 @@
         if (app.on.opened) app.on.opened();
         const s = store.get(app.onlineKey);
         if (s && !queue.some((m) => m.t === "create" || m.t === "join"))
-          sock.send(JSON.stringify(s.watch ? { t: "join", code: s.code, name: s.watch } : { t: "resume", code: s.code, secret: s.secret }));
+          sock.send(JSON.stringify(s.watch ? { t: "join", code: s.code, name: s.watch, watch: true } : { t: "resume", code: s.code, secret: s.secret }));
         for (const m of queue.splice(0)) sock.send(JSON.stringify(m));
         app.render();
       };
@@ -283,6 +296,7 @@
         (app.watchers ? " Ist der Raum voll, schauen weitere Leute zu." : "") + (lan ? " Alle müssen im selben WLAN sein." : "");
       const host = r.you === r.host;
       $("#closeLobby").hidden = !host;
+      $("#partyLobby").hidden = !r.party; if (r.party) $("#partyLobby").href = partyHref();
       const watcher = r.you < 0, seen = r.watchers || [];
       $("#membersLabel").textContent = `Spieler (${r.members.length}/${max})` + (seen.length ? ` · ${seen.length} ${seen.length === 1 ? "schaut" : "schauen"} zu` : "");
       $("#sitBtn").hidden = !watcher || r.members.length >= max;
@@ -417,6 +431,11 @@
           if (host) hb.append(armed("Spiel für alle beenden", () => send({ t: "end" })));
         }
         if (host) hb.append(armed("Raum für alle schließen", () => send({ t: "close" })));
+      }
+      if (mode === "online" && r && r.party) {
+        const a = document.createElement("a");
+        a.className = "btn btn-block"; a.textContent = "Zurück zur Party"; a.href = partyHref();
+        box.append(a);
       }
       $("#hostBox").hidden = !hb.children.length;
       $("#hostBox details").open = !!(r && r.members.some((m) => !m.bot && !m.online)); // someone dropped out: show what the host can do

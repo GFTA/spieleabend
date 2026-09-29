@@ -482,6 +482,27 @@ Startbildschirm lautet entsprechend „… kannst du danach im Warteraum noch
   abfragen. Muss exakt dieses Shape haben.
 - Statische Dateien aus `public/`
 - WebSocket-Upgrade für den Online-Modus
+- `POST /party-room` → legt einen Raum an, in dem alle Party-Mitglieder schon sitzen (Header
+  `x-party-secret` = Env `PARTY_SECRET`, sonst 403; ohne gesetztes Secret 503). Body
+  `{party, members:[{name, avatar, ready}]}`, Antwort `{code, max, seats:[{name, secret}], watch:[name], out:[name]}`.
+  Passen alle rein, sitzen alle. Sonst sitzen der Host (erster) und alle mit `ready`, der Rest wird
+  Zuschauer (`watch`, nur Spiele mit `watchers`) oder bleibt draußen (`out`). Der Bereit-Status aus
+  der Party wird übernommen. Das Raum-Objekt trägt `party` (Code), die `room`-Nachricht ebenfalls.
+
+### Party-System (Startseite)
+
+`start/party.js` + `start/server.js`: Gruppen im Speicher des Start-Servers (weg bei Neustart, nach
+3 h ohne Besuch aufgeräumt). Aktionen per `POST /party/{create,join,act}`, Updates per Server-Sent
+Events (`GET /party/events`, ohne Abhängigkeiten). Nur der Host startet ein Spiel (`act {t:"launch"}`):
+der Start-Server ruft `<status-origin>/party-room` des Spiels auf und schickt jedem Mitglied nur seine
+eigene Einlass-URL (`?pr=RAUM&ps=SITZ-SECRET`, Zuschauer `?pr=RAUM&pw=NAME`). Die Startseite folgt
+einmal pro Raum automatisch (`spieleabend.went` in localStorage). `shared/room-ui.js` legt diese
+Parameter beim Laden wie ein gespeichertes Raum-Secret ab, das normale `UI.resume()` des Spiels
+übernimmt den Rest (keine Änderung an den `app.js` nötig). Ist der Raum von einer Party, gibt es
+„Zurück zur Party“ im Warteraum und im Menü (`Spieleabend.startUrl("?party=CODE")`).
+`games.json`: `max` (Plätze), `watch` (Spiel hat Zuschauer), `hint:false` (kein Hinweis bei zu
+großer Party, bisher Mensch ärgere dich nicht wegen der geplanten 5–6/7–8-Bretter).
+`PARTY_SECRET` steht in der `.env` jedes Spiels und der Startseite (gleicher Wert, nicht im Repo).
 
 ## Deployment
 

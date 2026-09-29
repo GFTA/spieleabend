@@ -130,7 +130,7 @@ test("skip: the next player sits out; with free choice you pick who", () => {
   assert.ok(G.act(S, 0, { t: "discard", id: sk.id, target: 2 }).ok);
   assert.strictEqual(S.cur, 1);
   S.step = "act";
-  G.act(S, 1, { t: "discard", id: S.players[1].hand[0].id });
+  G.act(S, 1, { t: "discard", id: S.players[1].hand.find((c) => !G.isSkip(c)).id });
   assert.strictEqual(S.cur, 0, "C was skipped");
 });
 
@@ -161,5 +161,6 @@ test("views: your own hand only, clock turn played for you", () => {
   const ev = G.tick(S, S.deadline + 5000);
   assert.strictEqual(ev[0].t, "timeout");
   assert.strictEqual(S.players[pi].hand.length, n, "drew one, threw one");
-  assert.notStrictEqual(S.cur, pi);
+  // with two players the turn only comes straight back when the other one had to sit out (an Aussetzen thrown for them)
+  if (!S.log.slice(-2).some((l) => /aussetzen|setzt aus/.test(l))) assert.notStrictEqual(S.cur, pi);
 });

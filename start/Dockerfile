@@ -1,7 +1,7 @@
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080
-COPY package.json server.js games.json ./
+COPY package.json server.js party.js games.json ./
 COPY public ./public
 USER node
 EXPOSE 8080

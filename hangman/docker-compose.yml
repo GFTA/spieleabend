@@ -8,6 +8,8 @@ services:
     image: hangman:latest
     container_name: hangman
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${HANGMAN_PORT:-8085}:8080"
     volumes:

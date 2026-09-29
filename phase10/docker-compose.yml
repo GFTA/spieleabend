@@ -8,6 +8,8 @@ services:
     image: phase10:latest
     container_name: phase10
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${PHASE10_PORT:-8086}:8080"
     volumes:

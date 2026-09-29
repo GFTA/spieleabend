@@ -9,6 +9,7 @@ const WebSocket = require("ws");
 
 process.env.PORT = "0";
 process.env.BOT_MS = "20";
+process.env.PARTY_SECRET = "test-geheim";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "hangman-"));
 const { server, wss, rooms } = require("../server.js");
 test.after(() => { for (const ws of wss.clients) ws.terminate(); server.close(); });
@@ -106,4 +107,43 @@ test("random words with a computer player: the bot guesses on its own", async ()
     }
   })();
   assert.ok(done, "the round ended");
+});
+
+test("a party asks for a room: seats come pre-filled and resume, ready decides an oversize party, the rest watch", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const port = server.address().port, url = `http://127.0.0.1:${port}/party-room`;
+  const post = (secret, body) => fetch(url, { method: "POST", headers: { "x-party-secret": secret, "content-type": "application/json" }, body: JSON.stringify(body) });
+  assert.strictEqual((await fetch(url)).status, 405);
+  assert.strictEqual((await post("falsch", { members: [{ name: "A" }] })).status, 403);
+  assert.strictEqual((await post("test-geheim", { members: [] })).status, 400);
+
+  // 11 people, 8 seats: the host and the ready ones sit, the others watch (the game has watchers)
+  const names = Array.from({ length: 11 }, (_, i) => "P" + i);
+  const members = names.map((name, i) => ({ name, avatar: "🦊", ready: [1, 2, 3, 4, 5, 6, 9, 10].includes(i) }));
+  const res = await post("test-geheim", { party: "PART", members });
+  assert.strictEqual(res.status, 200);
+  const out = await res.json();
+  assert.strictEqual(out.max, 8);
+  assert.deepStrictEqual(out.seats.map((s) => s.name), ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P9"]);
+  assert.deepStrictEqual(out.watch, ["P7", "P8", "P10"]);
+  assert.deepStrictEqual(out.out, []);
+
+  const host = client(port), guest = client(port);
+  await Promise.all([host.open, guest.open]);
+  host.send({ t: "resume", code: out.code, secret: out.seats[0].secret });
+  const joined = await host.next((m) => m.t === "room");
+  assert.strictEqual(joined.you, 0);
+  assert.strictEqual(joined.host, 0);
+  assert.strictEqual(joined.party, "PART");
+  assert.strictEqual(joined.members.length, 8);
+  assert.deepStrictEqual(joined.members.map((m) => m.ready), [false, true, true, true, true, true, true, true], "the party's ready flags carry over");
+  guest.send({ t: "join", code: out.code, name: "P7", watch: true });
+  const w = await guest.next((m) => m.t === "watching");
+  assert.strictEqual(w.name, "P7");
+  assert.strictEqual((await guest.next((m) => m.t === "room")).you, -1);
+
+  // a small party: everybody sits, nobody watches
+  const small = await (await post("test-geheim", { members: [{ name: "A" }, { name: "B" }, { name: "a" }] })).json();
+  assert.deepStrictEqual(small.seats.map((s) => s.name), ["A", "B"], "duplicate names are dropped");
+  host.ws.close(); guest.ws.close();
 });

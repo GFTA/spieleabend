@@ -8,6 +8,8 @@ services:
     image: schiffe:latest
     container_name: schiffe
     restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
     ports:
       - "${SCHIFFE_PORT:-8081}:8080"
     volumes:
