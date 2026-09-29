@@ -34,7 +34,7 @@
   const BOT_AVATAR = "🤖";
   // computer players always wear the robot; people keep a valid animal (or get one by seat)
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
-  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
+  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi", 0: "Zufällig" };
   const SWIFT_MS = 8000, CLOCK_MS = 15000, GRACE = 600;
 
   // Marks on a board, one character per cell. Everyone sees every board's marks.
@@ -58,7 +58,9 @@
   }
   const normSize = (n) => (FLEETS[+n] ? +n : 10);
   const normGoal = (n) => ([1, 2, 3].includes(+n) ? +n : 1);
-  const normLevel = (n) => (LEVELS[+n] ? +n : 2);
+  const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
+  // level 0 = random: every computer player got its own strength when the game started
+  const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
 
   const cellName = (size, i) => COLS[i % size] + (Math.floor(i / size) + 1);
   const shipName = (key) => (SHAPES[key] ? SHAPES[key].name : key);
@@ -176,7 +178,7 @@
   // players: [{ name, bot, avatar }]; goal: wins needed (1-3); size: a key of FLEETS; level: computer strength 1-3
   function newGame(players, goal, size, rules, level) {
     const S = {
-      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), wins: 0 })),
+      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), wins: 0 })),
       size: normSize(size), goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
       round: 0, turn: 0, starter: rand(players.length), log: [], last: null
     };
@@ -471,8 +473,8 @@
       const weak = foes.filter((i) => shipsLeft(S.players[i]) === min);
       ti = Math.random() < 0.6 ? pick(weak) : pick(foes);
     }
-    const T = S.players[ti], cell = aim(S, T, S.level || 2);
-    if (S.rules.weapons && !P.bomb && S.level >= 2 && !T.marks.includes(HIT) && Math.random() < 0.3) return { t: "bomb", target: ti, cell };
+    const T = S.players[ti], lv = lvOf(S, pi), cell = aim(S, T, lv);
+    if (S.rules.weapons && !P.bomb && lv >= 2 && !T.marks.includes(HIT) && Math.random() < 0.3) return { t: "bomb", target: ti, cell };
     return { t: "shoot", target: ti, cell };
   }
 
@@ -532,7 +534,7 @@
   function view(S, pi) {
     const P = S.players[pi], me = P ? pi : -1, reveal = S.phase === "roundEnd";
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, size: S.size, level: S.level || 2,
+      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, size: S.size, level: S.level == null ? 2 : S.level,
       fleet: FLEETS[S.size], rules: S.rules, teams: !!S.teams, shotsLeft: S.shotsLeft,
       clockMs: clockMs(S), clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => {
