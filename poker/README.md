@@ -25,7 +25,7 @@ in drei Stärken (sie schätzen ihre Gewinnchance per Simulation und setzen nach
 Tisch-Designs, Kartengröße, Emoji-Reaktionen, Chat und Tastenkürzel am Computer (F passen, C/Leertaste
 checken/mitgehen, R erhöhen, Enter bestätigen, H Tipp).
 
-## Installation auf dem Mini-PC
+## Installation auf dem Server
 
 ```sh
 cd spieleabend/poker
