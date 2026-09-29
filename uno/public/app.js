@@ -1,4 +1,4 @@
-// Pass-Uno UI: local pass-and-play and online rooms share one table renderer.
+// Uno UI: local pass-and-play and online rooms share one table renderer.
 (() => {
   "use strict";
   const G = window.UnoGame;
@@ -785,7 +785,7 @@
     const sh = $("#serverHint");
     sh.hidden = serverState === "ok";
     sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …"
-      : "Unter dieser Adresse antwortet kein Pass-Uno-Server. Du kannst es trotzdem versuchen, „Einzelspieler“ geht immer.";
+      : "Unter dieser Adresse antwortet kein Uno-Server. Du kannst es trotzdem versuchen, „Einzelspieler“ geht immer.";
     $("#localPanel").hidden = tab !== "local";
     for (const b of document.querySelectorAll("#goalOnline button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalOnline));
     for (const b of document.querySelectorAll("#goalLocal button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalLocal));

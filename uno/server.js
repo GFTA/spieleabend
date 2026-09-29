@@ -1,4 +1,4 @@
-// Pass-Uno server: the shared Spieleabend room server (../shared/room-server.js) with the
+// Uno server: the shared Spieleabend room server (../shared/room-server.js) with the
 // Uno engine. Start with `node server.js` (PORT, HOST and DATA_DIR are optional env vars).
 "use strict";
 
@@ -13,7 +13,7 @@ module.exports = require("../shared/room-server.js")({
   dir: __dirname,
   Game: Uno,
   id: "uno",
-  title: "Pass-Uno",
+  title: "Uno",
   legacyPath: "/pass-uno-server",
   metaName: "pass-uno-version",
   maxPlayers: 10,

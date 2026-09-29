@@ -1,6 +1,6 @@
 # Vier gewinnt
 
-Vier gewinnt im Browser für Android, iOS und Desktop, im selben Stil wie Pass-Uno und
+Vier gewinnt im Browser für Android, iOS und Desktop, im selben Stil wie Uno und
 Schiffe versenken. Zwei Spielarten:
 
 - **Jeder sein Handy**: Einer erstellt einen Raum, der Gegner scannt den QR-Code (oder

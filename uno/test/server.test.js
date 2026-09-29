@@ -65,7 +65,7 @@ test("create, join, start and play over WebSockets", async () => {
   const info = await (await fetch(`http://127.0.0.1:${port}/info`)).json();
   assert.strictEqual(info.uno, true);
   const page = await fetch(`http://127.0.0.1:${port}/`);
-  assert.match(await page.text(), /Pass-Uno/);
+  assert.match(await page.text(), /Uno/);
   assert.strictEqual((await fetch(`http://127.0.0.1:${port}/vendor/qrcode.js`)).status, 200);
   assert.strictEqual((await fetch(`http://127.0.0.1:${port}/../server.js`)).status, 404);
 

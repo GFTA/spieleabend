@@ -4,7 +4,7 @@
 // own server.js only hands over its engine (public/game.js) and a few game-specific hooks:
 //
 //   require("../shared/room-server.js")({
-//     dir: __dirname, Game, id: "uno", title: "Pass-Uno", maxPlayers: 10, reactions: [...],
+//     dir: __dirname, Game, id: "uno", title: "Uno", maxPlayers: 10, reactions: [...],
 //     newRoom(msg)            -> the settings a new room starts with ({ goal, rules, ... })
 //     roomFields(room)        -> those settings as sent to the players with every room update
 //     settings(room, msg)     -> host changes settings in the waiting room ({t:"settings"})

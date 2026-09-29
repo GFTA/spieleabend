@@ -1,17 +1,16 @@
 {
-  "name": "Uno",
-  "short_name": "Uno",
-  "description": "Uno für ein Handy, das am Tisch herumgereicht wird.",
+  "name": "Spieleabend",
+  "short_name": "Spieleabend",
+  "description": "Brettspiele und Kartenspiele für den Spieleabend, direkt im Browser.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#1a1426",
   "theme_color": "#1a1426",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "logo.svg", "sizes": "any", "type": "image/svg+xml" }
   ]
 }

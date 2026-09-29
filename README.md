@@ -13,7 +13,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Ein neues Spiel legt
 
 | Spiel | Ordner | Details |
 | --- | --- | --- |
-| Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler plus Zuschauer, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
+| Uno | [`uno/`](uno/) | 2–10 Spieler plus Zuschauer, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
 | Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler plus Zuschauer, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
 | Vier gewinnt | [`viergewinnt/`](viergewinnt/) | 2 Spieler plus Zuschauer, Felder 7×6 bis 10×8, Pop Out, 5 gewinnt, Computer-Gegner, Avatare, Tisch-Designs · Port 8082 |
 | Galgenmännchen | [`hangman/`](hangman/) | 1–8 Spieler plus Zuschauer, deutsche Zufallswörter oder ein Mitspieler denkt sich eins aus, Computer-Gegner, Chat · Port 8085 |

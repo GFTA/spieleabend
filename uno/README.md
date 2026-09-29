@@ -1,4 +1,4 @@
-# Pass-Uno
+# Uno
 
 Uno im Browser für Android und iOS. Zwei Spielarten:
 
@@ -54,7 +54,7 @@ Der Container startet nach einem Neustart des Mini-PCs von selbst
 
 ### Über einen Cloudflare-Tunnel (von überall erreichbar, mit HTTPS)
 
-Läuft auf dem Mini-PC schon ein `cloudflared`-Container, hängt sich Pass-Uno in dessen
+Läuft auf dem Mini-PC schon ein `cloudflared`-Container, hängt sich Uno in dessen
 Docker-Netzwerk. Im Tunnel zeigt dann ein Hostname (hier `uno.cool-kidz.net`) auf
 `http://pass-uno:8080`.
 
@@ -86,7 +86,7 @@ privaten Netzwerk erlauben soll: mit Ja bestätigen.
 Beim Start schreibt der Server die Adresse ins Log (`docker compose logs`), etwa
 
 ```
-Pass-Uno läuft auf Port 8080
+Uno läuft auf Port 8080
   im WLAN öffnen: http://192.168.178.20:8080
 ```
 

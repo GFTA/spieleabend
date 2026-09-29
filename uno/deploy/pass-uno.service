@@ -1,9 +1,9 @@
-# systemd unit for running Pass-Uno without Docker.
+# systemd unit for running Uno without Docker.
 # Copy the uno/ folder to /opt/pass-uno, run `npm ci --omit=dev` there, then:
 #   sudo cp deploy/pass-uno.service /etc/systemd/system/
 #   sudo systemctl enable --now pass-uno
 [Unit]
-Description=Pass-Uno game server
+Description=Uno game server
 After=network-online.target
 Wants=network-online.target
 

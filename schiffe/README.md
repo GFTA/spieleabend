@@ -1,7 +1,7 @@
 # Schiffe versenken
 
 Schiffe versenken im Browser für Android und iOS, für **2 bis 4 Spieler**, im selben
-Stil wie Pass-Uno. Zwei Spielarten:
+Stil wie Uno. Zwei Spielarten:
 
 - **Jeder sein Handy**: Einer erstellt einen Raum, die anderen scannen den QR-Code
   (oder geben den 4-Buchstaben-Code ein). Jeder sieht nur seine eigene Flotte. Braucht
@@ -94,7 +94,7 @@ aufgeben.
 
 Der Server ist ein einzelnes Node.js-Programm (`server.js`) ohne Datenbank. Spielstände
 landen in `data/rooms.json`, damit ein Neustart laufende Runden nicht verliert.
-Er läuft problemlos neben Pass-Uno: im WLAN auf Port **8081** statt 8080.
+Er läuft problemlos neben Uno: im WLAN auf Port **8081** statt 8080.
 
 ### Mit Docker (empfohlen)
 

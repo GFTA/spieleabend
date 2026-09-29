@@ -1,4 +1,4 @@
-// Pass-Uno game engine. Pure state + rules, shared by the browser (local mode)
+// Uno game engine. Pure state + rules, shared by the browser (local mode)
 // and the Node server (online mode). No DOM, no I/O.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
