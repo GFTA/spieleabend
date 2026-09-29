@@ -83,7 +83,7 @@ h1 span{color:var(--accent)}
   .tagline{max-width:none}
   .layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;align-items:start}
   .side{display:flex;flex-direction:column;gap:14px}
-  .side>.me,.side>.party,.side>.modes{width:100%;align-self:stretch}
+  .side>.me,.side>.party{width:100%;align-self:stretch}
   .games{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:14px}
   .hero{padding-bottom:8px}
 }
@@ -144,12 +144,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .pnote{color:var(--muted);font-size:13px;padding:8px 10px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
 .perr{color:#ff8a8f;font-size:13px;min-height:0}
 .partybox{display:flex;flex-direction:column;gap:8px}
-.modes{align-self:center;width:min(100%,560px);display:flex;gap:6px;padding:5px;border-radius:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.modes button{flex:1;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-weight:800;background:transparent;color:var(--muted);cursor:pointer}
-.modes button[aria-pressed="true"]{color:var(--text);background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-.single #party,.single .partybox,.single .how,.single .pill{display:none}
 /* in a party the host picks the game: no own start button on the cards */
-.inparty:not(.single) .game .actions{display:none}
+.inparty .game .actions{display:none}
 .partybox:empty{display:none}
 .partybox:not(:empty){margin-top:auto}
 .partybox:not(:empty)+.actions{margin-top:0}
@@ -177,17 +173,12 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     <a class="btn btn-ghost" href="profile.html">Profil &amp; Statistik</a>
   </section>
 
-  <div class="modes" id="modes" role="group" aria-label="Spielart">
-    <button type="button" data-m="multi" aria-pressed="true">Mehrspieler</button>
-    <button type="button" data-m="single" aria-pressed="false">Einzelspieler</button>
-  </div>
-
   <section class="party" id="party" aria-label="Party"></section>
 
   <section class="how" aria-label="So geht's">
     <div><b>Party erstellen</b><p>Einer erstellt eine Party und teilt den Code oder den Einladungslink.</p></div>
     <div><b>Beitreten</b><p>Die anderen tippen den Party-Code hier ein oder öffnen den Link. Der Host wählt das Spiel, dann landen alle im selben Raum.</p></div>
-    <div><b>Allein?</b><p>Oben „Einzelspieler“ wählen: dann geht es gegen den Computer, ohne Party und ohne Code.</p></div>
+    <div><b>Allein?</b><p>Ohne Party startet „Spielen“ ein Spiel allein gegen den Computer.</p></div>
   </section>
   </aside>
 
@@ -260,27 +251,12 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   });
   renderMe();
 
-  // single player: no rooms, codes or parties, the games open straight in their single-player tab (?sp=1)
-  let single = false;
-  try { single = localStorage.getItem("spieleabend.single") === "1"; } catch (e) {}
-  function applySingle() {
-    document.body.classList.toggle("single", single);
-    for (const b of document.querySelectorAll("#modes button")) b.setAttribute("aria-pressed", String((b.dataset.m === "single") === single));
-  }
-  $("#modes").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-m]"); if (!b) return;
-    single = b.dataset.m === "single";
-    try { localStorage.setItem("spieleabend.single", single ? "1" : "0"); } catch (err) {}
-    applySingle(); updateLinks();
-    if (!single) maybeGo();
-  });
-  applySingle();
-
+  // without a party "Spielen" opens the game in its single-player tab (?sp=1)
   function gameUrl(base, extra) {
     const u = new URL(base);
     for (const [k, v] of Object.entries(extra || {})) u.searchParams.set(k, v);
     if (table !== "night") u.searchParams.set("table", table);
-    if (single) u.searchParams.set("sp", "1");
+    if (!party) u.searchParams.set("sp", "1");
     if (me.name.trim()) u.searchParams.set("name", me.name.trim());
     u.searchParams.set("av", me.avatar);
     return u.toString();
@@ -379,7 +355,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   // the host started a game: everybody follows into it, once per room
   function maybeGo() {
     const g = party && party.game;
-    if (single || !g || !g.params || read(WK) === g.room) return;
+    if (!g || !g.params || read(WK) === g.room) return;
     const def = games.find((x) => x.id === g.id);
     if (!def) return;
     write(WK, g.room);
@@ -392,13 +368,14 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   };
   function renderPartyBoxes() {
     document.body.classList.toggle("inparty", !!party);
+    updateLinks();
     for (const box of document.querySelectorAll(".partybox")) {
       const g = games.find((x) => x.id === box.dataset.for);
       if (!g) { box.innerHTML = ""; continue; }
-      if (!party) { box.innerHTML = `<button class="btn" type="button" data-newparty>Party erstellen</button>`; continue; }
+      if (!party) { box.innerHTML = ""; continue; }
       const host = party.you === party.host, hint = overHint(g);
       box.innerHTML = (hint ? `<div class="pnote">${esc(hint)}</div>` : "") +
-        (host ? `<button class="btn btn-primary" type="button" data-launch="${esc(g.id)}"${busy ? " disabled" : ""}>${busy ? "Starte …" : "Mit der Party spielen"}</button>` : "");
+        (host ? `<button class="btn btn-primary" type="button" data-launch="${esc(g.id)}"${busy ? " disabled" : ""}>${busy ? "Starte …" : "Spielen"}</button>` : "");
     }
   }
   function renderParty() {
@@ -471,8 +448,6 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   });
   $("#party").addEventListener("input", (e) => { if (e.target.id === "partyCode") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   $("#games").addEventListener("click", async (e) => {
-    const np = e.target.closest("[data-newparty]");
-    if (np) { if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar, color: me.color }); $("#party").scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
     const b = e.target.closest("[data-launch]"); if (!b || busy) return;
     busy = true; say(""); renderPartyBoxes();
     try { await act({ t: "launch", game: b.dataset.launch }); }
