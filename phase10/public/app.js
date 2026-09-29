@@ -70,6 +70,7 @@
   const backHTML = () => '<span class="card back"></span>';
 
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#plates", ".plate.active"); // the player on turn scrolls into view
   function flash(text, sub, cls) {
     const f = $("#flash"), s = $("#flashText");
     s.className = cls || "";
@@ -490,8 +491,6 @@
     for (const id of [...staged.keys()]) if (!V.hand.some((c) => c.id === id)) staged.delete(id);
     if (P && P.laid) staged.clear();
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
-    const act = $("#plates .plate.active");
-    if (act) act.scrollIntoView({ block: "nearest", inline: "nearest" });
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · bis Phase ${V.goal}`;
 
     // piles

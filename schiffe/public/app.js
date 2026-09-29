@@ -68,6 +68,7 @@
   const humans = () => L.players.map((_, i) => i).filter((i) => !L.players[i].bot);
 
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#opps", [".opp.sel", ".opp.active"]); // the player on turn scrolls into view
   function flash(text, sub, cls) {
     const f = $("#flash"), s = $("#flashText");
     s.className = cls || "";
@@ -604,8 +605,6 @@
       if (el) { const c = ping.res === "miss" ? "ping" : "ping hot"; el.classList.remove("ping", "hot"); void el.offsetWidth; el.classList.add(...c.split(" ")); }
       ping = null;
     }
-    const act = oppsEl.querySelector(".opp.sel") || oppsEl.querySelector(".opp.active");
-    if (act) oppsEl.scrollLeft = act.offsetLeft - (oppsEl.clientWidth - act.offsetWidth) / 2;
 
     // arena
     const board = $("#board");

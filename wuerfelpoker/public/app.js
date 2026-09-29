@@ -46,6 +46,7 @@
   const miniDice = (dice) => (dice || []).slice().sort((a, b) => b - a).map((v) => dieHTML(v, "mini")).join("");
 
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#players", ".pcard.active"); // the player on turn scrolls into view
 
   // ---------- sound ----------
   const { sfx, buzz, wake } = Spieleabend.sound({
@@ -204,8 +205,6 @@
         `<div class="who"><span class="av">${p.avatar || (p.bot ? "🤖" : "")}</span><span class="nm">${esc(i === V.me && mode === "online" ? `${p.name} (du)` : p.name)}</span><span class="wins" title="Siege">${p.score}</span></div>` +
         `<div class="res">${res}</div><div class="hand">${esc(hand)}</div></div>`;
     }).join("");
-    const act = $("#players .pcard.active");
-    if (act) { const box = $("#players"); box.scrollLeft = act.offsetLeft - (box.clientWidth - act.offsetWidth) / 2; }
   }
 
   // the five big dice; built once, then only faces and classes change so animations run

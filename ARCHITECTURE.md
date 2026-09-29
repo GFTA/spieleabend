@@ -31,7 +31,7 @@ Renderer (`public/app.js`).
 
 | Datei | Inhalt |
 |---|---|
-| `kit.css` | Basis-Palette, die fünf Tisch-Designs (nur Basisfarben) und alle Bausteine, die überall gleich aussehen (Knöpfe-Grundlagen, Felder, Panels, Segmente, Toggles, Toast, Avatar-Raster, Reaktionsblasen, Konfetti, Startseiten-Link …) |
+| `kit.css` | Basis-Palette, die sieben Tisch-Designs (nur Basisfarben) und alle Bausteine, die überall gleich aussehen (Knöpfe-Grundlagen, Felder, Panels, Segmente, Toggles, Toast, Avatar-Raster, Reaktionsblasen, Konfetti, Startseiten-Link …) |
 | `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (Profil + `?name=`/`?av=`), `avatarPicker()`/`pickerHTML()`, `profile`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
 | `avatars.js` / `profile.js` | Avatar-Liste, Farben; Profil mit Statistik (s. „Profil, Avatar & Statistik“) |
 | `room-ui.css` / `room-ui.js` | Warteraum und Spielmenü (s. u.) |
@@ -66,14 +66,14 @@ spiel-eigene Variablen (Schiffe: `--sea`/`--hull`/`--wreck`, Würfelpoker:
 Aussehen-Menü, s.u.) — jedes Spiel multipliziert seine Spielelement-Größe
 damit.
 
-### Tisch-Designs (immer exakt diese fünf, gleiche Reihenfolge, gleiche Farben)
+### Tisch-Designs (immer exakt diese sieben, gleiche Reihenfolge, gleiche Farben)
 
 ```js
-const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
+const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"], ["vulkan", "Vulkan", "#301c17"], ["mint", "Minze", "#dff3ea"]];
 ```
 
 „Nacht“ ist der Default (kein `data-table`-Attribut nötig). Für die anderen
-vier überschreibt `:root[data-table="X"]{...}` dieselben Variablennamen wie
+sechs überschreibt `:root[data-table="X"]{...}` dieselben Variablennamen wie
 oben, plus die spiel-eigenen:
 
 ```css
@@ -81,6 +81,8 @@ oben, plus die spiel-eigenen:
 :root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3; /* + spieleigene Vars */}
 :root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479; /* + spieleigene Vars */}
 :root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--scrim:rgba(251,227,236,.92); /* + spieleigene Vars, pastellig */}
+:root[data-table="vulkan"]{--bg:#241512;--bg2:#301c17;--surface:#3d241d;--line:#583229;--text:#fbeee8;--muted:#cfa89a;--scrim:rgba(24,10,7,.86); /* + spieleigene Vars, dunkel-warm */}
+:root[data-table="mint"]{color-scheme:light; /* helle Minz-Palette, s. kit.css; + spieleigene Vars, pastellig */}
 ```
 
 „Blüte“ ist ein helles Pastell-Pink-Theme und folgt „Hell“ Regel für Regel:
@@ -93,7 +95,7 @@ bleibt Gelb, weil die Primär-Buttons einen fest gelben Schatten haben.
 
 Die Design-Buttons im Spiel liegen in `<div class="seg tables">` mit
 `.look .seg.tables{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}`,
-damit fünf (oder später mehr) Optionen auf schmalen Handys umbrechen statt
+damit sieben (oder später mehr) Optionen auf schmalen Handys umbrechen statt
 rauszulaufen.
 
 Im JS (`app.js`, Abschnitt „look“):
@@ -110,9 +112,9 @@ function applyLook() {
 ```
 
 Ausgewählt wird das über zwei identische UI-Stellen in `index.html`, ein
-`<div class="look" id="lookHome">` auf dem Startbildschirm und ein
-`id="lookMenu"` im Einstellungen/Regeln-Bereich; `renderLook()` befüllt
-beide mit denselben Buttons.
+`<div class="look" id="lookHome">` auf dem Startbildschirm und das
+Einstellungen-Sheet (`id="lookSettings"`, s. u.); `renderLook()` befüllt
+alle Ziele (`#lookHome`, `#lookSettings`) mit denselben Buttons.
 
 **Design-Übernahme von der Startseite:** `games.cool-kidz.net` hat oben
 rechts denselben Tisch-Picker und hängt die Wahl als `?table=<id>` an jeden
@@ -163,6 +165,25 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - App-Vertrag für `RoomUI`: `avatars: G.AVATARS` und `setAvatar(a)` (statt früher `cycleAvatar`).
 
 `#myName` hat überall `maxlength="18"`.
+
+### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
+
+- `room-ui.js` baut in **jedem** Spiel oben rechts ein Einstellungen-Sheet
+  (`#settings`): Tisch-Design, Größe, Avatar und Farbe (wie im Profil,
+  online wird `{t:"avatar", avatar, color}` an den Raum geschickt) und der
+  Ton-Schalter. Geöffnet wird es über `#setBtn` in der Topbar im Spiel bzw.
+  `#setFab` (fest oben rechts) auf Startbildschirm/Warteraum; im Spiel ist
+  der Fab per `:has(#game:not([hidden]))` ausgeblendet. Pro Spiel ist dafür
+  kein HTML nötig; spielspezifische Optionen gehören in ein
+  `data-slot="settings"`-Template im Menü („Spiel-Einstellungen“).
+- `Spieleabend.followTurn(box, selektor|[selektoren])` scrollt eine
+  horizontal scrollende Spielerleiste automatisch zum Spieler, der dran ist
+  (weich, nur wenn er nicht komplett sichtbar ist, zentriert; hält die
+  Position bei Neuzeichnen). Jedes Spiel mit so einer Leiste ruft es einmal
+  beim Start auf (`#plates`/`.plate.active`, `#players`/`.pcard.active` …);
+  eigenes `scrollLeft`/`scrollIntoView` gehört nicht mehr in die Spiele.
+- Neue Themes brauchen in jedem Spiel eine `:root[data-table="X"]`-Regel mit
+  den spieleigenen Variablen (Brett, Meer, Filz …) — die Basis kommt aus `kit.css`.
 
 ### Sonstige geteilte UI-Konventionen
 
@@ -574,7 +595,7 @@ die README-Tabelle ein (Punkte 1, 2, 4 und 5 unten sind damit erledigt). Danach 
 Die einzelnen Schritte, falls man ohne Generator arbeitet:
 
 1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
-2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, `shared/avatars.js` + `shared/profile.js` einbinden (Profil, Statistik-Hook `profile.result`, „Profil & Statistik“-Link), responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
+2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: sieben `TABLES` (inkl. „Blüte“, „Vulkan“, „Minze“ mit passenden Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, `shared/avatars.js` + `shared/profile.js` einbinden (Profil, Statistik-Hook `profile.result`, „Profil & Statistik“-Link), responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
 3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen

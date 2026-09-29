@@ -24,6 +24,7 @@
     bot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6" /></svg>'
   };
 
+  ICONS.sliders = SVG('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>');
   ICONS.chat = SVG('<path d="M4 5h16v11H9l-5 4z"/>', ' stroke-linejoin="round"');
   const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
 
@@ -81,7 +82,7 @@
     <div class="hint" id="menuRules"></div>
     <div class="rules"><details><summary>${menu.dataset.rulesTitle || "Spielregeln"}</summary>${rulesHTML}</details></div>
     <div class="rules"><details><summary>Spielverlauf</summary>${slot(menu, "history")}<ol class="history" id="menuLog"></ol></details></div>
-    <div class="rules"><details><summary>Einstellungen</summary><div class="look" id="lookMenu"></div>${slot(menu, "settings")}<label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label></details></div>
+    ${slot(menu, "settings") ? `<div class="rules"><details><summary>Spiel-Einstellungen</summary>${slot(menu, "settings")}</details></div>` : ""}
     <div id="menuActions"></div>
     <div class="rules" id="hostBox" hidden><details><summary>Als Host</summary><div class="hostacts" id="hostActions"></div></details></div>
     <div class="menubar">
@@ -92,6 +93,14 @@
   </div>`;
   // chat during a game: a button in the top bar next to the menu, and a sheet with the whole log
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="chatBtn" type="button" aria-label="Chat" title="Chat" hidden>${ICONS.chat}<span class="badge" id="chatBadge" hidden></span></button>`);
+  // settings (design, avatar, colour, sound): a button in the game's top bar, a floating one on the start and waiting screens
+  $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="setBtn" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>`);
+  document.body.insertAdjacentHTML("beforeend", `<button class="iconbtn setfab" id="setFab" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>
+  <div class="overlay" id="settings" hidden><div class="sheet"><h2>Einstellungen</h2>
+    <div class="look" id="lookSettings"></div>
+    <div class="label">Avatar &amp; Farbe</div><div class="avgrid" id="setAvGrid"></div>
+    <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+    <button class="btn btn-primary btn-block" id="settingsClose" type="button">Fertig</button></div></div>`);
   document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
     <button class="btn btn-primary btn-block" id="chatClose" type="button">Weiterspielen</button></div></div>`);
 
@@ -427,6 +436,24 @@
       send({ t: "avatar", avatar: a ? a.dataset.pick : undefined, color: P.get().col });
       if (!lobbyAv.hidden) fillLobbyAv();
     });
+
+    // ---------- settings sheet: design, avatar and colour (also sent to the room), sound ----------
+    (function settings() {
+      const P = window.Spieleabend.profile, grid = $("#setAvGrid");
+      const paintHome = () => { const b = $("#myAvatar"); if (b) { b.textContent = P.get().av; b.style.background = P.get().col || ""; } };
+      const fill = () => { grid.innerHTML = window.Spieleabend.pickerHTML(app.avatars, P.get().av, P.get().col); };
+      const open = () => { fill(); $("#settings").hidden = false; };
+      $("#setBtn").addEventListener("click", open);
+      $("#setFab").addEventListener("click", open);
+      $("#settingsClose").addEventListener("click", () => { $("#settings").hidden = true; });
+      grid.addEventListener("click", (e) => {
+        const c = e.target.closest("[data-col]"), a = e.target.closest("[data-pick]");
+        if (!c && !a) return;
+        if (c) P.set({ col: c.dataset.col }); else { app.setAvatar(a.dataset.pick); P.set({ av: a.dataset.pick }); }
+        if (app.mode() === "online" && R()) send({ t: "avatar", avatar: a ? a.dataset.pick : undefined, color: P.get().col });
+        paintHome(); fill();
+      });
+    })();
 
     // ---------- in-game menu ----------
     // a menu action with in-page two-step confirmation

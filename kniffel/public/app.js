@@ -43,6 +43,7 @@
   const dieHTML = (v, cls = "") => `<span class="die ${cls}" data-v="${v}">${pips(v)}</span>`;
   
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#sheetWrap", "#sheet thead th.act"); // the player on turn scrolls into view
 
   // ---------- sound ----------
   const { sfx, buzz, wake } = Spieleabend.sound({
@@ -204,7 +205,6 @@
 
   // the score sheet: one column per player, the one on turn highlighted; boxes that may be
   // written down now show their points and are tapped (twice: pick, then confirm)
-  let sheetTurn = null;
   function renderSheet() {
     const order = V.order && V.order.length ? V.order : V.players.map((_, i) => i);
     const activePi = V.phase === "play" ? (hold ? hold.pi : V.cur) : -1;
@@ -239,13 +239,6 @@
     // mark the leader in the total row
     const cells = $("#sheet").querySelectorAll("tr.total td");
     order.forEach((i, k) => { if (V.players.some((p) => p.tot.total > 0) && tots[i] === top) cells[k].classList.add("lead"); });
-    // bring the player on turn into view (wide tables scroll sideways)
-    const turnKey = `${V.round}:${V.turn}`;
-    if (sheetTurn !== turnKey) {
-      sheetTurn = turnKey;
-      const th = $("#sheet thead th.act"), w = $("#sheetWrap");
-      if (th) w.scrollLeft = th.offsetLeft - (w.clientWidth - th.offsetWidth) / 2;
-    }
   }
 
   // the five big dice; built once, then only faces and classes change so animations run

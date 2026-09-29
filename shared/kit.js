@@ -20,7 +20,7 @@
   }
 
   // ---------- look: table design and size, applied before anything is drawn ----------
-  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"]];
+  const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"], ["vulkan", "Vulkan", "#301c17"], ["mint", "Minze", "#dff3ea"]];
   const SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   // key: where the choice is stored; sizeLabel: "Größe", "Kartengröße", ...; onChange: redraw after a change
   function look({ key, sizeLabel = "Größe", onChange }) {
@@ -36,17 +36,17 @@
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute("content", getComputedStyle(root).getPropertyValue("--bg").trim() || t[2]);
     }
-    // the same buttons on the start screen (#lookHome) and in the menu (#lookMenu)
+    // the same buttons on the start screen (#lookHome) and in the menu (#lookSettings)
     function render() {
       const html = `<div class="label">Tisch</div><div class="seg tables">${TABLES.map(([k, n, c]) =>
         `<button type="button" data-table="${k}" aria-pressed="${cur.table === k}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("")}</div>` +
         `<div class="label">${sizeLabel}</div><div class="seg three">${SIZES.map(([k, n]) =>
         `<button type="button" data-size="${k}" aria-pressed="${cur.size === k}">${n}</button>`).join("")}</div>`;
-      for (const id of ["#lookHome", "#lookMenu"]) { const el = $(id); if (el && el.innerHTML !== html) el.innerHTML = html; }
+      for (const id of ["#lookHome", "#lookSettings"]) { const el = $(id); if (el && el.innerHTML !== html) el.innerHTML = html; }
       const sum = $("#lookSum");
       if (sum) sum.textContent = `${(TABLES.find((x) => x[0] === cur.table) || TABLES[0])[1]} · ${(SIZES.find((x) => x[0] === cur.size) || SIZES[1])[1]}`;
     }
-    for (const id of ["#lookHome", "#lookMenu"]) { const el = $(id); if (el) el.addEventListener("click", (e) => {
+    for (const id of ["#lookHome", "#lookSettings"]) { const el = $(id); if (el) el.addEventListener("click", (e) => {
       const t = e.target.closest("[data-table]"), z = e.target.closest("[data-size]");
       if (!t && !z) return;
       if (t) cur.table = t.dataset.table;
@@ -98,6 +98,31 @@
       set(b.dataset.pick); P.set({ av: b.dataset.pick });
       grid.hidden = true; btn.textContent = b.dataset.pick;
     });
+  }
+
+  // A row of player plates that scrolls sideways: whenever another player gets the turn, bring them into view.
+  // sels: selectors of the highlighted plate, the first one that exists wins
+  function followTurn(box, sels) {
+    box = typeof box === "string" ? $(box) : box;
+    if (!box) return;
+    sels = [].concat(sels);
+    let last = null, left = 0, raf = 0;
+    box.addEventListener("scroll", () => { left = box.scrollLeft; }, { passive: true });
+    const find = () => { for (const s of sels) { const a = box.querySelector(s); if (a) return a; } return null; };
+    const run = () => {
+      raf = 0;
+      const a = find();
+      if (!a) { last = null; return; }
+      if (!box.clientWidth) return;
+      const key = [...a.parentNode.children].indexOf(a);
+      if (key === last) { if (Math.abs(box.scrollLeft - left) > 1) box.scrollLeft = left; return; } // the row was redrawn: keep where it was
+      last = key;
+      const c = box.getBoundingClientRect(), r = a.getBoundingClientRect();
+      if (r.left >= c.left + 4 && r.right <= c.right - 4) return;
+      box.scrollTo({ left: box.scrollLeft + (r.left + r.width / 2) - (c.left + c.width / 2), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    };
+    new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); }).observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    raf = requestAnimationFrame(run);
   }
 
   // ---------- feedback ----------
@@ -196,5 +221,5 @@
     return { sfx, buzz, isOn: () => on, wake };
   }
 
-  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, profile: P, toast, confetti, showBubble, sound, dropParams };
+  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, profile: P, toast, confetti, showBubble, sound, dropParams };
 })();

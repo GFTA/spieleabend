@@ -60,6 +60,7 @@
   const pname = (i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name);
 
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#plates", ".plate.active"); // the player on turn scrolls into view
   function flash(text, sub, cls) {
     const f = $("#flash"), s = $("#flashText");
     s.className = cls || "";
@@ -246,8 +247,6 @@
     if (V.phase !== "roundEnd") peek = false;
     if (!canPlay()) solving = false;
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
-    const act = $("#plates .plate.active");
-    if (act) act.scrollIntoView({ block: "nearest", inline: "nearest" });
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> von ${V.goal}`;
 
     const choosing = V.phase === "choose", end = V.phase === "roundEnd";

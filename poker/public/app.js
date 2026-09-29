@@ -43,6 +43,7 @@
     ? `<span class="card back ${cls}"></span>`
     : `<span class="card s${G.suitOf(id)} ${cls}" data-id="${id}"><b>${RANKS[G.rankOf(id)] || G.rankOf(id)}</b><i>${G.SUITS[G.suitOf(id)]}</i></span>`;
   const { toast, confetti, showBubble } = Spieleabend;
+  Spieleabend.followTurn("#players", ".pcard.active"); // the player on turn scrolls into view
 
   // ---------- sound ----------
   const { sfx, buzz, wake } = Spieleabend.sound({
@@ -385,8 +386,6 @@
         (p.bet ? `<span class="bet">${money(p.bet)}</span>` : "") + `</div>`;
     }).join("");
     syncStacks();
-    const act = $("#players .pcard.active");
-    if (act) { const box = $("#players"); box.scrollLeft = act.offsetLeft - (box.clientWidth - act.offsetWidth) / 2; }
   }
 
   const STREET = { pre: "Vor dem Flop", flop: "Flop", turn: "Turn", river: "River" };
