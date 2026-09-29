@@ -159,7 +159,7 @@
       if (mode !== "local" || !L) return;
       const snap = snapshot(), ev = G.tick(L);
       localEvents(ev); trackIncoming(snap, ev);
-      store.set(K.local, L); render(); scheduleLocalUno();
+      store.set(K.local, L); render(); seatFlights(ev); scheduleLocalUno();
     }, ms + 30);
   }
 
@@ -229,6 +229,7 @@
       }
       store.set(K.local, L);
       render();
+      seatFlights(res.events);
       scheduleLocalUno();
       return true;
     }
@@ -686,6 +687,58 @@
       a.onfinish = a.oncancel = () => wrap.remove();
     }
   }
+  // where a player's cards are on screen: own hand at the bottom, everybody else at their seat
+  function handSpot(pi) {
+    const el = pi === V.me ? $("#hand") : document.querySelector(`#table .seat[data-seat="${pi}"] .sfan`);
+    return el && el.getBoundingClientRect();
+  }
+  // 7 and 0: a bundle of card backs travels from one hand to another
+  function flyHands(from, to, n, delay = 0) {
+    const a = handSpot(from), b = handSpot(to);
+    if (!a || !b || !a.width || !b.width || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cw = 34, ch = cw * 1.5;
+    const ax = a.left + a.width / 2 - cw / 2, ay = a.top + a.height / 2 - ch / 2;
+    const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2;
+    const dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist, bow = Math.min(60, dist * 0.2);
+    for (let k = 0; k < Math.min(n, 5); k++) {
+      const wrap = document.createElement("div");
+      wrap.className = "fly";
+      wrap.style.cssText = `left:${ax}px;top:${ay}px;width:${cw}px;height:${ch}px`;
+      const inner = document.createElement("div");
+      inner.className = "fly-inner";
+      const back = document.createElement("span");
+      back.className = "card card-back";
+      back.style.setProperty("--cw", cw + "px");
+      inner.append(back); wrap.append(inner); document.body.append(wrap);
+      const sw = (k - 2) * 5;
+      const an = wrap.animate([
+        { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 0 },
+        { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.12 },
+        { transform: `translate(${dx / 2 + nx * bow}px,${dy / 2 + ny * bow}px) rotate(${(k - 2) * 14}deg) scale(1.15)`, opacity: 1, offset: 0.55 },
+        { transform: `translate(${dx + sw}px,${dy}px) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.9 },
+        { transform: `translate(${dx + sw}px,${dy}px)`, opacity: 0 }
+      ], { duration: 700, delay: delay + k * 70, easing: "ease-in-out", fill: "backwards" });
+      an.onfinish = an.oncancel = () => wrap.remove();
+    }
+    if (to === V.me) {
+      [...$("#hand").children].forEach((el, i) => el.animate([{ translate: "0 -18px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 300, delay: delay + 480 + i * 35, fill: "backwards" }));
+    }
+  }
+  // flights for what others just did, after the screen was redrawn (online and shared phone)
+  function seatFlights(events) {
+    if (!V || (mode === "local" && hidden && hold == null)) return;
+    for (const ev of events || []) {
+      if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi !== V.me) flyToSeat(ev.pi, ev.n || (ev.t === "penalty" ? 2 : 1));
+      if (ev.t === "swap") {
+        flyHands(ev.pi, ev.with, V.players[ev.with].count);
+        flyHands(ev.with, ev.pi, V.players[ev.pi].count, 60);
+      }
+      if (ev.t === "rotate") {
+        const S = { players: V.players, dir: V.dir };
+        V.players.forEach((p, k) => { if (!p.out) { const to = G.nextIdx(S, k); flyHands(k, to, V.players[to].count); } });
+      }
+    }
+  }
   // someone else played: their card travels from their seat onto the pile
   function flyFromSeat(pi, el) {
     const seat = document.querySelector(`#table .seat[data-seat="${pi}"] .sfan`);
@@ -839,11 +892,10 @@
   // a room update from the server: sounds and notes for what just happened, then draw
   function onRoom(m) {
     R = m; mode = "online";
-    const flights = [];
     if (m.view) {
       const v = m.view;
       for (const ev of m.events || []) {
-        if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi !== v.me) { flights.push([ev.pi, ev.n || (ev.t === "penalty" ? 2 : 1)]); sfx("draw"); }
+        if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi !== v.me) sfx("draw");
         if (ev.t === "played") { sfx("card"); playFrom = ev.pi; }
         if ((ev.t === "drew" || ev.t === "took") && ev.pi === v.me) sfx("draw");
         if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi === v.me) drawFx = true;
@@ -857,7 +909,7 @@
       }
     }
     render();
-    for (const [pi, n] of flights) flyToSeat(pi, n);
+    if (m.view) seatFlights(m.events);
   }
 
   // ---------- events ----------

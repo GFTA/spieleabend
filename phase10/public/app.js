@@ -151,6 +151,7 @@
     return s;
   }
   // a card (face or back) flies from rect `from` onto element `to`, which shows up when it lands
+  // on a smooth curve that bows sideways; long flights (phone: stack → hand) take a little longer
   function fly(html, from, to, delay = 0, dur = 420) {
     const tr = rectOf(to);
     if (!visible(from) || !visible(tr) || still.matches) return;
@@ -161,11 +162,18 @@
     document.body.appendChild(f);
     to.style.visibility = "hidden";
     const sx = from.width / tr.width;
-    const a = f.animate([
-      { transform: `translate(${from.left}px,${from.top}px) scale(${sx})`, opacity: 0.9 },
-      { transform: `translate(${(from.left + tr.left) / 2}px,${Math.min(from.top, tr.top) - 30}px) scale(${(sx + 1) / 2}) rotate(-6deg)`, opacity: 1, offset: 0.55 },
-      { transform: `translate(${tr.left}px,${tr.top}px) scale(1)`, opacity: 1 }
-    ], { duration: dur, delay, easing: "cubic-bezier(.3,.7,.3,1)", fill: "both" });
+    const dx = tr.left - from.left, dy = tr.top - from.top, dist = Math.hypot(dx, dy) || 1;
+    dur += Math.min(240, Math.max(0, dist - 250) * 0.3);
+    let nx = -dy / dist, ny = dx / dist;
+    if (Math.abs(ny) < 0.5 ? nx * (innerWidth / 2 - from.left) < 0 : ny > 0) { nx = -nx; ny = -ny; }
+    const bow = Math.min(46, dist * 0.14);
+    const frames = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10, lift = Math.sin(Math.PI * t);
+      const x = from.left + dx * t + nx * bow * 2 * lift * 0.5, y = from.top + dy * t + ny * bow * 2 * lift * 0.5;
+      frames.push({ transform: `translate(${x}px,${y}px) scale(${sx + (1 - sx) * t + lift * 0.06}) rotate(${-6 * lift * (nx < 0 ? -1 : 1)}deg)`, opacity: t < 0.15 ? 0.9 + t * 0.66 : 1 });
+    }
+    const a = f.animate(frames, { duration: dur, delay, easing: "cubic-bezier(.35,.1,.25,1)", fill: "both" });
     const done = () => { f.remove(); to.style.visibility = ""; };
     a.onfinish = done; a.oncancel = done;
     setTimeout(done, dur + delay + 400);
