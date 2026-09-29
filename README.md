@@ -13,12 +13,12 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo.
 
 | Spiel | Ordner | Details |
 | --- | --- | --- |
-| Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
-| Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
+| Uno („Pass-Uno“) | [`uno/`](uno/) | 2–10 Spieler plus Zuschauer, Hausregeln, Computer-Gegner, Avatare, Tisch-Designs |
+| Schiffe versenken | [`schiffe/`](schiffe/) | 2–4 Spieler plus Zuschauer, Felder von 5×5 (Swiftplay) bis 16×16, Sonderschiffe, Teams, Spezialwaffen, Computer-Gegner, Avatare, Tisch-Designs · Port 8081 |
 | Vier gewinnt | [`viergewinnt/`](viergewinnt/) | 2 Spieler plus Zuschauer, Felder 7×6 bis 10×8, Pop Out, 5 gewinnt, Computer-Gegner, Avatare, Tisch-Designs · Port 8082 |
 | Galgenmännchen | [`hangman/`](hangman/) | 1–8 Spieler plus Zuschauer, deutsche Zufallswörter oder ein Mitspieler denkt sich eins aus, Computer-Gegner, Chat · Port 8085 |
 | Phase 10 | [`phase10/`](phase10/) | 2–6 Spieler plus Zuschauer, alle 10 Phasen oder kurz bis Phase 5, Joker, Aussetzen, Anlegen, Computer-Gegner, Animationen · Port 8086 |
-| Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler, alle sehen live, welche Würfel behalten werden, Computer-Gegner, Avatare, Tisch-Designs · Port 8083 |
+| Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler plus Zuschauer, alle sehen live, welche Würfel behalten werden, Computer-Gegner, Avatare, Tisch-Designs · Port 8083 |
 | Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–4 Spieler plus Zuschauer, elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).

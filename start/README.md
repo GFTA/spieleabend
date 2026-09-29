@@ -7,7 +7,7 @@ Live-Anzeige, ob der Spiel-Server läuft und wie viele Räume offen sind.
 **Party**: Einer erstellt eine Party (4-Buchstaben-Code oder Link), die anderen treten bei. Nur der
 Host wählt das Spiel, dann landen alle automatisch im selben Raum (Name und Avatar wandern mit).
 Hat die Party mehr Leute als das Spiel Plätze, spielen der Host und alle mit „Bereit“, die anderen
-schauen zu (falls das Spiel Zuschauer kennt). Im Spiel führt „Zurück zur Party“ wieder her. Dafür
+schauen zu. Im Spiel führt „Zurück zur Party“ wieder her. Dafür
 braucht es `PARTY_SECRET` (derselbe Wert in der `.env` von Startseite und Spielen).
 
 Die Spiele stehen in [`games.json`](games.json). Ein neues Spiel ist ein neuer Eintrag

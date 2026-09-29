@@ -426,18 +426,21 @@
   const SEATS = {
     1: ["t"], 2: ["l", "r"], 3: ["l", "t", "r"], 4: ["l", "tl", "tr", "r"], 5: ["l", "tl", "t", "tr", "r"],
     6: ["bl", "l", "tl", "tr", "r", "br"], 7: ["bl", "l", "tl", "t", "tr", "r", "br"],
-    8: ["bl", "l", "tl", "t", "t", "tr", "r", "br"], 9: ["bl", "l", "tl", "t", "t", "t", "tr", "r", "br"]
+    8: ["bl", "l", "tl", "t", "t", "tr", "r", "br"], 9: ["bl", "l", "tl", "t", "t", "t", "tr", "r", "br"],
+    10: ["bl", "l", "tl", "t", "t", "t", "tr", "r", "br", "br"]
   };
   function renderSeats() {
     const n = V.players.length, members = mode === "online" && R ? R.members : null;
-    const slots = SEATS[n - 1] || [], perSlot = {};
+    // a spectator has no seat of their own: everybody sits around the table, starting with player 1
+    const first = V.me >= 0 ? 1 : 0, from = V.me >= 0 ? V.me : 0;
+    const slots = SEATS[n - first] || [], perSlot = {};
     slots.forEach((sl) => { perSlot[sl] = (perSlot[sl] || 0) + 1; });
     const tbl = $("#table"), W = tbl.clientWidth || innerWidth, H = tbl.clientHeight || innerHeight / 2;
     const big = matchMedia("(min-width: 900px) and (min-height: 700px)").matches;
     const cardLen = big ? 24 : 18, maxStep = big ? 20 : 13;
     const html = { tl: "", t: "", tr: "", l: "", r: "", bl: "", br: "" };
-    for (let k = 1; k < n; k++) {
-      const i = (V.me + k) % n, p = V.players[i], slot = slots[k - 1];
+    for (let k = first; k < n; k++) {
+      const i = (from + k) % n, p = V.players[i], slot = slots[k - first];
       const vertical = slot === "l" || slot === "r";
       // room for the fan: cards stay countable, they just overlap more when there are many
       const room = Math.max(40, vertical ? Math.min(big ? 260 : 190, H * 0.42)
@@ -484,6 +487,7 @@
     const drawn = V.drawnId != null ? V.hand.find((c) => c.id === V.drawnId) : null;
     let who, hint;
     if (V.phase === "roundEnd") { who = "Runde vorbei"; hint = ""; }
+    else if (mode === "online" && V.me < 0) { who = `${V.players[V.cur].name} ist dran`; hint = "Du schaust zu."; }
     else if (V.players[V.me] && V.players[V.me].out) { who = "Du hast aufgegeben"; hint = "Nächste Runde bist du wieder dabei."; }
     else if (mine) {
       who = mode === "local" ? `${V.players[V.me].name}, du bist dran` : "Du bist dran";
@@ -500,6 +504,7 @@
     $("#whoHint").textContent = hint;
     $("#keepBtn").hidden = !(mine && V.phase === "drawn");
     $("#hintBtn").hidden = !mine;
+    $("#sortBtn").hidden = mode === "online" && V.me < 0;
     $("#sortBtn").textContent = sortMode === "value" ? "⇅ Zahl" : "⇅ Farbe";
     renderClock();
     $("#chaosTag").hidden = !rules().chaos;
@@ -844,7 +849,7 @@
       left() { R = null; mode = null; }
     },
     bubble: (pi, text) => bubble(pi, text),
-    toast, render: () => render(), maxPlayers: 10,
+    toast, render: () => render(), maxPlayers: 10, watchers: true,
     cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
     // goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {

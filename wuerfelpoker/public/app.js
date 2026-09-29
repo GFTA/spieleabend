@@ -290,11 +290,12 @@
       hint = !V.rolls ? "Tippe auf Würfeln." : left ? "Tippe Würfel an, die du behalten willst, dann würfle den Rest." : "";
     } else {
       who_ = `${V.players[V.cur].name} würfelt`;
-      hint = V.rolls ? "Gelb markierte Würfel werden behalten." : "Gleich geht's los.";
+      hint = mode === "online" && V.me < 0 ? "Du schaust zu." : V.rolls ? "Gelb markierte Würfel werden behalten." : "Gleich geht's los.";
     }
     $("#whoName").textContent = who_;
     $("#whoHint").textContent = hint;
     const rb = $("#rollBtn"), sb = $("#stopBtn");
+    rb.hidden = sb.hidden = mode === "online" && V.me < 0;
     rb.disabled = !mine || left <= 0 || rolling;
     sb.disabled = !mine || !V.rolls || rolling;
     rb.textContent = !V.rolls || !mine ? "Würfeln" : left === 1 ? "Letzter Wurf" : `Würfeln (${left} übrig)`;
@@ -458,7 +459,7 @@
       left() { R = null; mode = null; }
     },
     bubble: (pi, text) => bubble(pi, text),
-    toast, render: () => render(), maxPlayers: 8,
+    toast, render: () => render(), maxPlayers: 8, watchers: true,
     cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
     // goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {

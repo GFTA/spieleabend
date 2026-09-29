@@ -313,7 +313,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   const overHint = (g) => {
     const n = party ? party.members.length : 0;
     if (!g.max || n <= g.max || g.hint === false) return "";
-    return `Die Party hat ${n} Leute, ${g.name} hat ${g.max} Plätze. Es spielen der Host und alle, die „Bereit“ gedrückt haben${g.watch ? ", die anderen schauen zu." : ". Die anderen können hier nicht zuschauen."}`;
+    return `Die Party hat ${n} Leute, ${g.name} hat ${g.max} Plätze. Es spielen der Host und alle, die „Bereit“ gedrückt haben, die anderen schauen zu.`;
   };
   function renderPartyBoxes() {
     for (const box of document.querySelectorAll(".partybox")) {

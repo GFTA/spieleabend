@@ -14,6 +14,7 @@ module.exports = require("../shared/room-server.js")({
   id: "wuerfelpoker",
   title: "Würfelpoker",
   maxPlayers: 8,
+  watchers: 20,
   hostHandover: true,
   reactions: ["👍", "😂", "😱", "😡", "🎉", "🙈", "Gut gespielt!", "Uff …", "Beeil dich!", "Na warte!"],
 

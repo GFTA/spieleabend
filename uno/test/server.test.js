@@ -29,6 +29,35 @@ function client(port) {
 // open sockets would keep the process alive after a failed assertion
 test.after(() => { server.close(); setImmediate(() => process.exit()); });
 
+test("spectators watch a running game without seeing any secrets", async () => {
+  await new Promise((r) => server.listening ? r() : server.on("listening", r));
+  const port = server.address().port;
+  const a = client(port), b = client(port), w = client(port);
+  await a.open; await b.open; await w.open;
+  a.send({ t: "create", name: "Anna" });
+  const joined = await a.next((m) => m.t === "joined");
+  b.send({ t: "join", code: joined.code, name: "Ben" });
+  await b.next((m) => m.t === "joined");
+  b.send({ t: "ready", on: true });
+  await a.next((m) => m.t === "room" && m.members[1] && m.members[1].ready);
+  a.send({ t: "start" });
+  await a.next((m) => m.t === "room" && m.view);
+
+  w.send({ t: "join", code: joined.code, name: "Zoe", watch: true });
+  assert.strictEqual((await w.next((m) => m.t === "watching")).name, "Zoe");
+  const seen = await w.next((m) => m.t === "room" && m.view);
+  assert.strictEqual(seen.you, -1);
+  assert.strictEqual(seen.view.me, -1);
+  assert.deepStrictEqual(seen.view.hand, []);
+  const roster = await a.next((m) => m.t === "room" && m.watchers.includes("Zoe"));
+  assert.deepStrictEqual(roster.watchers, ["Zoe"]);
+  w.send({ t: "act", a: { t: "draw" } });
+  assert.match((await w.next((m) => m.t === "error")).msg, /./);
+  w.send({ t: "chat", text: "hallo" });
+  assert.strictEqual((await a.next((m) => m.t === "chat")).line.name, "Zoe");
+  a.ws.close(); b.ws.close(); w.ws.close();
+});
+
 test("create, join, start and play over WebSockets", async () => {
   await new Promise((r) => server.listening ? r() : server.on("listening", r));
   const port = server.address().port;

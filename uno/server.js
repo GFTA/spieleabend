@@ -17,6 +17,7 @@ module.exports = require("../shared/room-server.js")({
   legacyPath: "/pass-uno-server",
   metaName: "pass-uno-version",
   maxPlayers: 10,
+  watchers: 20,
   hostHandover: true,
   reactions: ["👍", "😂", "😱", "😡", "🎉", "🙈", "Gut gespielt!", "Uff …", "Beeil dich!", "Na warte!"],
 

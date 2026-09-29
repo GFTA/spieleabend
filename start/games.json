@@ -4,10 +4,9 @@
     "name": "Uno",
     "title": "Pass-Uno",
     "desc": "Karten auf den Stapel ziehen, UNO rufen, Hausregeln nach Wahl. Mit Computer-Gegnern und Avataren.",
-    "players": "2–10 Spieler",
+    "players": "2–10 Spieler + Zuschauer",
     "url": "https://uno.cool-kidz.net/",
     "max": 10,
-    "watch": false,
     "status": "http://pass-uno:8080/info"
   },
   {
@@ -15,10 +14,9 @@
     "name": "Schiffe versenken",
     "title": "Schiffe versenken",
     "desc": "Flotte verstecken, Koordinaten raten, versenken. Verschiedene Kartengrößen, Waffen und Computer-Gegner.",
-    "players": "2–4 Spieler",
+    "players": "2–4 Spieler + Zuschauer",
     "url": "https://schiffe.cool-kidz.net/",
     "max": 4,
-    "watch": false,
     "status": "http://schiffe:8080/info"
   },
   {
@@ -29,7 +27,6 @@
     "players": "2 Spieler + Zuschauer",
     "url": "https://vier.cool-kidz.net/",
     "max": 2,
-    "watch": true,
     "status": "http://viergewinnt:8080/info"
   },
   {
@@ -37,10 +34,9 @@
     "name": "Würfelpoker",
     "title": "Würfelpoker",
     "desc": "Fünf Würfel, drei Würfe, die beste Hand gewinnt. Alle sehen live, welche Würfel behalten werden.",
-    "players": "2–8 Spieler",
+    "players": "2–8 Spieler + Zuschauer",
     "url": "https://wuerfelpoker.cool-kidz.net/",
     "max": 8,
-    "watch": false,
     "status": "http://wuerfelpoker:8080/info"
   },
   {
@@ -51,7 +47,6 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://mensch.cool-kidz.net/",
     "max": 4,
-    "watch": true,
     "hint": false,
     "status": "http://maedn:8080/info"
   },
@@ -63,7 +58,6 @@
     "players": "1–8 Spieler + Zuschauer",
     "url": "https://hangman.cool-kidz.net/",
     "max": 8,
-    "watch": true,
     "status": "http://hangman:8080/info"
   },
   {
@@ -74,7 +68,6 @@
     "players": "2–6 Spieler + Zuschauer",
     "url": "https://phase10.cool-kidz.net/",
     "max": 6,
-    "watch": true,
     "status": "http://phase10:8080/info"
   }
 ]
