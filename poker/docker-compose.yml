@@ -1,0 +1,19 @@
+services:
+  poker:
+    build:
+      context: ..
+      dockerfile: poker/Dockerfile
+      args:
+        GAME: poker
+    image: poker:latest
+    container_name: poker
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${POKER_PORT:-8088}:8080"
+    volumes:
+      - poker-data:/data
+
+volumes:
+  poker-data:

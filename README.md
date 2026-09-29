@@ -20,6 +20,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo.
 | Phase 10 | [`phase10/`](phase10/) | 2–6 Spieler plus Zuschauer, alle 10 Phasen oder kurz bis Phase 5, Joker, Aussetzen, Anlegen, Computer-Gegner, Animationen · Port 8086 |
 | Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler plus Zuschauer, alle sehen live, welche Würfel behalten werden, Computer-Gegner, Avatare, Tisch-Designs · Port 8083 |
 | Kniffel | [`kniffel/`](kniffel/) | 2–8 Spieler plus Zuschauer, 13 Felder mit Bonus, optionaler Joker, Computer-Gegner, Avatare, Tisch-Designs · Port 8087 |
+| Poker (Texas Hold’em) | [`poker/`](poker/) | 2–8 Spieler plus Zuschauer, No-Limit-Turnier mit Blinds und Side Pots, private Karten (Übergabe-Bildschirm bei einem Handy), Computer-Gegner, Avatare, Tisch-Designs · Port 8088 |
 | Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–4 Spieler plus Zuschauer, elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).

@@ -1,0 +1,21 @@
+# systemd unit for running Poker without Docker.
+# Copy the uno/ folder to /opt/poker, run `npm ci --omit=dev` there, then:
+#   sudo cp deploy/poker.service /etc/systemd/system/
+#   sudo systemctl enable --now poker
+[Unit]
+Description=Poker game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/poker
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8088
+Environment=DATA_DIR=/var/lib/poker
+StateDirectory=poker
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

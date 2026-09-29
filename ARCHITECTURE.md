@@ -4,7 +4,7 @@ Dieses Dokument beschreibt, was alle Spiele in diesem Repo gemeinsam haben —
 designtechnisch und servertechnisch. Es ist der Bauplan für jedes neue Spiel:
 wer sich daran hält, fühlt sich sofort wie die anderen an und lässt sich mit
 demselben Handgriff deployen. Stand heute (uno, schiffe, wuerfelpoker,
-viergewinnt, maedn, hangman, phase10, kniffel) sind alle sieben Punkte für Punkt danach gebaut — das hier ist die
+viergewinnt, maedn, hangman, phase10, kniffel, poker) sind alle sieben Punkte für Punkt danach gebaut — das hier ist die
 Doku dieser bereits gelebten Konvention, nicht ein Wunschzettel.
 
 Wird eine neue gemeinsame Konvention eingeführt (z. B. der `?table=`-Handoff
@@ -534,7 +534,7 @@ CMD ["node", "server.js"]
 
 Basis-Compose macht das Spiel lokal im LAN erreichbar (Host-Port
 konfigurierbar über eine Env-Var, Default individuell pro Spiel: uno 8080,
-schiffe 8081, viergewinnt 8082, wuerfelpoker 8083, maedn 8084, hangman 8085, phase10 8086, kniffel 8087, start 8090 — neues Spiel
+schiffe 8081, viergewinnt 8082, wuerfelpoker 8083, maedn 8084, hangman 8085, phase10 8086, kniffel 8087, poker 8088, start 8090 — neues Spiel
 nimmt sich den nächsten freien):
 
 ```yaml
