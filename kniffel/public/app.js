@@ -366,9 +366,9 @@
   function renderRoundEnd() {
     const last = V.last || { winners: [] }, w = last.winners;
     const names_ = w.map((i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name));
-    const plural = w.length > 1 || (w.length === 1 && names_[0] === "Du");
+    const verb = w.length > 1 ? "gewinnen" : names_[0] === "Du" ? "gewinnst" : "gewinnt";
     $("#reLabel").textContent = "Spiel vorbei";
-    $("#reTitle").textContent = `${names_.join(" und ")} ${plural ? "gewinnen" : "gewinnt"} mit ${last.label}!`;
+    $("#reTitle").textContent = `${names_.join(" und ")} ${verb} mit ${last.label}!`;
     $("#reRanking").innerHTML = rankingHTML(true);
     $("#reBtn").textContent = "Revanche";
     if (mode === "online" && R) { // a rematch needs everyone still at the table

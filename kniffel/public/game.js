@@ -145,7 +145,7 @@
   function endGame(S, events) {
     const tot = S.players.map((p) => totals(p).total), best = Math.max(...tot);
     const winners = tot.map((t, i) => (t === best ? i : -1)).filter((i) => i >= 0);
-    S.last = { winners, label: `${best} Punkte`, over: true };
+    S.last = { winners, label: `${best} Punkten`, over: true };
     S.phase = "roundEnd";
     S.seq++;
     const names = winners.map((i) => S.players[i].name).join(" und ");
