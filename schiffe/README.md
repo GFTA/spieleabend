@@ -90,7 +90,7 @@ Online gibt es **Emoji-Reaktionen** und Schnellnachrichten („Na warte!“, „
 (im Menü abschaltbar). Der Host kann einen abwesenden Spieler überspringen, jeder kann
 aufgeben.
 
-## Auf dem HP Mini installieren
+## Auf dem Server installieren
 
 Der Server ist ein einzelnes Node.js-Programm (`server.js`) ohne Datenbank. Spielstände
 landen in `data/rooms.json`, damit ein Neustart laufende Runden nicht verliert.
@@ -104,13 +104,13 @@ cd spieleabend/schiffe
 docker compose up -d --build
 ```
 
-Der Container startet nach einem Neustart des Mini-PCs von selbst
+Der Container startet nach einem Neustart des Servers von selbst
 (`restart: unless-stopped`). Aktualisieren: `git pull && docker compose up -d --build`.
 
 ### Über einen Cloudflare-Tunnel (von überall erreichbar, mit HTTPS)
 
-Läuft auf dem Mini-PC schon ein `cloudflared`-Container, hängt sich das Spiel in dessen
-Docker-Netzwerk. Im Tunnel `debian-main` ist dafür schon eingetragen:
+Läuft auf dem Server schon ein `cloudflared`-Container, hängt sich das Spiel in dessen
+Docker-Netzwerk. Im Tunnel wird dafür ein Hostname eingetragen:
 `schiffe.cool-kidz.net` → `http://schiffe:8080` (samt DNS-Eintrag).
 
 ```sh
@@ -118,7 +118,7 @@ echo "TUNNEL_NETWORK=<netzwerk-von-cloudflared>" > .env   # docker inspect cloud
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
 ```
 
-Ist Port 8081 auf dem Mini-PC schon belegt, zusätzlich `SCHIFFE_PORT=8082` in `.env`
+Ist Port 8081 auf dem Server schon belegt, zusätzlich `SCHIFFE_PORT=8082` in `.env`
 eintragen (betrifft nur den Zugriff direkt im WLAN).
 
 ### Ohne Docker (Linux mit systemd)
@@ -142,14 +142,13 @@ Beim Start schreibt der Server die Adresse ins Log (`docker compose logs`), etwa
 
 ```
 Schiffe versenken läuft auf Port 8080
-  im WLAN öffnen: http://192.168.178.20:8080
+  im WLAN öffnen: http://192.168.1.50:8080
 ```
 
 Im Docker-Container steht dort die interne Container-Adresse und Port 8080; nimm
-stattdessen die IP des Mini-PCs (`hostname -I`) und Port 8081. Diese Adresse auf dem
+stattdessen die IP des Servers (`hostname -I`) und Port 8081. Diese Adresse auf dem
 ersten Handy öffnen, Raum erstellen, die anderen scannen den QR-Code. Alle Handys
-müssen im selben WLAN sein wie der Mini-PC. Tipp: im Router dem Mini-PC eine feste IP
-geben.
+müssen im selben WLAN sein wie der Server. Tipp: dem Server eine feste IP geben.
 
 Einstellungen über Umgebungsvariablen: `PORT` (Standard 8080), `HOST` (Standard
 0.0.0.0), `DATA_DIR` (Standard `./data`), `BOT_MS` (Bedenkzeit der Computer-Gegner,
