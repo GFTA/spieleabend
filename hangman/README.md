@@ -30,12 +30,12 @@ ausgesucht hat, bekommt 5 Punkte. Nach 3, 5 oder 8 Runden gewinnt, wer die meist
   Avatare, Tisch-Designs, Bilanz, Töne, Konfetti. Am Computer einfach Buchstaben tippen,
   Enter öffnet „Wort lösen“.
 
-## Auf dem Mini-PC installieren
+## Auf dem Server installieren
 
 Vom Repo-Ordner aus (der Build braucht `../shared`):
 
     cd hangman
-    echo TUNNEL_NETWORK=proxy > .env
+    echo TUNNEL_NETWORK=<netzwerk-von-cloudflared> > .env
     docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
 
 Läuft dann auf Port 8085 (`HANGMAN_PORT` in `.env` ändert das) und im Tunnel als
