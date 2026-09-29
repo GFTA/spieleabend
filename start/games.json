@@ -64,10 +64,9 @@
     "name": "Mensch ärgere dich nicht",
     "title": "Mensch ärgere dich nicht",
     "desc": "Würfeln, rauskommen, rauswerfen. Elf Hausregeln von Schlagpflicht bis Teams, dazu Computer-Gegner in drei Stufen.",
-    "players": "2–4 Spieler + Zuschauer",
+    "players": "2–8 Spieler + Zuschauer",
     "url": "https://mensch.cool-kidz.net/",
-    "max": 4,
-    "hint": false,
+    "max": 8,
     "status": "http://maedn:8080/info"
   },
   {

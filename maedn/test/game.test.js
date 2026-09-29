@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const G = require("../public/game.js");
 
-const names = (n) => ["Anna", "Ben", "Cem", "Dora"].slice(0, n).map((name) => ({ name }));
+const names = (n) => ["Anna", "Ben", "Cem", "Dora", "Emil", "Fritz", "Gina", "Hugo"].slice(0, n).map((name) => ({ name }));
 // a fresh game where Anna begins and the dice come from `rig`
 function game(n, rules, goal) {
   const S = G.newGame(names(n || 2), goal || 1, rules);
@@ -30,6 +30,63 @@ test("seats: two players sit opposite, teams only with four", () => {
   assert.deepStrictEqual(game(3).players.map((p) => p.seat), [0, 1, 2]);
   assert.strictEqual(game(3, { teams: true }).rules.teams, false);
   assert.strictEqual(game(4, { teams: true }).rules.teams, true);
+});
+
+test("big boards: 5-6 players get 60 fields, 7-8 get 80, everybody has an own start and colour", () => {
+  assert.strictEqual(G.MAX_PLAYERS, 8);
+  assert.strictEqual(G.COLORS.length, 8);
+  for (const [n, arms] of [[2, 4], [4, 4], [5, 6], [6, 6], [7, 8], [8, 8]]) {
+    const S = game(n);
+    assert.strictEqual(S.arms, arms, n + " players");
+    assert.strictEqual(S.track, arms * 10);
+    assert.strictEqual(G.armsFor(n), arms);
+    assert.strictEqual(new Set(S.players.map((p) => p.seat)).size, n);
+    assert.ok(S.players.every((p) => p.seat < arms));
+    const v = G.view(S, 0);
+    assert.strictEqual(v.arms, arms);
+    assert.strictEqual(v.track, arms * 10);
+  }
+  assert.strictEqual(G.newGame(names(8).concat([{ name: "Extra" }]), 1).players.length, 8);
+  assert.strictEqual(game(6, { teams: true }).rules.teams, false);
+  assert.strictEqual(G.BOT_NAMES.length, 7);
+});
+
+test("on a 60-field board a piece walks all the way round before it enters the goal", () => {
+  const S = game(6);
+  setup(S, [[57, -1, -1, -1], [30, -1, -1, -1]]);
+  roll(S, 3);
+  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => [m.k, m.from, m.to]), [[0, 57, 60]], "field 60 is the first goal field");
+  move(S, 0);
+  assert.strictEqual(S.players[0].pieces[0], 60);
+  // a piece on the last track field needs exactly 4 to reach the last goal field, 5 is too far
+  setup(S, [[59, -1, -1, -1]]);
+  S.cur = 0; S.need = "roll"; S.dice = 0;
+  roll(S, 4);
+  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => m.to), [63]);
+  const T = game(6);
+  setup(T, [[59, -1, -1, -1]]);
+  roll(T, 5);
+  assert.deepStrictEqual(G.view(T, 0).moves, []);
+});
+
+test("on the 80-field board seats are 10 fields apart and hits find the piece on the other arm", () => {
+  const S = game(8);
+  // seat 7 stands on rel 5 = field 75; seat 0 reaches field 75 from rel 71 with a 4
+  setup(S, [[71, -1, -1, -1], null, null, null, null, null, null, [5, -1, -1, -1]]);
+  roll(S, 4);
+  const m = G.view(S, 0).moves;
+  assert.strictEqual(m.length, 1);
+  assert.deepStrictEqual(m[0].hit, { pi: 7, k: 0 });
+  move(S, 0);
+  assert.strictEqual(S.players[7].pieces[0], -1, "sent back to the yard");
+  // the wrap-around: seat 7's rel 9 is field 79, seat 0's next field is 0
+  const T = game(8);
+  setup(T, [[-1, -1, -1, -1], null, null, null, null, null, null, [9, -1, -1, -1]]);
+  T.cur = 7; T.need = "roll"; T.dice = 0;
+  roll(T, 2);
+  assert.strictEqual(G.view(T, 7).moves[0].to, 11);
+  T.players[0].pieces[0] = 1; // field 1 = seat 7's rel 11
+  assert.deepStrictEqual(G.view(T, 7).moves[0].hit, { pi: 0, k: 0 });
 });
 
 test("a 6 brings a piece out, then roll again; no 6 means three tries", () => {
@@ -218,10 +275,10 @@ test("the computer prefers hitting and coming out; games between computers alway
   setup(S, [[5, 10, -1, -1], [27, -1, -1, -1]]);
   S.level = 3; roll(S, 2);
   assert.deepStrictEqual(G.botMove(S, 0), { t: "move", k: 0 });
-  for (const n of [2, 3, 4]) for (const level of [1, 2, 3]) for (const rules of [null, { hit: true, teams: true, rush: true }]) {
+  for (const n of [2, 3, 4, 5, 6, 7, 8]) for (const level of [1, 2, 3]) for (const rules of [null, { hit: true, teams: true, rush: true }]) {
     const B = G.newGame(names(n).map((p) => ({ ...p, bot: true })), 2, rules, level);
     let k = 0;
-    while (B.phase === "play" && k++ < 20000) assert.ok(G.act(B, B.cur, G.botMove(B, B.cur)).ok);
+    while (B.phase === "play" && k++ < 400000) assert.ok(G.act(B, B.cur, G.botMove(B, B.cur)).ok);
     assert.strictEqual(B.phase, "roundEnd");
   }
 });

@@ -12,7 +12,7 @@ for (const f of ["kit.css", "room-ui.css"]) {
   const css = fs.readFileSync(path.join(shared, f), "utf8");
   html = html.replace(`<link rel="stylesheet" href="${f}">`, () => `<style>\n${css}</style>`);
 }
-for (const f of ["avatars.js", "profile.js", "kit.js", "room-ui.js", "home-ui.js", "game.js", "app.js"]) {
+for (const f of ["avatars.js", "profile.js", "kit.js", "room-ui.js", "home-ui.js", "game.js", "board.js", "app.js"]) {
   const js = fs.readFileSync(path.join(/^(avatars|profile|kit|room-ui|home-ui)\.js$/.test(f) ? shared : pub, f), "utf8").replace(/<\/script/gi, "<\\/script");
   html = html.replace(`<script src="${f}"></script>`, () => `<script>\n${js}\n</script>`);
 }

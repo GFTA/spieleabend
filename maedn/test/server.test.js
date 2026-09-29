@@ -59,14 +59,10 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   assert.strictEqual(lobby.rules.hit, true);
   assert.strictEqual(lobby.rules.three, false);
 
-  // two computers fill the room, a fourth person watches
+  // two computers make four players
   a.send({ t: "bot" }); a.send({ t: "bot" });
   const full = await a.next((m) => m.t === "room" && m.members.length === 4);
   assert.deepStrictEqual(full.members.slice(2).map((m) => m.name), ["Robo Rudi", "Käpt'n Chip"]);
-  c.send({ t: "join", code: joined.code, name: "Chris", avatar: "🦉" });
-  assert.strictEqual((await c.next((m) => m.t === "watching")).name, "Chris");
-  a.send({ t: "bot" });
-  assert.match((await a.next((m) => m.t === "error")).msg, /Mehr als 4/);
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
   b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
@@ -78,6 +74,9 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   let v = (await a.next((m) => m.t === "room" && m.view)).view;
   assert.deepStrictEqual(v.players.map((p) => p.seat), [0, 1, 2, 3]);
   assert.deepStrictEqual(v.players.map((p) => p.pieces[0]), [0, 0, 0, 0], "quick start");
+  // Chris comes late and watches the running game
+  c.send({ t: "join", code: joined.code, name: "Chris", avatar: "🦉", watch: true });
+  assert.strictEqual((await c.next((m) => m.t === "watching")).name, "Chris");
   assert.strictEqual((await c.next((m) => m.t === "room" && m.view)).you, -1);
   c.send({ t: "react", e: "Ärger dich nicht!" });
   assert.deepStrictEqual(await a.next((m) => m.t === "react"), { t: "react", pi: -1, e: "Ärger dich nicht!", name: "Chris" });
@@ -120,4 +119,25 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   d.send({ t: "join", code: joined.code, name: "anna" });
   assert.match((await d.next((m) => m.t === "error")).msg, /vergeben/);
   a.ws.close(); b.ws.close(); c.ws.close(); d.ws.close();
+});
+
+test("up to eight people or computers share a room and get the 80-field board", async () => {
+  await new Promise((r) => server.listening ? r() : server.on("listening", r));
+  const port = server.address().port;
+  const a = client(port);
+  await a.open;
+  a.send({ t: "create", name: "Anna", goal: 1, rules: { teams: true } });
+  await a.next((m) => m.t === "joined");
+  for (let i = 0; i < 7; i++) a.send({ t: "bot" });
+  const full = await a.next((m) => m.t === "room" && m.members.length === 8);
+  assert.deepStrictEqual(full.members.slice(1).map((m) => m.name), Game.BOT_NAMES);
+  a.send({ t: "bot" });
+  assert.match((await a.next((m) => m.t === "error")).msg, /Mehr als 8/);
+  a.send({ t: "start" });
+  const v = (await a.next((m) => m.t === "room" && m.view)).view;
+  assert.strictEqual(v.arms, 8);
+  assert.strictEqual(v.track, 80);
+  assert.deepStrictEqual(v.players.map((p) => p.seat), [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.strictEqual(v.rules.teams, false, "teams need exactly four");
+  a.ws.close();
 });

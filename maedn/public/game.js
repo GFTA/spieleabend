@@ -6,16 +6,19 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  const MAX_PLAYERS = 4;
-  const COLORS = ["Rot", "Blau", "Grün", "Gelb"]; // by seat, clockwise around the board
-  const SEATS = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] }; // two players sit opposite each other
-  const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Bit-Berta", "Dr. Würfel"];
+  const MAX_PLAYERS = 8;
+  const COLORS = ["Rot", "Blau", "Grün", "Gelb", "Lila", "Türkis", "Orange", "Rosa"]; // by seat, clockwise around the board
+  // up to 4 players sit at a 4-arm board (two opposite each other), 5-6 at 6 arms, 7-8 at 8 arms
+  const SEATS = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6], 8: [0, 1, 2, 3, 4, 5, 6, 7] };
+  const armsFor = (n) => (n <= 4 ? 4 : n <= 6 ? 6 : 8);
+  const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Bit-Berta", "Dr. Würfel", "Turbo-Tina", "Sir Sechs", "Kicker Kalle"];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const GOALS = { 1: "Wer zuerst fertig ist", 2: "Alle Plätze ausspielen" };
   const CLOCK_MS = 20000, GRACE = 600;
-  const TRACK = 40, HOME = 40, LAST = 43, OUT = -2; // piece: -1 in the yard, 0..39 steps from its start, 40..43 goal, -2 gave up
+  const OUT = -2; // piece: -1 in the yard, 0..track-1 steps from its start, track..track+3 goal, -2 gave up (the track has 10 fields per arm: 40, 60 or 80)
+  const trk = (S) => S.track || 40;
 
   // House rules. Shared with the UI, which renders one switch per entry.
   const RULES = [
@@ -49,14 +52,14 @@
   const partner = (S, i) => (S.rules.teams ? (i + 2) % 4 : -1);
   // whose pieces player pi moves: in teams a finished player plays for the partner
   const owner = (S, pi) => (S.rules.teams && S.players[pi].done ? partner(S, pi) : pi);
-  // absolute track field (0..39) of a piece that is on the track
-  const abs = (S, o, rel) => (S.players[o].seat * 10 + rel) % TRACK;
+  // absolute track field of a piece that is on the track
+  const abs = (S, o, rel) => (S.players[o].seat * 10 + rel) % trk(S);
   const color = (S, i) => COLORS[S.players[i].seat];
 
   function occupant(S, field) {
     for (let i = 0; i < S.players.length; i++) {
       const P = S.players[i];
-      for (let k = 0; k < 4; k++) if (P.pieces[k] >= 0 && P.pieces[k] < TRACK && abs(S, i, P.pieces[k]) === field) return { pi: i, k };
+      for (let k = 0; k < 4; k++) if (P.pieces[k] >= 0 && P.pieces[k] < trk(S) && abs(S, i, P.pieces[k]) === field) return { pi: i, k };
     }
     return null;
   }
@@ -65,7 +68,7 @@
 
   // where piece k of player o lands with d, or null
   function target(S, o, k, d) {
-    const P = S.players[o], rel = P.pieces[k];
+    const P = S.players[o], rel = P.pieces[k], HOME = trk(S);
     if (rel === OUT) return null;
     let to;
     if (rel === -1) {
@@ -73,7 +76,7 @@
       to = 0;
     } else {
       to = rel + d;
-      if (to > LAST) return null;
+      if (to > HOME + 3) return null;
       if (to >= HOME) {
         if (P.pieces.includes(to)) return null;
         if (!S.rules.jumpGoal) for (let g = Math.max(rel + 1, HOME); g < to; g++) if (P.pieces.includes(g)) return null;
@@ -98,7 +101,7 @@
       if (to == null) continue;
       if (P.pieces[k] === -1) { if (yard) continue; yard = true; } // every piece in the yard does the same
       let hit = null;
-      if (to < TRACK) { const occ = occupant(S, abs(S, o, to)); if (occ && occ.pi !== o) hit = occ; }
+      if (to < trk(S)) { const occ = occupant(S, abs(S, o, to)); if (occ && occ.pi !== o) hit = occ; }
       ms.push({ k, from: P.pieces[k], to, hit });
     }
     if (!S.rules.freeSix) {
@@ -115,6 +118,7 @@
   // nothing on the track and nothing in the goal that could still move up
   function stuck(S, o) {
     const P = S.players[o];
+    const HOME = trk(S);
     return P.pieces.every((r, k) => r < 0 || (r >= HOME && [1, 2, 3].every((d) => target(S, o, k, d) == null)));
   }
   const canAct = (S, i) => {
@@ -125,12 +129,13 @@
     return q >= 0 && !S.players[q].done && !S.players[q].out;
   };
 
-  // players: [{ name, bot, avatar }] (2-4); goal: 1 first finisher wins, 2 play out all places
+  // players: [{ name, bot, avatar }] (2-8); goal: 1 first finisher wins, 2 play out all places
   function newGame(players, goal, rules, level) {
     const list = players.slice(0, MAX_PLAYERS);
     const S = {
       players: list.map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), wins: 0 })),
       goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
+      arms: armsFor(list.length), track: armsFor(list.length) * 10,
       round: 0, turn: 0, starter: rand(list.length), log: [], last: null, lastMove: null, deadline: 0
     };
     if (S.players.length !== 4) S.rules.teams = false;
@@ -214,7 +219,7 @@
   // Apply an action by player `pi`. Returns { ok, error?, events }.
   // Actions: {t:"roll"} {t:"move", k} {t:"giveup"} {t:"skip"} {t:"next"}
   function act(S, pi, a) {
-    const events = [];
+    const events = [], HOME = trk(S);
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
     const P = S.players[pi];
@@ -334,6 +339,7 @@
   // ---------- computer player: weighs every legal move ----------
   // how many opposing pieces could reach field `rel` of player o with one roll
   function danger(S, o, rel, ignore) {
+    const TRACK = trk(S);
     if (rel < 0 || rel >= TRACK) return 0;
     if (S.rules.safeStart && rel === 0) return 0;
     const f = abs(S, o, rel);
@@ -351,7 +357,7 @@
     return n;
   }
   function score(S, pi, m, level) {
-    const o = owner(S, pi);
+    const o = owner(S, pi), HOME = trk(S), TRACK = HOME;
     let s = (m.to - Math.max(m.from, 0)) * 0.6;
     if (m.from === -1) s += 45;
     if (m.hit) s += 35 + S.players[m.hit.pi].pieces[m.hit.k] * 0.8;
@@ -383,7 +389,7 @@
   function view(S, pi) {
     const me = S.players[pi] ? pi : -1, play = S.phase === "play";
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level || 2, rules: S.rules,
+      me, arms: S.arms || 4, track: trk(S), phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level || 2, rules: S.rules,
       need: S.need, dice: S.dice, tries: S.tries || 0, streak: S.streak || 0, nextStarter: S.starter % S.players.length,
       owner: play ? owner(S, S.cur) : -1, moves: play && S.need === "move" ? legalMoves(S, S.cur, S.dice) : [],
       three: play && S.need === "roll" && S.rules.three && stuck(S, owner(S, S.cur)),
@@ -397,7 +403,7 @@
   }
 
   return {
-    MAX_PLAYERS, COLORS, SEATS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, RULES, DEFAULT_RULES, TRACK, HOME,
+    MAX_PLAYERS, COLORS, SEATS, armsFor, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, RULES, DEFAULT_RULES,
     normRules, normGoal, normLevel, newGame, startRound, act, legalMoves, tick, nextDeadline, resetClock, botMove, view
   };
 });

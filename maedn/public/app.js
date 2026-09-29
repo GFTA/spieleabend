@@ -3,7 +3,7 @@
   "use strict";
   const G = window.MaednGame;
   // An old cached game.js next to a new app.js: reload once without cache instead of breaking.
-  if (!G || !G.botMove || !G.AVATARS) {
+  if (!G || !G.botMove || !G.AVATARS || !window.MaednBoard) {
     let tried = false;
     try { tried = sessionStorage.getItem("maedn.reloaded") === "1"; sessionStorage.setItem("maedn.reloaded", "1"); } catch (e) {}
     if (!tried) { const u = new URL(location.href); u.searchParams.set("fresh", Date.now()); location.replace(u.toString()); }
@@ -32,22 +32,16 @@
     bot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6" /></svg>'
   };
 
-  // ---------- board geometry: 11×11 fields, the track runs clockwise ----------
-  const TRACK_XY = [];
-  {
-    const legs = [[0, 4, 1, 0, 5], [4, 3, 0, -1, 4], [5, 0, 1, 0, 1], [6, 0, 0, 1, 5], [7, 4, 1, 0, 4], [10, 5, 0, 1, 1],
-      [10, 6, -1, 0, 5], [6, 7, 0, 1, 4], [5, 10, -1, 0, 1], [4, 10, 0, -1, 5], [3, 6, -1, 0, 4], [0, 5, 0, -1, 1]];
-    for (const [x, y, dx, dy, n] of legs) for (let i = 0; i < n; i++) TRACK_XY.push([x + dx * i, y + dy * i]);
-  }
-  const GOAL_XY = [[[1, 5], [2, 5], [3, 5], [4, 5]], [[5, 1], [5, 2], [5, 3], [5, 4]], [[9, 5], [8, 5], [7, 5], [6, 5]], [[5, 9], [5, 8], [5, 7], [5, 6]]];
-  const YARD_XY = [[0, 0], [9, 0], [9, 9], [0, 9]].map(([x, y]) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]);
-  // per seat: the name tag next to the yard, and where the die lies when it is that player's turn
+  // ---------- board geometry: a star with 4, 6 or 8 arms (board.js), the track runs clockwise ----------
+  const geoOf = (v) => window.MaednBoard.geometry(v.arms || 4);
+  // per seat on the classic board: the name tag next to the yard, and where the die lies when it is that player's turn
   const BADGE_AT = [[0.08, 2.2], [7.08, 2.2], [7.08, 7.1], [0.08, 7.1]];
   const DICE_AT = [[2.25, 0.18], [7.05, 0.18], [7.05, 9.18], [2.25, 9.18]];
-  function cellOf(seat, rel, k) {
-    if (rel < 0) return YARD_XY[seat][k];
-    if (rel >= G.HOME) return GOAL_XY[seat][rel - G.HOME];
-    return TRACK_XY[(seat * 10 + rel) % G.TRACK];
+  function cellOf(geo, seat, rel, k) {
+    const home = geo.track.length;
+    if (rel < 0) return geo.yard[seat][k];
+    if (rel >= home) return geo.goal[seat][rel - home];
+    return geo.track[(seat * 10 + rel) % home];
   }
 
   let mode = null;        // "local" | "online" | null
@@ -77,7 +71,7 @@
   const canPlay = () => !!V && V.phase === "play" && V.cur >= 0 && (mode === "local" ? !V.players[V.cur].bot : V.cur === V.me);
   const pname = (i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name);
   const colorOf = (v, i) => G.COLORS[v.players[i].seat];
-  const inGoal = (p) => p.pieces.filter((r) => r >= G.HOME).length;
+  const inGoal = (p) => p.pieces.filter((r) => r >= V.track).length;
 
   const { toast, confetti, showBubble } = Spieleabend;
   function flash(text, sub, cls) {
@@ -245,22 +239,22 @@
   // v: { players: [{ seat, pieces }] }; o: { moves, owner, sel, last, dice, used }
   function boardHTML(v, o) {
     o = o || {};
-    const used = new Set(v.players.map((p) => p.seat));
-    let h = `<div class="in"><svg class="path" viewBox="0 0 11 11" aria-hidden="true"><polyline points="${TRACK_XY.map(([x, y]) => `${x + 0.5},${y + 0.5}`).join(" ")} 0.5,4.5"/></svg>`;
+    const geo = geoOf(v), arms = geo.arms, used = new Set(v.players.map((p) => p.seat));
+    let h = `<div class="in"><svg class="path" viewBox="0 0 ${geo.w} ${geo.h}" aria-hidden="true"><polygon points="${geo.track.map(([x, y]) => `${x + 0.5},${y + 0.5}`).join(" ")}"/></svg>`;
     const targets = new Map(); // "x,y" -> k
     const owner = o.moves && o.moves.length ? v.players[o.owner] : null;
-    if (owner) for (const m of o.moves) targets.set(cellOf(owner.seat, m.to, m.k).join(","), m.k);
+    if (owner) for (const m of o.moves) targets.set(cellOf(geo, owner.seat, m.to, m.k).join(","), m.k);
     const field = (xy, cls) => {
       const t = targets.get(xy.join(","));
       return `<span class="spot ${cls}${t != null ? " target" : ""}" style="${at(xy)}"${t != null ? ` data-k="${t}"` : ""}></span>`;
     };
-    for (let s = 0; s < 4; s++) {
+    for (let s = 0; s < arms; s++) {
       const off = used.has(s) ? "" : " off";
-      h += `<span class="yard c${s}${o.yardOn === s ? " on" : ""}${off}" style="${at(YARD_XY[s][0])}"></span>`;
-      for (const xy of YARD_XY[s]) h += field(xy, `c${s}${off}`);
-      for (const xy of GOAL_XY[s]) h += field(xy, `c${s}${off}`);
+      h += `<span class="yard c${s}${o.yardOn === s ? " on" : ""}${off}" style="${at(geo.yard[s][0])}"></span>`;
+      for (const xy of geo.yard[s]) h += field(xy, `c${s}${off}`);
+      for (const xy of geo.goal[s]) h += field(xy, `c${s}${off}`);
     }
-    TRACK_XY.forEach((xy, i) => { h += field(xy, i % 10 === 0 ? `start c${i / 10}${used.has(i / 10) ? "" : " off"}` : ""); });
+    geo.track.forEach((xy, i) => { h += field(xy, i % 10 === 0 ? `start c${i / 10}${used.has(i / 10) ? "" : " off"}` : ""); });
     if (o.extra) h += o.extra;
     if (o.dice != null && o.diceSeat != null) {
       const d = `class="die${o.canRoll ? " go" : ""}" data-f="${o.dice}" style="${at(DICE_AT[o.diceSeat])}"`;
@@ -271,7 +265,7 @@
       if (r < -1) return;
       const mine = owner && i === o.owner && can.has(k);
       const cls = ["piece", "p" + p.seat, mine ? "can" : "", mine && o.sel === can.get(k) ? "sel" : "", o.last && o.last.o === i && o.last.k === k ? "last" : ""].join(" ");
-      h += `<span class="${cls}" style="${at(cellOf(p.seat, r, k))}" data-o="${i}" data-k="${k}"${mine ? ` role="button" aria-label="Figur ${can.get(k) + 1}"` : ""}>` +
+      h += `<span class="${cls}" style="${at(cellOf(geo, p.seat, r, k))}" data-o="${i}" data-k="${k}"${mine ? ` role="button" aria-label="Figur ${can.get(k) + 1}"` : ""}>` +
         `<i></i>${mine ? `<span class="n">${can.get(k) + 1}</span>` : ""}</span>`;
     }));
     return h + "</div>";
@@ -282,9 +276,9 @@
     const board = $("#board"), el = board.querySelector(`.piece[data-o="${ev.o}"][data-k="${ev.k}"]`);
     if (!el || !el.animate || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cell = parseFloat(board.style.getPropertyValue("--cell")) || 32, seat = V.players[ev.o].seat;
-    const path = [cellOf(seat, ev.from, ev.k)];
-    if (ev.from < 0) path.push(cellOf(seat, 0, ev.k));
-    else for (let r = ev.from + 1; r <= ev.to; r++) path.push(cellOf(seat, r, ev.k));
+    const geo = geoOf(V), path = [cellOf(geo, seat, ev.from, ev.k)];
+    if (ev.from < 0) path.push(cellOf(geo, seat, 0, ev.k));
+    else for (let r = ev.from + 1; r <= ev.to; r++) path.push(cellOf(geo, seat, r, ev.k));
     const end = path[path.length - 1], n = path.length - 1;
     const frames = [];
     path.forEach(([x, y], i) => {
@@ -299,7 +293,7 @@
     if (ev.hit) {
       const vic = board.querySelector(`.piece[data-o="${ev.hit.pi}"][data-k="${ev.hit.k}"]`);
       if (vic) {
-        const home = cellOf(V.players[ev.hit.pi].seat, -1, ev.hit.k);
+        const home = cellOf(geo, V.players[ev.hit.pi].seat, -1, ev.hit.k);
         vic.animate([
           { transform: `translate(${(end[0] - home[0]) * cell}px,${(end[1] - home[1]) * cell}px)` },
           { transform: `translate(${(end[0] - home[0]) * cell * 0.5}px,${(end[1] - home[1]) * cell * 0.5 - cell * 1.5}px) rotate(200deg)`, offset: 0.5 },
@@ -350,13 +344,18 @@
     const arena = $("#arena"), b = $("#board");
     if (!V || !arena.offsetParent) return;
     const st = getComputedStyle(arena);
-    const W = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
-    const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - 10 - 4;
-    const cs = parseFloat(LOOK.get().size) || 1;
-    const fit = Math.min(W / 11.5, H / 11.5, desktop.matches ? 104 : 64);
-    const maxW = cs > 1 ? (arena.clientWidth - 4) / 11.5 : W / 11.5; // a big board may use the side margins
-    const cell = Math.max(18, Math.floor(Math.min(maxW, fit * cs)));
+    const W0 = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
+    const geo = geoOf(V), strip = $("#pstrip"), side = desktop.matches && !strip.hidden;
+    arena.classList.toggle("side", side); // wide screens: the name tags stand beside the board
+    const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - (strip.hidden || side ? 0 : strip.offsetHeight + 10) - 10 - 4;
+    const cs = parseFloat(LOOK.get().size) || 1, bw = geo.w + 0.5, bh = geo.h + 0.5;
+    const W = W0 - (side ? 290 : 0);
+    const fit = Math.min(W / bw, H / bh, desktop.matches ? 104 : 64);
+    const maxW = cs > 1 ? (arena.clientWidth - 4) / bw : W / bw; // a big board may use the side margins
+    const cell = Math.max(geo.arms > 4 ? 14 : 18, Math.floor(Math.min(maxW, fit * cs)));
     b.style.setProperty("--cell", cell + "px");
+    b.style.setProperty("--bw", bw);
+    b.style.setProperty("--bh", bh);
   }
   desktop.addEventListener && desktop.addEventListener("change", () => { if (V) render(); });
   window.addEventListener("resize", () => { if (V) layoutBoard(); });
@@ -368,7 +367,7 @@
     const cls = ["badge", "c" + p.seat, V.phase === "play" && V.cur === i ? "on" : "", away || p.out ? "away" : "", p.done ? "done" : ""].join(" ");
     const tag = p.out ? "aufgegeben" : p.done ? `Platz ${p.place}` : away ? "offline" : mode === "online" && i === V.me ? "du" : G.COLORS[p.seat];
     const g = inGoal(p);
-    return `<div class="${cls}" data-seat="${i}" style="${at(BADGE_AT[p.seat])}"><span class="bav" aria-hidden="true">${p.avatar}</span>` +
+    return `<div class="${cls}" data-seat="${i}" ${V.arms > 4 ? "" : ` style="${at(BADGE_AT[p.seat])}"`}><span class="bav" aria-hidden="true">${p.avatar}</span>` +
       `<span class="binfo"><b>${esc(p.name)}</b><small><span class="pgoal" title="${g} von 4 im Ziel">${[0, 1, 2, 3].map((j) => `<i class="${j < g ? "on" : ""}"></i>`).join("")}</span>${tag}</small></span>` +
       `<span class="bwins" title="Siege">${p.wins}</span></div>`;
   }
@@ -385,9 +384,13 @@
     const board = $("#board"), lm = V.lastMove;
     board.innerHTML = boardHTML(V, {
       moves: play && V.need === "move" ? V.moves : null, owner: V.owner, sel,
-      last: lm && V.phase === "play" ? lm : null, extra: V.players.map((_, i) => badgeHTML(i)).join(""),
+      last: lm && V.phase === "play" ? lm : null, extra: V.arms > 4 ? "" : V.players.map((_, i) => badgeHTML(i)).join(""),
       yardOn: V.phase === "play" && V.cur >= 0 ? V.players[V.cur].seat : null
     });
+    // a big board has no room for name tags on it: they line up below instead
+    const strip = $("#pstrip");
+    strip.hidden = V.arms <= 4;
+    strip.innerHTML = V.arms > 4 ? V.players.map((_, i) => badgeHTML(i)).join("") : "";
     layoutBoard();
     if (anim) { animateMove(anim); anim = null; }
 
@@ -517,7 +520,7 @@
   // reactions float above everything (fixed), so the top edge of the screen or a scrolling
   // player strip can't clip them; near the top they show up below the player instead
   function bubble(pi, e, who) {
-    const host = pi >= 0 ? document.querySelector(`#board [data-seat="${pi}"]`) : $("#dock");
+    const host = pi >= 0 ? document.querySelector(`#arena [data-seat="${pi}"]`) : $("#dock");
     if (!host) return;
     const b = document.createElement("span");
     const text = e.length > 3;

@@ -21,7 +21,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Ein neues Spiel legt
 | Würfelpoker | [`wuerfelpoker/`](wuerfelpoker/) | 2–8 Spieler plus Zuschauer, alle sehen live, welche Würfel behalten werden, Computer-Gegner, Avatare, Tisch-Designs · Port 8083 |
 | Kniffel | [`kniffel/`](kniffel/) | 2–8 Spieler plus Zuschauer, 13 Felder mit Bonus, optionaler Joker, Computer-Gegner, Avatare, Tisch-Designs · Port 8087 |
 | Poker (Texas Hold’em) | [`poker/`](poker/) | 2–8 Spieler plus Zuschauer, No-Limit-Turnier mit Blinds und Side Pots, private Karten (Übergabe-Bildschirm bei einem Handy), Computer-Gegner, Avatare, Tisch-Designs · Port 8088 |
-| Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–4 Spieler plus Zuschauer, elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
+| Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–8 Spieler plus Zuschauer (ab 5 auf dem Sechser- oder Achter-Brett), elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 

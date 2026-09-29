@@ -48,7 +48,7 @@ stehen so in `shared/kit.*`.
 
 Jedes Spiel definiert dieselbe Basis-Palette in `:root{}` und ergänzt nur
 spiel-eigene Variablen (Schiffe: `--sea`/`--hull`/`--wreck`, Würfelpoker:
-`--felt`/`--ivory`/`--pip`, Vier gewinnt: `--frame`/`--hole`, Mensch ärgere dich nicht: `--board`/`--spot`/`--c0`…`--c3`, …):
+`--felt`/`--ivory`/`--pip`, Vier gewinnt: `--frame`/`--hole`, Mensch ärgere dich nicht: `--board`/`--spot`/`--c0`…`--c7`, …):
 
 ```css
 :root{
@@ -220,6 +220,11 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
   verschluckt — gibt es genau einen möglichen Zug, führt er ihn aus
   (Mensch ärgere dich nicht: 6 würfeln, nochmal tippen → Figur kommt raus),
   sonst sagt er, was zu tun ist.
+- Mensch ärgere dich nicht spielt mit 2 bis 8 Leuten. Das Brett ist ein Stern mit 4, 6 oder 8 Armen
+  (≤4 Spieler: 4, ≤6: 6, sonst 8; `armsFor` in `game.js`), jeder Arm hat 10 Felder Bahn
+  (`state.arms`, `state.track`; alte Spielstände ohne `track` zählen als 40). Die Geometrie
+  steckt DOM-frei in `maedn/public/board.js` (`MaednBoard.geometry(arms)`), die Engine kennt nur
+  Feldnummern. Am Desktop stehen die Namensschilder neben dem Brett, auf dem Handy darunter.
 
 ## Server-Architektur (`shared/room-server.js` + `server.js` pro Spiel)
 
@@ -491,7 +496,7 @@ Parameter beim Laden wie ein gespeichertes Raum-Secret ab, das normale `UI.resum
 übernimmt den Rest (keine Änderung an den `app.js` nötig). Ist der Raum von einer Party, gibt es
 „Zurück zur Party“ im Warteraum und im Menü (`Spieleabend.startUrl("?party=CODE")`).
 `games.json`: `max` (Plätze), `watch` (Spiel hat Zuschauer), `hint:false` (kein Hinweis bei zu
-großer Party, bisher Mensch ärgere dich nicht wegen der geplanten 5–6/7–8-Bretter).
+großer Party, gibt es aktuell bei keinem Spiel mehr).
 `PARTY_SECRET` steht in der `.env` jedes Spiels und der Startseite (gleicher Wert, nicht im Repo).
 
 **Wiederverbinden nach Standby/Netzwechsel:** Ein Handy behält oft einen Socket, der offen aussieht,

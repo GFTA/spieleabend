@@ -19,7 +19,9 @@
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="room-ui.css">
 <style>
-:root{--board:#efe2c2;--board2:#d9c69d;--spot:#fffaf0;--spotline:#5b4a2e;--path:#8a7550;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230}
+:root{--board:#efe2c2;--board2:#d9c69d;--spot:#fffaf0;--spotline:#5b4a2e;--path:#8a7550;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230;--c4:#8a4fd0;--c5:#1fb5c9;--c6:#f28a1f;--c7:#ec6fb2}
+.c0{--sc:var(--c0);--st:#fff}.c1{--sc:var(--c1);--st:#fff}.c2{--sc:var(--c2);--st:#fff}.c3{--sc:var(--c3);--st:#231a05}
+.c4{--sc:var(--c4);--st:#fff}.c5{--sc:var(--c5);--st:#0b2a30}.c6{--sc:var(--c6);--st:#2a1603}.c7{--sc:var(--c7);--st:#3a0f27}
 /* table designs; "Nacht" is the default without an attribute */
 :root[data-table="vulkan"]{--sea:#3a1c1a;--board:#efe0cc;--board2:#d4bd9a}
 :root[data-table="mint"]{--ring:#12352a;--sea:#cfe9e0;--board:#f7fbf0;--board2:#d5e6c9}
@@ -43,7 +45,7 @@
 h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
 .tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
 .row .btn{flex:1}
-.prow .seat.c0{background:var(--c0);color:#fff} .prow .seat.c1{background:var(--c1);color:#fff} .prow .seat.c2{background:var(--c2);color:#fff} .prow .seat.c3{background:var(--c3);color:#231a05}
+.prow .seat[class*=" c"]{background:var(--sc);color:var(--st)}
 .prow .seat{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface);color:var(--muted);font-variant-numeric:tabular-nums}
 .prow .kind{flex:none;border:0;border-radius:12px;padding:0 10px;height:48px;min-width:92px;font-weight:800;font-size:13px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
 .prow .kind svg{width:18px;height:18px}
@@ -53,7 +55,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .seg button:disabled:not([aria-pressed="true"]){opacity:.5}
 /* ---------- lobby ---------- */
 /* the lobby buttons stay reachable at the bottom on an opaque bar, never over the rules */
-.members .dot.c0{background:var(--c0)} .members .dot.c1{background:var(--c1)} .members .dot.c2{background:var(--c2)} .members .dot.c3{background:var(--c3)}
+.members .dot[class*=" c"]{background:var(--sc)}
 /* ---------- game ---------- */
 .topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
 .roundinfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
@@ -63,29 +65,28 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
 @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
 /* the board: 11×11 fields on a cream plate, the track as a ring of white spots */
-.board{--cell:32px;flex:none;position:relative;width:calc(var(--cell) * 11 + var(--cell) * .5);height:calc(var(--cell) * 11 + var(--cell) * .5);padding:calc(var(--cell) * .25);
+.board{--cell:32px;--bw:11.5;--bh:11.5;flex:none;position:relative;width:calc(var(--cell) * var(--bw));height:calc(var(--cell) * var(--bh));padding:calc(var(--cell) * .25);
   border-radius:calc(var(--cell) * .45);background:var(--board);box-shadow:inset 0 calc(var(--cell) * -.12) 0 var(--board2),0 14px 30px rgba(0,0,0,.35);touch-action:manipulation;color:#1b1325}
 .board .in{position:relative;width:100%;height:100%}
 .board svg.path{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.board svg.path polyline{fill:none;stroke:var(--path);stroke-width:.09;stroke-linejoin:round}
+.board svg.path polygon{fill:none;stroke:var(--path);stroke-width:.09;stroke-linejoin:round}
 .spot{position:absolute;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:var(--cell);height:var(--cell);display:grid;place-items:center;border:0;padding:0;margin:0;background:none}
 .spot::before{content:"";width:80%;height:80%;border-radius:50%;background:var(--spot);box-shadow:inset 0 0 0 calc(var(--cell) * .055) var(--spotline),inset 0 calc(var(--cell) * -.06) 0 rgba(0,0,0,.08)}
-.spot.c0::before{background:color-mix(in srgb,var(--c0) 35%,#fff)} .spot.c1::before{background:color-mix(in srgb,var(--c1) 35%,#fff)}
-.spot.c2::before{background:color-mix(in srgb,var(--c2) 35%,#fff)} .spot.c3::before{background:color-mix(in srgb,var(--c3) 45%,#fff)}
-.spot.start.c0::before{background:var(--c0)} .spot.start.c1::before{background:var(--c1)} .spot.start.c2::before{background:var(--c2)} .spot.start.c3::before{background:var(--c3)}
+.spot[class*=" c"]::before{background:color-mix(in srgb,var(--sc) 35%,#fff)} .spot.c3::before,.spot.c6::before,.spot.c7::before{background:color-mix(in srgb,var(--sc) 45%,#fff)}
+.spot.start[class*=" c"]::before{background:var(--sc)}
 .spot.start::after{content:"";position:absolute;width:34%;height:34%;border-radius:50%;background:rgba(255,255,255,.7)}
 .spot.off::before{opacity:.35}
 .spot.target{cursor:pointer;z-index:1}
 .spot.target::after{content:"";position:absolute;width:92%;height:92%;border-radius:50%;box-sizing:border-box;border:calc(var(--cell) * .08) dashed #1b1325;animation:spin 3s linear infinite;background:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .yard{position:absolute;left:calc(var(--x) * var(--cell) - var(--cell) * .12);top:calc(var(--y) * var(--cell) - var(--cell) * .12);width:calc(var(--cell) * 2.24);height:calc(var(--cell) * 2.24);border-radius:calc(var(--cell) * .5);opacity:.28}
-.yard.c0{background:var(--c0)} .yard.c1{background:var(--c1)} .yard.c2{background:var(--c2)} .yard.c3{background:var(--c3)}
+.yard[class*=" c"]{background:var(--sc)}
 .yard.on{opacity:.6;box-shadow:0 0 0 calc(var(--cell) * .06) var(--ring)}
 /* name tags next to the yards, the die lies with whoever is on */
 .badge{position:absolute;z-index:1;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:calc(var(--cell) * 3.84);height:calc(var(--cell) * 1.62);
   display:flex;align-items:center;gap:calc(var(--cell) * .14);padding:0 calc(var(--cell) * .18) 0 calc(var(--cell) * .26);border-radius:calc(var(--cell) * .36);
   background:rgba(255,255,255,.5);box-shadow:inset calc(var(--cell) * .12) 0 0 var(--pc);color:#1b1325;transition:box-shadow .25s,background .25s}
-.badge.c0{--pc:var(--c0)} .badge.c1{--pc:var(--c1)} .badge.c2{--pc:var(--c2)} .badge.c3{--pc:var(--c3)}
+.badge[class*=" c"]{--pc:var(--sc)}
 .badge.on{background:#fff;box-shadow:inset calc(var(--cell) * .12) 0 0 var(--pc),0 0 0 calc(var(--cell) * .09) var(--pc),0 calc(var(--cell) * .12) calc(var(--cell) * .35) rgba(0,0,0,.28)}
 .badge.away{opacity:.5}
 .badge.done{background:rgba(255,255,255,.8)}
@@ -98,14 +99,21 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .binfo .pgoal i.on{background:var(--green)}
 .bwins{position:absolute;top:calc(var(--cell) * -.22);right:calc(var(--cell) * -.14);min-width:calc(var(--cell) * .62);height:calc(var(--cell) * .62);padding:0 4px;border-radius:99px;
   background:var(--pc);color:#fff;font:800 max(10px,calc(var(--cell) * .34))/calc(var(--cell) * .62) var(--ui);text-align:center;box-shadow:0 0 0 2px var(--board)}
-.badge.c3 .bwins{color:#231a05}
+.badge[class*=" c"] .bwins{color:var(--st)}
+/* name tags of a big board: two columns under it */
+.pstrip{--cell:26px;flex:none;width:min(100%,460px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(var(--cell) * .3) calc(var(--cell) * .5)}
+.pstrip[hidden]{display:none}
+.arena.side{display:grid;grid-template-columns:auto 260px;grid-template-rows:auto auto;justify-content:center;align-content:center;column-gap:30px}
+.arena.side .lastmove{grid-column:1 / -1;justify-self:center}
+.arena.side .pstrip{grid-template-columns:1fr;width:260px;align-self:center}
+.pstrip .badge{position:relative;left:auto;top:auto;width:auto;height:calc(var(--cell) * 1.62);min-width:0}
 .board .die{position:absolute;z-index:4;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));--ds:calc(var(--cell) * 1.48)}
 /* pawns: a round body with a head, in the player's color */
 .piece{position:absolute;z-index:2;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:var(--cell);height:var(--cell);border:0;padding:0;margin:0;background:none;pointer-events:none;display:block}
 .piece i{position:absolute;left:18%;right:18%;bottom:14%;height:52%;border-radius:50% 50% 42% 42%;background:radial-gradient(circle at 38% 30%,rgba(255,255,255,.55) 0 14%,transparent 15%),var(--pc);
   box-shadow:inset 0 calc(var(--cell) * -.07) 0 rgba(0,0,0,.28),0 calc(var(--cell) * .05) calc(var(--cell) * .06) rgba(0,0,0,.4)}
 .piece i::after{content:"";position:absolute;left:24%;right:24%;top:-46%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 34%,rgba(255,255,255,.6) 0 16%,transparent 17%),var(--pc);box-shadow:inset 0 calc(var(--cell) * -.05) 0 rgba(0,0,0,.25)}
-.piece.p0{--pc:var(--c0)} .piece.p1{--pc:var(--c1)} .piece.p2{--pc:var(--c2)} .piece.p3{--pc:var(--c3)}
+.piece.p0{--pc:var(--c0)} .piece.p1{--pc:var(--c1)} .piece.p2{--pc:var(--c2)} .piece.p3{--pc:var(--c3)} .piece.p4{--pc:var(--c4)} .piece.p5{--pc:var(--c5)} .piece.p6{--pc:var(--c6)} .piece.p7{--pc:var(--c7)}
 .piece.can{pointer-events:auto;cursor:pointer;z-index:3}
 .piece.can i{animation:bob .8s ease-in-out infinite}
 .piece.can.hint{animation:hint .35s ease-in-out 3}
@@ -247,7 +255,7 @@ button.die:disabled{cursor:default}
     <div class="hero">
       <div class="board" id="heroBoard" aria-hidden="true"></div>
       <h1>Mensch <span>ärgere dich nicht</span></h1>
-      <p class="tagline">Für 2 bis 4 Spieler, jeder mit dem eigenen Handy, oder allein gegen den Computer. Mit Hausregeln.</p>
+      <p class="tagline">Für 2 bis 8 Spieler, jeder mit dem eigenen Handy, oder allein gegen den Computer. Mit Hausregeln.</p>
     </div>
 
     <div class="panel" id="whoPanel">
@@ -332,6 +340,7 @@ button.die:disabled{cursor:default}
 
     <div class="arena" id="arena">
       <div class="board" id="board"></div>
+      <div class="pstrip" id="pstrip" hidden></div>
       <div class="lastmove" id="lastMove" aria-live="polite"></div>
     </div>
 
@@ -393,6 +402,7 @@ button.die:disabled{cursor:default}
 <script src="room-ui.js"></script>
 <script src="home-ui.js"></script>
 <script src="game.js"></script>
+<script src="board.js"></script>
 <script src="app.js"></script>
 <!-- ARTIFACT-BODY-END -->
 </body>

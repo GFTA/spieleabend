@@ -4,15 +4,17 @@ Mensch ärgere dich nicht im Browser für Android, iOS und Desktop, im selben St
 die anderen Spiele im Repo. Zwei Spielarten:
 
 - **Jeder sein Handy**: Einer erstellt einen Raum, die anderen scannen den QR-Code (oder
-  geben den 4-Buchstaben-Code ein). Bis zu 4 spielen mit, wer später kommt, schaut zu.
+  geben den 4-Buchstaben-Code ein). Bis zu 8 spielen mit, wer später kommt, schaut zu.
   Braucht den kleinen Server unten.
-- **Ein Gerät für alle**: 2 bis 4 Spieler reichen ein Handy, Tablet oder den Rechner
+- **Ein Gerät für alle**: 2 bis 8 Spieler reichen ein Handy, Tablet oder den Rechner
   herum, freie Plätze übernimmt der Computer. Geht auch ohne Server als einzelne HTML-Datei.
 
 Tippe auf den Würfel. Mit einer 6 kommt eine Figur aus dem Haus, danach geht es einmal
 ums Brett und in dein Ziel. Wer auf einer fremden Figur landet, wirft sie raus. Wer
 zuerst alle vier Figuren im Ziel hat, gewinnt. Zu zweit sitzt ihr euch gegenüber
-(Rot gegen Grün).
+(Rot gegen Grün). Ab 5 Spielern wächst das Brett: 5 bis 6 spielen auf einem Brett mit
+sechs Armen (60 Felder), 7 bis 8 auf einem mit acht Armen (80 Felder), jeweils mit
+den Farben Rot, Blau, Grün, Gelb, Lila, Türkis, Orange und Rosa.
 
 - **Spielziel**: „Erster gewinnt“ oder „Alle Plätze“ (weiterspielen bis zum letzten Platz).
 - **Grundregeln**: Rauskommen und das Startfeld räumen sind Pflicht, nach einer 6 wird
