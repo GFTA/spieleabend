@@ -36,7 +36,7 @@ den Farben Rot, Blau, Grün, Gelb, Lila, Türkis, Orange und Rosa.
 - **Am Computer**: breites Layout. Leertaste würfelt, 1–4 oder ←/→ und Enter ziehen,
   Esc schließt Fenster.
 
-## Auf dem Mini-PC installieren
+## Auf dem Server installieren
 
 Ein einzelnes Node.js-Programm (`server.js`) ohne Datenbank, Spielstände landen in
 `data/rooms.json`. Läuft neben den anderen Spielen im WLAN auf Port **8084**, über den
