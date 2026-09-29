@@ -111,6 +111,10 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .pnote{color:var(--muted);font-size:13px;padding:8px 10px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
 .perr{color:#ff8a8f;font-size:13px;min-height:0}
 .partybox{display:flex;flex-direction:column;gap:8px}
+.modes{align-self:center;width:min(100%,560px);display:flex;gap:6px;padding:5px;border-radius:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.modes button{flex:1;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-weight:800;background:transparent;color:var(--muted);cursor:pointer}
+.modes button[aria-pressed="true"]{color:var(--text);background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.single #party,.single .partybox,.single .join,.single .how,.single .pill{display:none}
 .partybox:empty{display:none}
 .partybox .btn{width:100%}
 </style>
@@ -121,7 +125,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <header class="hero">
     <div class="label">cool-kidz.net</div>
     <h1>Spiele<span>abend</span></h1>
-    <p class="tagline">Jeder mit dem eigenen Handy, oder ein Handy, das herumgereicht wird. Such dir ein Spiel aus.</p>
+    <p class="tagline">Jeder mit dem eigenen Handy, oder allein gegen den Computer. Such dir ein Spiel aus.</p>
   </header>
 
   <section class="me" aria-label="Du">
@@ -134,14 +138,19 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     <p class="hint">Name, Avatar und Design nimmst du in jedes Spiel mit, das du von hier aus öffnest.</p>
   </section>
 
+  <div class="modes" id="modes" role="group" aria-label="Spielart">
+    <button type="button" data-m="multi" aria-pressed="true">Mehrspieler</button>
+    <button type="button" data-m="single" aria-pressed="false">Einzelspieler</button>
+  </div>
+
   <section class="party" id="party" aria-label="Party"></section>
 
   <section class="games" id="games" aria-label="Spiele"></section>
 
   <section class="how" aria-label="So geht's">
-    <div><b>Raum erstellen</b><p>Einer öffnet ein Spiel, wählt „Jeder sein Handy“ und erstellt einen Raum.</p></div>
+    <div><b>Raum erstellen</b><p>Einer öffnet ein Spiel, wählt „Mehrspieler“ und erstellt einen Raum.</p></div>
     <div><b>Beitreten</b><p>Die anderen scannen den QR-Code im Spiel oder tippen den Raum-Code hier beim Spiel ein.</p></div>
-    <div><b>Nur ein Handy?</b><p>„Ein Handy für alle“ wählen und das Handy nach jedem Zug weitergeben.</p></div>
+    <div><b>Allein?</b><p>Oben „Einzelspieler“ wählen: dann geht es gegen den Computer, ohne Raum und ohne Code.</p></div>
   </section>
 
   <footer>Läuft auf dem Mini-PC zu Hause · Code auf github.com/GFTA/spieleabend</footer>
@@ -200,10 +209,27 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   });
   renderMe();
 
+  // single player: no rooms, codes or parties, the games open straight in their single-player tab (?sp=1)
+  let single = false;
+  try { single = localStorage.getItem("spieleabend.single") === "1"; } catch (e) {}
+  function applySingle() {
+    document.body.classList.toggle("single", single);
+    for (const b of document.querySelectorAll("#modes button")) b.setAttribute("aria-pressed", String((b.dataset.m === "single") === single));
+  }
+  $("#modes").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-m]"); if (!b) return;
+    single = b.dataset.m === "single";
+    try { localStorage.setItem("spieleabend.single", single ? "1" : "0"); } catch (err) {}
+    applySingle(); updateLinks();
+    if (!single) maybeGo();
+  });
+  applySingle();
+
   function gameUrl(base, extra) {
     const u = new URL(base);
     for (const [k, v] of Object.entries(extra || {})) u.searchParams.set(k, v);
     if (table !== "night") u.searchParams.set("table", table);
+    if (single) u.searchParams.set("sp", "1");
     if (me.name.trim()) u.searchParams.set("name", me.name.trim());
     u.searchParams.set("av", me.avatar);
     return u.toString();
@@ -304,7 +330,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   // the host started a game: everybody follows into it, once per room
   function maybeGo() {
     const g = party && party.game;
-    if (!g || !g.params || read(WK) === g.room) return;
+    if (single || !g || !g.params || read(WK) === g.room) return;
     const def = games.find((x) => x.id === g.id);
     if (!def) return;
     write(WK, g.room);

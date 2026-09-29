@@ -180,5 +180,5 @@
     return { sfx, buzz, isOn: () => on, wake };
   }
 
-  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble, sound };
+  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble, sound, dropParams };
 })();

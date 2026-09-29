@@ -13,7 +13,7 @@
   try { sessionStorage.removeItem("wuerfelpoker.reloaded"); } catch (e) {}
 
   const $ = (s) => document.querySelector(s);
-  const K = { local: "wuerfelpoker.v1", names: "wuerfelpoker.names", bots: "wuerfelpoker.bots", avatars: "wuerfelpoker.avatars",
+  const K = { local: "wuerfelpoker.v1",
     online: "wuerfelpoker.online", me: "wuerfelpoker.me", avatar: "wuerfelpoker.avatar", rules: "wuerfelpoker.rules",
     level: "wuerfelpoker.level", look: "wuerfelpoker.look", sound: "wuerfelpoker.sound" };
   const store = Spieleabend.store;
@@ -26,15 +26,12 @@
   let V = null;           // view on screen
   let server = null, serverState = "checking";
   const webHost = /^https?:$/.test(location.protocol);
-  let tab = webHost ? "online" : "local", tabTouched = false;
+  const HOME = window.HomeUI({ key: "wuerfelpoker.opp", max: 8, botNames: G.BOT_NAMES, onChange: () => renderHome() });
+  let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let goalLocal = 5, goalOnline = 5;
-  let names = store.get(K.names) || ["", ""];
-  let localBots = store.get(K.bots) || [false, true];
-  let localAvatars = store.get(K.avatars) || [];
   let localLevel = G.BOT_LEVELS[store.get(K.level)] ? store.get(K.level) : "normal";
   let localRules = G.normRules(store.get(K.rules) || {});
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
-  const avatarFor = (i) => localAvatars[i] || G.AVATARS[i % G.AVATARS.length];
   const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
 
   // ---------- helpers ----------
@@ -351,7 +348,7 @@
     }
     $("#reVotes").hidden = !(mode === "online" && R && last.over);
     const back = $("#reBack");
-    if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }
+    if (mode === "local") { back.hidden = false; back.textContent = "Zurück zum Start"; }
     else { back.hidden = R.host !== V.me; back.textContent = "Zurück in den Warteraum"; }
     if (mode === "online" && last.over) back.hidden = !R.members[R.you]; // after a game everyone decides for themselves
     const k = `${V.round}:${w.join(",")}:${V.players.map((p) => p.score).join(",")}`;
@@ -367,7 +364,6 @@
       `<label class="toggle" for="rule-${local ? "l" : "o"}-${x.k}"><input type="checkbox" id="rule-${local ? "l" : "o"}-${x.k}" data-rule="${x.k}"` +
       `${r[x.k] ? " checked" : ""}${editable ? "" : " disabled"}><span>${x.name}<small>${x.desc}</small></span></label>`).join("");
   }
-  const botName = (i) => G.BOT_NAMES[names.slice(0, i).filter((_, k) => localBots[k] && !(names[k] || "").trim()).length];
   function renderHome() {
     for (const b of document.querySelectorAll("#modeTabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
     $("#onlinePanel").hidden = tab !== "online" || !webHost;
@@ -375,23 +371,14 @@
     $("#localPanel").hidden = tab !== "local";
     const sh = $("#serverHint");
     sh.hidden = serverState === "ok";
-    sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …" : "Unter dieser Adresse antwortet kein Würfelpoker-Server. „Ein Handy für alle“ geht immer.";
+    sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …" : "Unter dieser Adresse antwortet kein Würfelpoker-Server. „Einzelspieler“ geht immer.";
     $("#goalOnline").innerHTML = goalButtons(goalOnline);
     $("#goalLocal").innerHTML = goalButtons(goalLocal);
     $("#myAvatar").textContent = myAvatar;
     const saved = store.get(K.local);
     $("#resumePanel").hidden = !(saved && saved.players);
     if (saved && saved.players) $("#resumeHint").textContent = `${saved.players.map((p) => p.name).join(", ")} · Runde ${saved.round}`;
-    const list = $("#plist");
-    if (!list.contains(document.activeElement)) {
-      list.innerHTML = names.map((n, i) =>
-        `<div class="prow"><button class="avbtn" type="button" data-av="${i}" aria-label="Avatar für Platz ${i + 1} wechseln">${localBots[i] ? "🤖" : avatarFor(i)}</button>` +
-        `<input class="field" id="pname-${i}" data-i="${i}" maxlength="18" autocomplete="off" enterkeyhint="next" placeholder="${localBots[i] ? `${botName(i)} (Computer)` : `Spieler ${i + 1}`}" value="${esc(n)}">` +
-        `<button class="botbtn" type="button" data-bot="${i}" aria-pressed="${!!localBots[i]}" title="Computer spielt diesen Platz" aria-label="Platz ${i + 1} vom Computer spielen lassen">🤖</button>` +
-        (names.length > 2 ? `<button class="rm" type="button" data-rm="${i}" aria-label="Spieler ${i + 1} entfernen">×</button>` : "") + `</div>`).join("");
-    }
-    $("#addPlayer").hidden = names.length >= 8;
-    $("#levelLocalBox").hidden = !names.some((_, i) => localBots[i]);
+    HOME.render();
     $("#levelLocal").innerHTML = levelButtons(localLevel);
     const box = $("#rulesLocal");
     if (!box.firstChild) box.innerHTML = rulesHTML(localRules, true, true);
@@ -505,34 +492,15 @@
     wsSend({ t: "create", name: n, goal: goalOnline, rules: localRules, avatar: myAvatar });
   });
 
-  $("#plist").addEventListener("input", (e) => { if (e.target.dataset.i != null) { names[+e.target.dataset.i] = e.target.value; store.set(K.names, names); } });
-  $("#plist").addEventListener("click", (e) => {
-    const rm = e.target.closest("[data-rm]"), av = e.target.closest("[data-av]"), bt = e.target.closest("[data-bot]");
-    if (rm) { const i = +rm.dataset.rm; names.splice(i, 1); localBots.splice(i, 1); localAvatars.splice(i, 1); }
-    else if (av) { const i = +av.dataset.av; if (localBots[i]) return; localAvatars[i] = nextAvatar(avatarFor(i)); }
-    else if (bt) { const i = +bt.dataset.bot; localBots[i] = !localBots[i]; }
-    else return;
-    store.set(K.names, names); store.set(K.bots, localBots); store.set(K.avatars, localAvatars); renderHome();
-  });
-  $("#plist").addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const nx = document.getElementById(`pname-${+e.target.dataset.i + 1}`);
-    if (nx) nx.focus(); else e.target.blur();
-  });
-  $("#addPlayer").addEventListener("click", () => {
-    if (names.length >= 8) return;
-    names.push(""); localBots.push(false); store.set(K.names, names); store.set(K.bots, localBots); renderHome();
-    const el = document.getElementById(`pname-${names.length - 1}`); if (el) el.focus();
-  });
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (!b) return; localLevel = b.dataset.level; store.set(K.level, localLevel); renderHome(); });
   $("#rulesLocal").addEventListener("change", (e) => {
     const k = e.target.dataset.rule; if (!k) return;
     localRules[k] = e.target.checked; store.set(K.rules, localRules); renderHome();
   });
   $("#startLocal").addEventListener("click", () => {
-    if (names.every((_, i) => localBots[i])) { toast("Mindestens ein Mensch muss mitspielen."); return; }
-    L = G.newGame(names.map((n, i) => (n || "").trim() || (localBots[i] ? botName(i) : `Spieler ${i + 1}`)), goalLocal, Object.assign({}, localRules, { turnTimer: false }));
-    L.players.forEach((p, i) => { p.bot = !!localBots[i]; p.avatar = p.bot ? "🤖" : avatarFor(i); });
+    const { names, bots } = HOME.roster($("#myName").value);
+    L = G.newGame(names, goalLocal, Object.assign({}, localRules, { turnTimer: false }));
+    L.players.forEach((p, i) => { p.bot = bots[i]; p.avatar = p.bot ? "🤖" : myAvatar; });
     mode = "local"; viewer = null; hold = null; lastTurnKey = null;
     store.set(K.local, L); render(); wake();
   });

@@ -199,22 +199,25 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
     <div class="hero">
       <div class="hero-dice" id="heroDice" aria-hidden="true"></div>
       <h1>Poker</h1>
-      <p class="tagline">Texas Hold’em: zwei Karten auf die Hand, fünf auf den Tisch. Wer am Ende alle Chips hat, gewinnt. Jeder mit dem eigenen Handy oder eins für alle.</p>
+      <p class="tagline">Texas Hold’em: zwei Karten auf die Hand, fünf auf den Tisch. Wer am Ende alle Chips hat, gewinnt. Jeder mit dem eigenen Handy, oder allein gegen den Computer.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="avrow">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
     </div>
 
     <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
-      <button type="button" data-tab="online" aria-pressed="true">Jeder sein Handy</button>
-      <button type="button" data-tab="local" aria-pressed="false">Ein Handy für alle</button>
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
     </div>
 
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
-      <label class="label" for="myName">Dein Name</label>
-      <div class="avrow">
-        <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
-        <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
-      </div>
-      <div class="avgrid" id="avatarGrid" hidden></div>
       <div class="label">Raum beitreten</div>
       <div class="row">
         <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
@@ -228,7 +231,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       <p class="hint">Hausregeln und Computer-Gegner kannst du danach im Warteraum noch ändern.</p>
     </div>
     <div class="panel" id="onlineOff" hidden>
-      <p class="hint">Für „Jeder sein Handy“ muss Poker auf einem Server laufen. Hier geht nur „Ein Handy für alle“.</p>
+      <p class="hint">Für „Mehrspieler“ muss Poker auf einem Server laufen. Hier geht nur „Einzelspieler“.</p>
     </div>
 
     <div class="panel" id="localPanel" hidden>
@@ -236,12 +239,10 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
         <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
         <p class="hint" id="resumeHint"></p>
       </div>
-      <div class="label">Mitspieler (2–8)</div>
-      <div class="plist" id="plist"></div>
-      <button class="btn btn-ghost" id="addPlayer" type="button">+ Spieler hinzufügen</button>
+      <div class="panel" id="oppBox"></div>
       <div class="label">Startchips</div>
       <div class="seg" id="chipsLocal" role="group" aria-label="Startchips"></div>
-      <div class="panel" id="levelLocalBox" hidden>
+      <div class="panel" id="levelLocalBox">
         <div class="label">Stärke der Computer-Gegner</div>
         <div class="seg" id="levelLocal"></div>
       </div>
@@ -359,6 +360,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 
 <script src="kit.js"></script>
 <script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
 <script src="game.js"></script>
 <script src="app.js"></script>
 <!-- ARTIFACT-BODY-END -->

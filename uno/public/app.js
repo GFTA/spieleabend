@@ -19,12 +19,12 @@
     rev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h14l-4-4"/><path d="M20 15H6l4 4"/></svg>',
     wildMini: '<svg viewBox="0 0 24 24"><path d="M12 12V3a9 9 0 0 1 9 9z" fill="#e0393e"/><path d="M12 12h9a9 9 0 0 1-9 9z" fill="#2d6fd6"/><path d="M12 12v9a9 9 0 0 1-9-9z" fill="#f2c230"/><path d="M12 12H3a9 9 0 0 1 9-9z" fill="#2fa35b"/></svg>'
   };
-  const K = { local: "passuno.v2", names: "passuno.names", online: "passuno.online", me: "passuno.me" };
+  const K = { local: "passuno.v2", online: "passuno.online", me: "passuno.me" };
   const store = Spieleabend.store;
 
   let mode = null;        // "local" | "online" | null
   let L = null;           // local engine state
-  let hidden = true;      // local: hand-off screen is up
+  let hidden = false;     // local: hand-off screen is up
   let R = null;           // last online room message
   let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
@@ -33,14 +33,11 @@
   let server = null;      // server info once found ({} when only the WebSocket answered)
   let serverState = "checking"; // "checking" | "ok" | "none"
   const webHost = /^https?:$/.test(location.protocol);
-  let tab = webHost ? "online" : "local", tabTouched = false;
+  const HOME = window.HomeUI({ key: "passuno.opp", max: 10, botNames: G.BOT_NAMES, onChange: () => renderHome() });
+  let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let goalLocal = 500, goalOnline = 500;
-  let names = store.get(K.names) || ["", "", ""];
-  let localBots = store.get("passuno.bots") || [];
-  let localAvatars = store.get("passuno.avatars") || [];
   let localLevel = G.BOT_LEVELS[store.get("passuno.level")] ? store.get("passuno.level") : "normal";
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: "passuno.avatar", avatars: G.AVATARS });
-  const avatarFor = (i) => localAvatars[i] || G.AVATARS[i % G.AVATARS.length];
   const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
   let lastTurn = null;
 
@@ -823,7 +820,7 @@
     }
     $("#reVotes").hidden = !(mode === "online" && R && last.over);
     const back = $("#reBack");
-    if (mode === "local") { back.hidden = false; back.textContent = "Zur Spieler-Auswahl"; }
+    if (mode === "local") { back.hidden = false; back.textContent = "Zurück zum Start"; }
     else { back.hidden = R.host !== V.me; back.textContent = "Zurück in den Warteraum"; }
     if (mode === "online" && last.over) back.hidden = !R.members[R.you]; // after a game everyone decides for themselves
   }
@@ -838,7 +835,7 @@
     const sh = $("#serverHint");
     sh.hidden = serverState === "ok";
     sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …"
-      : "Unter dieser Adresse antwortet kein Pass-Uno-Server. Du kannst es trotzdem versuchen, „Ein Handy für alle“ geht immer.";
+      : "Unter dieser Adresse antwortet kein Pass-Uno-Server. Du kannst es trotzdem versuchen, „Einzelspieler“ geht immer.";
     $("#localPanel").hidden = tab !== "local";
     for (const b of document.querySelectorAll("#goalOnline button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalOnline));
     for (const b of document.querySelectorAll("#goalLocal button")) b.setAttribute("aria-pressed", String(+b.dataset.goal === goalLocal));
@@ -846,17 +843,7 @@
     const saved = store.get(K.local);
     $("#resumePanel").hidden = !(saved && saved.players);
     if (saved && saved.players) $("#resumeHint").textContent = `${saved.players.map((p) => p.name).join(", ")} · Runde ${saved.round}`;
-    const list = $("#plist");
-    if (!list.contains(document.activeElement)) {
-      list.innerHTML = names.map((n, i) =>
-        `<div class="prow"><button class="avbtn" type="button" data-av="${i}" aria-label="Avatar für Platz ${i + 1} wechseln">${localBots[i] ? "🤖" : avatarFor(i)}</button>` +
-        `<input class="field" id="pname-${i}" data-i="${i}" maxlength="18" autocomplete="off" enterkeyhint="next" placeholder="${localBots[i] ? G.BOT_NAMES[names.slice(0, i).filter((_, k) => localBots[k] && !names[k].trim()).length] + " (Computer)" : `Spieler ${i + 1}`}" value="${esc(n)}">` +
-        `<button class="botbtn" type="button" data-bot="${i}" aria-pressed="${!!localBots[i]}" title="Computer spielt diesen Platz" aria-label="Platz ${i + 1} vom Computer spielen lassen">🤖</button>` +
-        (names.length > 2 ? `<button class="rm" type="button" data-rm="${i}" aria-label="Spieler ${i + 1} entfernen">×</button>` : "") +
-        `</div>`).join("");
-    }
-    $("#addPlayer").hidden = names.length >= 10;
-    $("#levelLocalBox").hidden = !names.some((_, i) => localBots[i]);
+    HOME.render();
     $("#levelLocal").innerHTML = levelButtons(localLevel);
     $("#myAvatar").textContent = myAvatar;
     LOOK.render();
@@ -940,7 +927,7 @@
       local(box) {
         box.append(
           UI.armed(`${L.players[localViewer()].name}: Runde aufgeben`, () => doAct({ t: "surrender" }, localViewer())),
-          UI.armed("Runde neu mischen", () => { L.round--; G.startRound(L); hidden = true; store.set(K.local, L); render(); scheduleLocalUno(); }),
+          UI.armed("Runde neu mischen", () => { L.round--; G.startRound(L); hidden = false; store.set(K.local, L); render(); scheduleLocalUno(); }),
           UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; render(); })
         );
       },
@@ -978,37 +965,16 @@
     wsSend({ t: "create", name: n, goal: goalOnline, rules: localRules, avatar: myAvatar });
   });
 
-  $("#plist").addEventListener("input", (e) => { if (e.target.dataset.i != null) { names[+e.target.dataset.i] = e.target.value; store.set(K.names, names); } });
-  $("#plist").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-rm]");
-    if (b) { names.splice(+b.dataset.rm, 1); localBots.splice(+b.dataset.rm, 1); store.set(K.names, names); store.set("passuno.bots", localBots); renderHome(); }
-    const av = e.target.closest("[data-av]");
-    if (av) { const i = +av.dataset.av; if (localBots[i]) return; localAvatars[i] = nextAvatar(avatarFor(i)); store.set("passuno.avatars", localAvatars); renderHome(); }
-    const t = e.target.closest("[data-bot]");
-    if (t) { const i = +t.dataset.bot; localBots[i] = !localBots[i]; store.set("passuno.bots", localBots); renderHome(); }
-  });
-  $("#plist").addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const nx = document.getElementById(`pname-${+e.target.dataset.i + 1}`);
-    if (nx) nx.focus(); else e.target.blur();
-  });
-  $("#addPlayer").addEventListener("click", () => {
-    if (names.length >= 10) return;
-    names.push(""); renderHome();
-    const el = document.getElementById(`pname-${names.length - 1}`); if (el) el.focus();
-  });
   $("#startLocal").addEventListener("click", () => {
-    if (names.every((_, i) => localBots[i])) { toast("Mindestens ein Mensch muss mitspielen."); return; }
-    L = G.newGame(names.map((n, i) => n.trim() || (localBots[i] ? G.BOT_NAMES[names.slice(0, i).filter((_, k) => localBots[k] && !names[k].trim()).length] : `Spieler ${i + 1}`)), goalLocal, Object.assign({}, localRules, { jumpIn: false, turnTimer: false }));
-    L.players.forEach((p, i) => { p.bot = !!localBots[i]; p.avatar = p.bot ? "🤖" : avatarFor(i); });
-    mode = "local"; viewer = null; hidden = true;
-    if (isBot(L.cur)) { viewer = firstHuman(); hidden = false; }
+    const { names, bots } = HOME.roster($("#myName").value);
+    L = G.newGame(names, goalLocal, Object.assign({}, localRules, { jumpIn: false, turnTimer: false }));
+    L.players.forEach((p, i) => { p.bot = bots[i]; p.avatar = p.bot ? "🤖" : myAvatar; });
+    mode = "local"; viewer = 0; hidden = false;
     store.set(K.local, L); render(); wake();
   });
   $("#resumeBtn").addEventListener("click", () => {
     L = store.get(K.local); if (!L) return render();
-    mode = "local"; viewer = null; hidden = !isBot(L.cur);
-    if (!hidden) viewer = firstHuman();
+    mode = "local"; viewer = 0; hidden = false;
     render(); wake(); scheduleLocalUno();
   });
 

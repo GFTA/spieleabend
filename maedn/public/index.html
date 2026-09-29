@@ -250,23 +250,26 @@ button.die:disabled{cursor:default}
     <div class="hero">
       <div class="board" id="heroBoard" aria-hidden="true"></div>
       <h1>Mensch <span>ärgere dich nicht</span></h1>
-      <p class="tagline">Für 2 bis 4 Spieler, jeder mit dem eigenen Handy oder alle an einem Gerät. Mit Hausregeln und Computer-Gegnern.</p>
+      <p class="tagline">Für 2 bis 4 Spieler, jeder mit dem eigenen Handy, oder allein gegen den Computer. Mit Hausregeln.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="row">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
     </div>
 
     <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
-      <button type="button" data-tab="online" aria-pressed="true">Jeder sein Handy</button>
-      <button type="button" data-tab="local" aria-pressed="false">Ein Gerät für alle</button>
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
     </div>
 
     <!-- online -->
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
-      <label class="label" for="myName">Dein Name</label>
-      <div class="row">
-        <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
-        <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
-      </div>
-      <div class="avgrid" id="avatarGrid" hidden></div>
       <div class="label">Raum beitreten</div>
       <div class="row">
         <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
@@ -278,7 +281,7 @@ button.die:disabled{cursor:default}
       <button class="btn" id="createBtn" type="button">Raum erstellen</button>
     </div>
     <div class="panel" id="onlineOff" hidden>
-      <p class="hint">Für „Jeder sein Handy“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem Mini-PC zu Hause. Öffne dann dessen Adresse, etwa <b>http://192.168.178.20:8084</b>. Hier geht nur „Ein Gerät für alle“.</p>
+      <p class="hint">Für „Mehrspieler“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem Mini-PC zu Hause. Öffne dann dessen Adresse, etwa <b>http://192.168.178.20:8084</b>. Hier geht nur „Einzelspieler“.</p>
     </div>
 
     <!-- local -->
@@ -287,10 +290,7 @@ button.die:disabled{cursor:default}
         <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
         <p class="hint" id="resumeHint"></p>
       </div>
-      <div class="label">Spieler</div>
-      <div class="plist" id="plist"></div>
-      <button class="btn btn-ghost" id="addPlayer" type="button">+ Spieler</button>
-      <p class="hint">Tippe auf <b>Mensch</b>, um daraus einen Computer-Gegner zu machen.</p>
+      <div class="panel" id="oppBox"></div>
       <div class="label">Spielziel</div>
       <div class="seg two" id="goalLocal" role="group" aria-label="Spielziel"></div>
       <div class="label">Computer-Gegner</div>
@@ -396,6 +396,7 @@ button.die:disabled{cursor:default}
 
 <script src="kit.js"></script>
 <script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
 <script src="game.js"></script>
 <script src="app.js"></script>
 <!-- ARTIFACT-BODY-END -->
