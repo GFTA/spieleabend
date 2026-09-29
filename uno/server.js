@@ -50,7 +50,7 @@ module.exports = require("../shared/room-server.js")({
     const decided = forgotUno.get(room.code); // "pi:until" -> true if the bot forgets, decided once per window
     const forgets = (w) => {
       const k = `${w.pi}:${w.until}`;
-      if (!decided.has(k)) decided.set(k, Math.random() > Uno.BOT_UNO[levelOf(room)]);
+      if (!decided.has(k)) decided.set(k, Math.random() > Uno.BOT_UNO[Uno.botLevel(S, w.pi, levelOf(room))]);
       return decided.get(k);
     };
     const open = new Set((S.unoWaits || []).map((w) => `${w.pi}:${w.until}`));
@@ -62,7 +62,7 @@ module.exports = require("../shared/room-server.js")({
   },
   botMove(room, pi, { apply }) {
     const S = room.state;
-    const a = Uno.suggest(Uno.view(S, pi), levelOf(room));
+    const a = Uno.suggest(Uno.view(S, pi), Uno.botLevel(S, pi, levelOf(room)));
     if (!a) return false;
     return apply(room, pi, a).ok || (a.t === "play" && apply(room, pi, { t: S.phase === "drawn" ? "keep" : "draw" }).ok);
   },

@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="room-ui.css">
 <style>
 :root{--wild:#17121f}
-/* table designs, picked under "Aussehen" */
+/* table designs, picked in the settings menu */
 :root[data-table="mint"] .card-back::after{background:#17121f}
 :root[data-table="light"] .card-back::after{background:#17121f}
 :root[data-table="blossom"] .card-back::after{background:#17121f}
@@ -236,6 +236,22 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 #unoFlash span{font-family:var(--display);font-size:min(28vw,180px);color:var(--red);text-shadow:6px 6px 0 #1b1325;animation:boom .8s ease-out forwards;text-align:center;line-height:.9}
 #unoFlash small{display:block;font-size:.2em;color:#fff;text-shadow:2px 2px 0 #1b1325}
 @keyframes boom{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.4) rotate(-4deg);opacity:0}}
+/* wide desktop: bigger piles, hand and opponents */
+@media (min-width:1100px) and (min-height:700px){
+  .topbar{padding-inline:24px}
+  .seat.h{--bw:32px;--bh:48px}
+  .seat.v{--bw:48px;--bh:32px}
+  .slabel{font-size:17px;--lw:180px}
+  .scount{min-width:30px;height:30px;border-radius:15px}
+  .piles{gap:clamp(28px,4vw,72px)}
+  .pile .card{--cw:clamp(112px,min(21vh,12vw),230px)}
+  .lastmove{font-size:18px;max-width:min(92%,640px)}
+  .pile .cap{font-size:14px}
+  .tinfo{font-size:16px}
+  .hand{--cw:calc(clamp(88px,min(15vh,7.4vw),150px) * var(--cs));--step:calc(var(--cw) + 10px)}
+  .dock{width:100%;max-width:1400px;align-self:center}
+  .dock .status b{font-size:20px}.dock .status small{font-size:15px}
+}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
@@ -310,10 +326,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       </div>
       <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
     </div>
-    <details class="houserules">
-      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
-    </details>
     <p class="hint">Wer eine Runde gewinnt, bekommt die Punkte aller Karten, die die anderen noch auf der Hand haben.</p>
   </section>
 

@@ -53,7 +53,13 @@
   const TURN_MS = 30000;
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
-  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
+  const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer", random: "Zufällig" };
+  // "random": every computer seat draws its own strength once per game
+  const botLevel = (S, pi, level) => {
+    if (level !== "random") return level;
+    const a = S.botLvls || (S.botLvls = []);
+    return a[pi] || (a[pi] = ["easy", "normal", "hard"][Math.floor(Math.random() * 3)]);
+  };
   // how often a computer player remembers to call UNO
   const BOT_UNO = { easy: 0.6, normal: 0.9, hard: 1 };
   function normRules(r) {
@@ -467,5 +473,5 @@
     };
   }
 
-  return { COLORS, CNAME, VNAME, UNO_MS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, BOT_UNO, suggest, RULES, normRules, canJumpIn, newGame, startRound, act, tick, nextDeadline, view, canPlay, cardName, isNum, points, nextIdx, buildDeck };
+  return { COLORS, CNAME, VNAME, UNO_MS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, BOT_UNO, suggest, RULES, normRules, canJumpIn, newGame, startRound, act, tick, nextDeadline, view, canPlay, cardName, isNum, points, nextIdx, buildDeck };
 });
