@@ -28,7 +28,7 @@
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "wuerfelpoker.opp", max: 8, botNames: G.BOT_NAMES, onChange: () => renderHome() });
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
-  let goalLocal = 5, goalOnline = 5;
+  let goalLocal = 5;
   let localLevel = G.BOT_LEVELS[store.get(K.level)] ? store.get(K.level) : "normal";
   let localRules = G.normRules(store.get(K.rules) || {});
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
@@ -350,7 +350,6 @@
     const sh = $("#serverHint");
     sh.hidden = serverState === "ok";
     sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …" : "Unter dieser Adresse antwortet kein Würfelpoker-Server. „Einzelspieler“ geht immer.";
-    $("#goalOnline").innerHTML = goalButtons(goalOnline);
     $("#goalLocal").innerHTML = goalButtons(goalLocal);
     $("#myAvatar").textContent = myAvatar;
     const saved = store.get(K.local);
@@ -394,7 +393,6 @@
 
   // ---------- events ----------
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
-  $("#goalOnline").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalOnline = +b.dataset.goal; renderHome(); } });
   $("#goalLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-goal]"); if (b) { goalLocal = +b.dataset.goal; renderHome(); } });
   // ---------- waiting room and menu: shared (room-ui.js), plus this game's own parts ----------
   const UI = window.RoomUI({
@@ -452,23 +450,8 @@
   $("#goalLobby").addEventListener("click",(e) => { const b = e.target.closest("[data-goal]"); if (b && R && R.you === R.host) wsSend({ t: "goal", goal: +b.dataset.goal }); });
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   Spieleabend.avatarPicker({ avatars: G.AVATARS, get: () => myAvatar, set: (a) => { myAvatar = a; store.set(K.avatar, a); } });
   const myName = () => { const n = $("#myName").value.trim(); if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); } return n; };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, goal: goalOnline, rules: localRules, avatar: myAvatar });
-  });
 
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (!b) return; localLevel = b.dataset.level; store.set(K.level, localLevel); renderHome(); });
   $("#rulesLocal").addEventListener("change", (e) => {
