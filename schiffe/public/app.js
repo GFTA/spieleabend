@@ -83,53 +83,22 @@
   function shakeBoard() {
     const b = $("#board"); b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
   }
-  let soundOn = store.get(K.sound) !== false;
-  const buzz = (ms) => { if (!soundOn) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
-
-  // tiny synthesized sound effects, no files needed; iOS unlocks audio on the first touch
-  let actx = null, noiseBuf = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
-    if (actx.state === "suspended") actx.resume().catch(() => {});
-    return actx;
-  }
-  document.addEventListener("pointerdown", () => { if (soundOn) audio(); }, { once: true, capture: true });
-  function tone(freq, start, dur, type = "sine", vol = 0.18, to) {
-    const a = audio(); if (!a) return;
-    const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
-  }
-  function noise(start, dur, vol, freq) {
-    const a = audio(); if (!a) return;
-    if (!noiseBuf) {
-      noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
-      const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    const t = a.currentTime + start, s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-    s.buffer = noiseBuf; f.type = "lowpass"; f.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(f).connect(g).connect(a.destination); s.start(t); s.stop(t + dur + 0.02);
-  }
-  const SFX = {
-    fire: () => tone(900, 0, 0.22, "triangle", 0.1, 180),
-    splash: () => { noise(0.18, 0.4, 0.22, 1400); tone(420, 0.18, 0.12, "sine", 0.06, 200); },
-    boom: () => { noise(0.18, 0.55, 0.5, 700); tone(110, 0.18, 0.4, "sine", 0.3, 40); },
-    sunk: () => { noise(0.18, 0.9, 0.55, 500); tone(90, 0.18, 0.7, "sawtooth", 0.12, 30); [392, 330, 262].forEach((f, i) => tone(f, 0.55 + i * 0.12, 0.2, "triangle", 0.1)); },
-    turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
-    sonar: () => { tone(1320, 0, 0.5, "sine", 0.12); tone(1320, 0.55, 0.5, "sine", 0.05); },
-    bad: () => { tone(300, 0, 0.14, "sawtooth", 0.08); tone(200, 0.14, 0.24, "sawtooth", 0.08); },
-    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
-    pop: () => tone(740, 0, 0.06, "sine", 0.12),
-    tick: () => tone(1200, 0, 0.05, "square", 0.06),
-    torpedo: () => { noise(0, 0.9, 0.12, 400); tone(160, 0, 0.8, "sine", 0.08, 90); }
-  };
-  const sfx = (k) => { if (soundOn && document.visibilityState === "visible") try { SFX[k](); } catch (e) {} };
+  const { sfx, buzz, wake } = Spieleabend.sound({
+    key: K.sound,
+    effects: ({ tone, noise }) => ({
+      fire: () => tone(900, 0, 0.22, "triangle", 0.1, 180),
+      splash: () => { noise(0.18, 0.4, 0.22, 1400); tone(420, 0.18, 0.12, "sine", 0.06, 200); },
+      boom: () => { noise(0.18, 0.55, 0.5, 700); tone(110, 0.18, 0.4, "sine", 0.3, 40); },
+      sunk: () => { noise(0.18, 0.9, 0.55, 500); tone(90, 0.18, 0.7, "sawtooth", 0.12, 30); [392, 330, 262].forEach((f, i) => tone(f, 0.55 + i * 0.12, 0.2, "triangle", 0.1)); },
+      turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
+      sonar: () => { tone(1320, 0, 0.5, "sine", 0.12); tone(1320, 0.55, 0.5, "sine", 0.05); },
+      bad: () => { tone(300, 0, 0.14, "sawtooth", 0.08); tone(200, 0.14, 0.24, "sawtooth", 0.08); },
+      win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
+      pop: () => tone(740, 0, 0.06, "sine", 0.12),
+      tick: () => tone(1200, 0, 0.05, "square", 0.06),
+      torpedo: () => { noise(0, 0.9, 0.12, 400); tone(160, 0, 0.8, "sine", 0.08, 90); }
+    })
+  });
 
   // ---------- events → feedback ----------
   // v is the view after the events, from the viewer's side (me = -1 on a shared phone between players)
@@ -1160,8 +1129,6 @@
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) { levelLocal = +b.dataset.v; store.set(K.level, levelLocal); renderHome(); } });
 
   $("#myName").value = store.get(K.me) || "";
-  $("#soundOn").checked = soundOn;
-  $("#soundOn").addEventListener("change", (e) => { soundOn = e.target.checked; store.set(K.sound, soundOn); if (soundOn) { audio(); sfx("pop"); } });
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
   $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   const myName = () => {
@@ -1247,10 +1214,6 @@
   $("#aimHelp").addEventListener("change", (e) => { aimHelp = e.target.checked; store.set(K.help, aimHelp); if (V) renderGame(); });
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)
-  let lock = null;
-  async function wake() {
-    try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {}
-  }
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (mode) wake();
@@ -1259,34 +1222,10 @@
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ---------- boot ----------
-  // Is there a game server behind this address? Ask twice over HTTP (some ad blockers
-  // eat such requests), then simply try the WebSocket.
-  async function getJson(path, ms) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
-    try {
-      const r = await fetch(path, { cache: "no-store", signal: ctl.signal });
-      const j = await r.json();
-      return j && j.schiffe ? j : null;
-    } catch (e) { return null; } finally { clearTimeout(t); }
-  }
-  function probeSocket(ms) {
-    return new Promise((res) => {
-      let w;
-      try { w = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return res(false); }
-      const t = setTimeout(() => { w.close(); res(false); }, ms);
-      w.onopen = () => { clearTimeout(t); w.close(); res(true); };
-      w.onerror = () => { clearTimeout(t); res(false); };
-    });
-  }
-  async function detectServer() {
-    if (!webHost) return null;
-    return (await getJson("/schiffe-server", 6000)) || (await getJson("/info", 4000)) || ((await probeSocket(6000)) ? {} : null);
-  }
-  const code = new URLSearchParams(location.search).get("r");
-  if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const code = UI.roomCode();
   render();
   if (webHost && (store.get(K.online) && !code)) UI.resume();
-  detectServer().then((info) => {
+  UI.detectServer("/schiffe-server", "schiffe").then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }
     render();

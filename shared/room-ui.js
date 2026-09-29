@@ -108,7 +108,7 @@
   //   cycleAvatar() -> the next avatar for me (also stored by the app)
   //   menu: { open(), local(box), player(box), skip(V) -> may the host skip the current player, standIn }
   // }
-  // returns { send, resume, update, renderLobby, rematchStatus, armed, ... }; update() runs on every render
+  // returns { send, resume, update, renderLobby, rematchStatus, armed, detectServer(path, flag), roomCode(), ... }; update() runs on every render
   window.RoomUI = function (app) {
     const R = () => app.room(), V = () => app.view();
     const store = window.Spieleabend.store, startUrl = window.Spieleabend.startUrl;
@@ -454,6 +454,36 @@
     });
     $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
 
-    return { send, resume, update, renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, ICONS };
+    // ---------- boot: is there a game server behind this address, and was I sent a room code (?r=) ----------
+    // Ask twice over HTTP (some ad blockers eat such requests), then simply try the WebSocket.
+    // path: the game's own /xxx-server answer, flag: the key that answer carries ({uno: true, ...})
+    async function getJson(path, flag, ms) {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
+      try {
+        const r = await fetch(path, { cache: "no-store", signal: ctl.signal });
+        const j = await r.json();
+        return j && j[flag] ? j : null;
+      } catch (e) { return null; } finally { clearTimeout(t); }
+    }
+    function probeSocket(ms) {
+      return new Promise((res) => {
+        let w;
+        try { w = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return res(false); }
+        const t = setTimeout(() => { w.close(); res(false); }, ms);
+        w.onopen = () => { clearTimeout(t); w.close(); res(true); };
+        w.onerror = () => { clearTimeout(t); res(false); };
+      });
+    }
+    async function detectServer(path, flag) {
+      if (!/^https?:$/.test(location.protocol)) return null;
+      return (await getJson(path, flag, 6000)) || (await getJson("/info", flag, 4000)) || ((await probeSocket(6000)) ? {} : null);
+    }
+    function roomCode() {
+      const code = new URLSearchParams(location.search).get("r");
+      if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+      return code;
+    }
+
+    return { send, resume, update, renderLobby, renderReady, rematchStatus, armed, openMenu, joinUrl, detectServer, roomCode, ICONS };
   };
 })();

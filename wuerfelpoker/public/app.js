@@ -52,32 +52,18 @@
   const { toast, confetti, showBubble } = Spieleabend;
 
   // ---------- sound ----------
-  let soundOn = store.get(K.sound) !== false;
-  const buzz = (ms) => { if (!soundOn) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
-  let actx = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
-    if (actx.state === "suspended") actx.resume().catch(() => {});
-    return actx;
-  }
-  document.addEventListener("pointerdown", () => { if (soundOn) audio(); }, { once: true, capture: true });
-  function tone(freq, start, dur, type = "sine", vol = 0.15) {
-    const a = audio(); if (!a) return;
-    const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
-  }
-  const SFX = {
-    rattle: (n) => { for (let i = 0; i < 5 + n * 2; i++) tone(160 + Math.random() * 260, i * 0.045 + Math.random() * 0.02, 0.03, "triangle", 0.12); },
-    land: () => tone(220, 0, 0.06, "triangle", 0.18),
-    hold: () => tone(760, 0, 0.05, "sine", 0.1),
-    turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
-    big: () => [523, 659, 784].forEach((f, i) => tone(f, i * 0.08, 0.18, "square", 0.06)),
-    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
-    pop: () => tone(740, 0, 0.06, "sine", 0.12)
-  };
-  const sfx = (k, ...a) => { if (soundOn && document.visibilityState === "visible") try { SFX[k](...a); } catch (e) {} };
+  const { sfx, buzz, wake } = Spieleabend.sound({
+    key: K.sound, vol: 0.15,
+    effects: ({ tone }) => ({
+      rattle: (n) => { for (let i = 0; i < 5 + n * 2; i++) tone(160 + Math.random() * 260, i * 0.045 + Math.random() * 0.02, 0.03, "triangle", 0.12); },
+      land: () => tone(220, 0, 0.06, "triangle", 0.18),
+      hold: () => tone(760, 0, 0.05, "sine", 0.1),
+      turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
+      big: () => [523, 659, 784].forEach((f, i) => tone(f, i * 0.08, 0.18, "square", 0.06)),
+      win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
+      pop: () => tone(740, 0, 0.06, "sine", 0.12)
+    })
+  });
 
   // ---------- one-phone mode ----------
   let viewer = null; // the human whose name the phone shows while a computer plays
@@ -591,15 +577,11 @@
 
   // leave the room from the menu's bottom row: first tap turns it red, the second leaves
 
-  $("#soundOn").checked = soundOn;
-  $("#soundOn").addEventListener("change", (e) => { soundOn = e.target.checked; store.set(K.sound, soundOn); if (soundOn) { audio(); sfx("pop"); } });
   // best hand first, with an example throw
   const EXAMPLES = [[6, 6, 6, 6, 6], [4, 4, 4, 4, 2], [5, 5, 5, 3, 3], [2, 3, 4, 5, 6], [1, 2, 3, 4, 5], [3, 3, 3, 6, 1], [6, 6, 2, 2, 4], [5, 5, 1, 3, 6], [1, 3, 4, 5, 6]];
   for (const ol of document.querySelectorAll(".ranklist")) ol.innerHTML = G.HANDS.slice().reverse().map((h, k) => `<li><b>${h}</b> <span class="res" style="display:inline-flex;gap:2px;vertical-align:middle">${EXAMPLES[k].map((v) => dieHTML(v, "mini")).join("")}</span></li>`).join("");
 
   // keep the screen on while playing (needs HTTPS)
-  let lock = null;
-  async function wake() { try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {} }
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (mode) wake();
@@ -607,29 +589,10 @@
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ---------- boot ----------
-  async function getJson(path, ms) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
-    try { const r = await fetch(path, { cache: "no-store", signal: ctl.signal }); const j = await r.json(); return j && j.wuerfelpoker ? j : null; }
-    catch (e) { return null; } finally { clearTimeout(t); }
-  }
-  function probeSocket(ms) {
-    return new Promise((res) => {
-      let w;
-      try { w = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return res(false); }
-      const t = setTimeout(() => { w.close(); res(false); }, ms);
-      w.onopen = () => { clearTimeout(t); w.close(); res(true); };
-      w.onerror = () => { clearTimeout(t); res(false); };
-    });
-  }
-  async function detectServer() {
-    if (!webHost) return null;
-    return (await getJson("/wuerfelpoker-server", 6000)) || (await getJson("/info", 4000)) || ((await probeSocket(6000)) ? {} : null);
-  }
-  const code = new URLSearchParams(location.search).get("r");
-  if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const code = UI.roomCode();
   render();
   if (webHost && store.get(K.online) && !code) UI.resume();
-  detectServer().then((info) => {
+  UI.detectServer("/wuerfelpoker-server", "wuerfelpoker").then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }
     render();

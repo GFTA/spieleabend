@@ -92,37 +92,19 @@
     const el = document.querySelector(`#hand [data-id="${id}"]`);
     if (el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
   }
-  let soundOn = store.get("passuno.sound") !== false;
-  const buzz = (ms) => { if (!soundOn) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
-
-  // tiny synthesized sound effects, no files needed; iOS unlocks audio on the first touch
-  let actx = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
-    if (actx.state === "suspended") actx.resume().catch(() => {});
-    return actx;
-  }
-  document.addEventListener("pointerdown", () => { if (soundOn) audio(); }, { once: true, capture: true });
-  function tone(freq, start, dur, type = "sine", vol = 0.18) {
-    const a = audio(); if (!a) return;
-    const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
-  }
-  const SFX = {
-    card: () => { tone(520, 0, 0.07, "triangle", 0.2); tone(340, 0.03, 0.08, "triangle", 0.12); },
-    draw: () => tone(260, 0, 0.1, "triangle", 0.14),
-    turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
-    uno: () => { tone(523, 0, 0.1, "square", 0.08); tone(659, 0.09, 0.1, "square", 0.08); tone(784, 0.18, 0.22, "square", 0.08); },
-    alarm: () => { tone(880, 0, 0.08, "square", 0.07); tone(880, 0.16, 0.08, "square", 0.07); },
-    bad: () => { tone(300, 0, 0.14, "sawtooth", 0.08); tone(200, 0.14, 0.24, "sawtooth", 0.08); },
-    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
-    pop: () => tone(740, 0, 0.06, "sine", 0.12)
-  };
-  const sfx = (k) => { if (soundOn && document.visibilityState === "visible") try { SFX[k](); } catch (e) {} };
+  const { sfx, buzz, wake } = Spieleabend.sound({
+    key: "passuno.sound",
+    effects: ({ tone }) => ({
+      card: () => { tone(520, 0, 0.07, "triangle", 0.2); tone(340, 0.03, 0.08, "triangle", 0.12); },
+      draw: () => tone(260, 0, 0.1, "triangle", 0.14),
+      turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
+      uno: () => { tone(523, 0, 0.1, "square", 0.08); tone(659, 0.09, 0.1, "square", 0.08); tone(784, 0.18, 0.22, "square", 0.08); },
+      alarm: () => { tone(880, 0, 0.08, "square", 0.07); tone(880, 0.16, 0.08, "square", 0.07); },
+      bad: () => { tone(300, 0, 0.14, "sawtooth", 0.08); tone(200, 0.14, 0.24, "sawtooth", 0.08); },
+      win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
+      pop: () => tone(740, 0, 0.06, "sine", 0.12)
+    })
+  });
 
   // ---------- actions ----------
   // messages for rule events; `me` is the viewer online, -1 on a shared phone
@@ -974,8 +956,6 @@
   $("#goalLobby").addEventListener("click",(e) => { const b = e.target.closest("[data-goal]"); if (b && R && R.you === R.host) wsSend({ t: "goal", goal: +b.dataset.goal }); });
 
   $("#myName").value = store.get(K.me) || "";
-  $("#soundOn").checked = soundOn;
-  $("#soundOn").addEventListener("change", (e) => { soundOn = e.target.checked; store.set("passuno.sound", soundOn); if (soundOn) { audio(); sfx("pop"); } });
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
   $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   const myName = () => {
@@ -1072,10 +1052,6 @@
 
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)
-  let lock = null;
-  async function wake() {
-    try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {}
-  }
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") { abortDrag(); return; }
     if (mode) wake();
@@ -1099,34 +1075,10 @@
   });
 
   // ---------- boot ----------
-  // Is there a Pass-Uno server behind this address? Ask twice over HTTP (some ad blockers
-  // eat such requests), then simply try the WebSocket.
-  async function getJson(path, ms) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
-    try {
-      const r = await fetch(path, { cache: "no-store", signal: ctl.signal });
-      const j = await r.json();
-      return j && j.uno ? j : null;
-    } catch (e) { return null; } finally { clearTimeout(t); }
-  }
-  function probeSocket(ms) {
-    return new Promise((res) => {
-      let w;
-      try { w = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return res(false); }
-      const t = setTimeout(() => { w.close(); res(false); }, ms);
-      w.onopen = () => { clearTimeout(t); w.close(); res(true); };
-      w.onerror = () => { clearTimeout(t); res(false); };
-    });
-  }
-  async function detectServer() {
-    if (!webHost) return null;
-    return (await getJson("/pass-uno-server", 6000)) || (await getJson("/info", 4000)) || ((await probeSocket(6000)) ? {} : null);
-  }
-  const code = new URLSearchParams(location.search).get("r");
-  if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const code = UI.roomCode();
   render();
   if (webHost && (store.get(K.online) && !code)) UI.resume();
-  detectServer().then((info) => {
+  UI.detectServer("/pass-uno-server", "uno").then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }
     render();

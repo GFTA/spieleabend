@@ -49,35 +49,21 @@
   const { toast, confetti, showBubble } = Spieleabend;
 
   // ---------- sound ----------
-  let soundOn = store.get(K.sound) !== false;
-  const buzz = (ms) => { if (!soundOn) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
-  let actx = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
-    if (actx.state === "suspended") actx.resume().catch(() => {});
-    return actx;
-  }
-  document.addEventListener("pointerdown", () => { if (soundOn) audio(); }, { once: true, capture: true });
-  function tone(freq, start, dur, type = "sine", vol = 0.15) {
-    const a = audio(); if (!a) return;
-    const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
-  }
-  const SFX = {
-    deal: (n = 1) => { for (let i = 0; i < n; i++) tone(300 + Math.random() * 120, i * 0.07, 0.04, "triangle", 0.1); },
-    chip: () => { tone(1300, 0, 0.04, "square", 0.05); tone(1700, 0.05, 0.05, "square", 0.05); },
-    check: () => { tone(200, 0, 0.05, "triangle", 0.2); tone(200, 0.09, 0.05, "triangle", 0.2); },
-    fold: () => tone(180, 0, 0.12, "sawtooth", 0.05),
-    allin: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.06, 0.16, "square", 0.06)),
-    turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
-    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
-    pop: () => tone(740, 0, 0.06, "sine", 0.12),
-    hint: () => tone(760, 0, 0.05, "sine", 0.1),
-    thump: () => { tone(75, 0, 0.14, "sine", 0.35); tone(75, 0.2, 0.16, "sine", 0.3); }
-  };
-  const sfx = (k, ...a) => { if (soundOn && document.visibilityState === "visible") try { SFX[k](...a); } catch (e) {} };
+  const { sfx, buzz, wake } = Spieleabend.sound({
+    key: K.sound, vol: 0.15,
+    effects: ({ tone }) => ({
+      deal: (n = 1) => { for (let i = 0; i < n; i++) tone(300 + Math.random() * 120, i * 0.07, 0.04, "triangle", 0.1); },
+      chip: () => { tone(1300, 0, 0.04, "square", 0.05); tone(1700, 0.05, 0.05, "square", 0.05); },
+      check: () => { tone(200, 0, 0.05, "triangle", 0.2); tone(200, 0.09, 0.05, "triangle", 0.2); },
+      fold: () => tone(180, 0, 0.12, "sawtooth", 0.05),
+      allin: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.06, 0.16, "square", 0.06)),
+      turn: () => { tone(660, 0, 0.12); tone(880, 0.12, 0.18); },
+      win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.25, "triangle", 0.16)),
+      pop: () => tone(740, 0, 0.06, "sine", 0.12),
+      hint: () => tone(760, 0, 0.05, "sine", 0.1),
+      thump: () => { tone(75, 0, 0.14, "sine", 0.35); tone(75, 0.2, 0.16, "sine", 0.3); }
+    })
+  });
 
   // ---------- animation helpers ----------
   const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -803,8 +789,6 @@
     else if (k === "h") showHint();
   });
 
-  $("#soundOn").checked = soundOn;
-  $("#soundOn").addEventListener("change", (e) => { soundOn = e.target.checked; store.set(K.sound, soundOn); if (soundOn) { audio(); sfx("pop"); } });
   // best hand first, with an example
   const EXAMPLES = ["As Ks Qs Js Ts", "9h 9d 9s 9c 2d", "3h 3d 3s 8c 8d", "2s 7s 9s Js Ks", "5h 6d 7s 8c 9d", "Qh Qd Qs 8c 2d", "Qh Qd 8s 8c 2d", "Qh Qd 7s 8c 2d", "Ah Qd 7s 8c 2d"];
   const cardOf = (t) => "shdc".indexOf(t[1]) * 13 + "23456789TJQKA".indexOf(t[0]);
@@ -812,8 +796,6 @@
   for (const ol of document.querySelectorAll(".ranklist")) ol.innerHTML = EXAMPLES.map((t, k) => `<li><b>${RANKNAMES[k]}</b> <span style="display:inline-flex;gap:2px;vertical-align:middle">${t.split(" ").map((c) => cardHTML(cardOf(c), "mini")).join("")}</span></li>`).join("");
 
   // keep the screen on while playing (needs HTTPS)
-  let lock = null;
-  async function wake() { try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {} }
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (mode) wake();
@@ -821,29 +803,10 @@
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ---------- boot ----------
-  async function getJson(path, ms) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
-    try { const r = await fetch(path, { cache: "no-store", signal: ctl.signal }); const j = await r.json(); return j && j.poker ? j : null; }
-    catch (e) { return null; } finally { clearTimeout(t); }
-  }
-  function probeSocket(ms) {
-    return new Promise((res) => {
-      let w;
-      try { w = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws"); } catch (e) { return res(false); }
-      const t = setTimeout(() => { w.close(); res(false); }, ms);
-      w.onopen = () => { clearTimeout(t); w.close(); res(true); };
-      w.onerror = () => { clearTimeout(t); res(false); };
-    });
-  }
-  async function detectServer() {
-    if (!webHost) return null;
-    return (await getJson("/poker-server", 6000)) || (await getJson("/info", 4000)) || ((await probeSocket(6000)) ? {} : null);
-  }
-  const code = new URLSearchParams(location.search).get("r");
-  if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const code = UI.roomCode();
   render();
   if (webHost && store.get(K.online) && !code) UI.resume();
-  detectServer().then((info) => {
+  UI.detectServer("/poker-server", "poker").then((info) => {
     if (info) { server = Object.assign(server || {}, info); serverState = "ok"; }
     else if (serverState !== "ok") { serverState = "none"; if (!tabTouched && !code) tab = "local"; }
     render();

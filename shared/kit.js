@@ -1,7 +1,7 @@
 // Shared browser base of every Spieleabend game, loaded first (before room-ui.js, game.js
 // and app.js): local storage, the table design and size (with the ?table= hand-off from the
 // start page), name and avatar (?name=&av= hand-off, avatar picker), toast, confetti,
-// reaction bubbles and the link back to the start page. app.js uses it as window.Spieleabend.
+// reaction bubbles, sound/haptics/wake lock and the link back to the start page. app.js uses it as window.Spieleabend.
 (function () {
   "use strict";
   const $ = (s) => document.querySelector(s);
@@ -130,5 +130,55 @@
       for (const a of document.querySelectorAll("[data-start-link]")) a.href = startUrl();
   });
 
-  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble };
+  // ---------- sound and haptics: synthesized effects (no files), the on/off switch, screen wake lock ----------
+  // key: where on/off is stored; vol: default loudness of tone(); noiseFilter: "lowpass" | "bandpass";
+  // effects: ({tone, noise}) => ({name: (...args) => ...}). Returns { sfx, buzz, isOn, wake }.
+  function sound({ key, vol: defVol = 0.18, noiseFilter = "lowpass", effects }) {
+    let on = store.get(key) !== false, actx = null, noiseBuf = null, lock = null;
+    function audio() {
+      if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+      if (actx.state === "suspended") actx.resume().catch(() => {});
+      return actx;
+    }
+    // iOS only unlocks audio inside a touch
+    document.addEventListener("pointerdown", () => { if (on) audio(); }, { once: true, capture: true });
+    function tone(freq, start, dur, type = "sine", vol = defVol, to) {
+      const a = audio(); if (!a) return;
+      const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.01, dur / 4));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+    }
+    function noise(start, dur, vol, freq) {
+      const a = audio(); if (!a) return;
+      if (!noiseBuf) {
+        noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      const t = a.currentTime + start, s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+      s.buffer = noiseBuf; f.type = noiseFilter; f.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g).connect(a.destination); s.start(t); s.stop(t + dur + 0.02);
+    }
+    const table = effects({ tone, noise });
+    const sfx = (k, ...args) => { if (on && document.visibilityState === "visible") try { table[k](...args); } catch (e) {} };
+    const buzz = (ms) => { if (!on) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+    // the checkbox is drawn by room-ui.js later in the same script run
+    const sync = () => { const box = $("#soundOn"); if (box) box.checked = on; };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync); else sync();
+    document.addEventListener("change", (e) => {
+      if (!e.target || e.target.id !== "soundOn") return;
+      on = e.target.checked; store.set(key, on); if (on) { audio(); sfx("pop"); }
+    });
+    async function wake() {
+      try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {}
+    }
+    return { sfx, buzz, isOn: () => on, wake };
+  }
+
+  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble, sound };
 })();
