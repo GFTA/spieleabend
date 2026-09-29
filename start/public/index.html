@@ -115,6 +115,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .modes button{flex:1;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-weight:800;background:transparent;color:var(--muted);cursor:pointer}
 .modes button[aria-pressed="true"]{color:var(--text);background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
 .single #party,.single .partybox,.single .join,.single .how,.single .pill{display:none}
+/* in a party the host picks the game: no own start or room code on the cards */
+.inparty .game .actions{display:none}
 .partybox:empty{display:none}
 .partybox .btn{width:100%}
 </style>
@@ -342,6 +344,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     return `Die Party hat ${n} Leute, ${g.name} hat ${g.max} Plätze. Es spielen der Host und alle, die „Bereit“ gedrückt haben, die anderen schauen zu.`;
   };
   function renderPartyBoxes() {
+    document.body.classList.toggle("inparty", !!party);
     for (const box of document.querySelectorAll(".partybox")) {
       const g = games.find((x) => x.id === box.dataset.for);
       if (!party || !g) { box.innerHTML = ""; continue; }
