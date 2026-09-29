@@ -111,10 +111,7 @@ function applyLook() {
 }
 ```
 
-Ausgewählt wird das über zwei identische UI-Stellen in `index.html`, ein
-`<div class="look" id="lookHome">` auf dem Startbildschirm und das
-Einstellungen-Sheet (`id="lookSettings"`, s. u.); `renderLook()` befüllt
-alle Ziele (`#lookHome`, `#lookSettings`) mit denselben Buttons.
+Ausgewählt wird das im Einstellungen-Sheet (`id="lookSettings"`, s. u.); `renderLook()` befüllt es mit den Tisch- und Größen-Buttons.
 
 **Design-Übernahme von der Startseite:** `games.cool-kidz.net` hat oben
 rechts denselben Tisch-Picker und hängt die Wahl als `?table=<id>` an jeden

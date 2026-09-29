@@ -89,9 +89,13 @@ body:has(#game:not([hidden])) .setfab{display:none}
 .ondesk{display:none}
 @media (min-width:1000px) and (min-height:560px){
   .onphone{display:none}.ondesk{display:inline}
-  #chat{inset:0 0 0 auto;width:340px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;align-items:stretch;justify-content:flex-start;gap:0;z-index:15;
-    background:var(--bg2);box-shadow:inset 1.5px 0 0 var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
-  #chat .sheet{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;width:100%}
-  #chat .chatlog{flex:1;max-height:none}
-  body.chatopen{right:340px}
+  #chat{inset:0 0 0 auto;width:320px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;align-items:stretch;justify-content:flex-start;gap:0;z-index:15;
+    background:var(--bg);box-shadow:inset 1px 0 0 var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+  #chat .sheet{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;width:100%;max-width:none;padding:0;border-radius:0;background:none;box-shadow:none;overflow:visible}
+  #chat .sheet h2{font-size:18px;color:var(--muted);font-family:inherit;font-weight:800}
+  #chat .chatlog{flex:1;max-height:none;gap:2px}
+  #chat .chatlog li{padding:6px 0;border-radius:0;background:none;box-shadow:none}
+  #chat .chatlog li.me b{color:var(--accent)}
+  #chat #chatClose{background:none;box-shadow:none;color:var(--muted);font-weight:600;min-height:0;padding:8px}
+  body.chatopen{right:320px}
 }

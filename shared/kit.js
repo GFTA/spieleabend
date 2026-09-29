@@ -36,17 +36,15 @@
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute("content", getComputedStyle(root).getPropertyValue("--bg").trim() || t[2]);
     }
-    // the same buttons on the start screen (#lookHome) and in the menu (#lookSettings)
+    // the design buttons live in the settings menu (#lookSettings)
     function render() {
       const html = `<div class="label">Tisch</div><div class="seg tables">${TABLES.map(([k, n, c]) =>
         `<button type="button" data-table="${k}" aria-pressed="${cur.table === k}"><span class="swatch" style="background:${c}"></span>${n}</button>`).join("")}</div>` +
         `<div class="label">${sizeLabel}</div><div class="seg three">${SIZES.map(([k, n]) =>
         `<button type="button" data-size="${k}" aria-pressed="${cur.size === k}">${n}</button>`).join("")}</div>`;
-      for (const id of ["#lookHome", "#lookSettings"]) { const el = $(id); if (el && el.innerHTML !== html) el.innerHTML = html; }
-      const sum = $("#lookSum");
-      if (sum) sum.textContent = `${(TABLES.find((x) => x[0] === cur.table) || TABLES[0])[1]} · ${(SIZES.find((x) => x[0] === cur.size) || SIZES[1])[1]}`;
+      const el = $("#lookSettings"); if (el && el.innerHTML !== html) el.innerHTML = html;
     }
-    for (const id of ["#lookHome", "#lookSettings"]) { const el = $(id); if (el) el.addEventListener("click", (e) => {
+    { const el = $("#lookSettings"); if (el) el.addEventListener("click", (e) => {
       const t = e.target.closest("[data-table]"), z = e.target.closest("[data-size]");
       if (!t && !z) return;
       if (t) cur.table = t.dataset.table;
