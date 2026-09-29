@@ -560,8 +560,7 @@
     }
     function roomCode() {
       const code = new URLSearchParams(location.search).get("r");
-      if (code) $("#joinCode").value = code.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
-      return code;
+            return code;
     }
 
     return { send, resume, update, renderLobby, renderReady, rematchStatus, roundEndFooter, armed, openMenu, joinUrl, detectServer, roomCode, ICONS };
