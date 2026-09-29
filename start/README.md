@@ -20,7 +20,7 @@ braucht es `up -d --build`).
 
 ## Starten
 
-Auf dem Mini-PC, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe`, `viergewinnt`, `wuerfelpoker` und `maedn`:
+Auf dem Server, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe`, `viergewinnt`, `wuerfelpoker` und `maedn`:
 
 ```sh
 cd spieleabend/start
