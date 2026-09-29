@@ -41,7 +41,6 @@
   let watching = false;   // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
   let sel = null;         // selected hand card id
-  let layMode = false, assign = new Map(), activeG = 1; // building the phase: card id -> group 1|2
   let peek = false;       // round over, looking at the table
   let inflight = false;
   let hidden = false, viewer = null; // shared device: whose hand is shown, and the hand-off screen
@@ -136,13 +135,19 @@
   const still = matchMedia("(prefers-reduced-motion: reduce)");
   const rectOf = (el) => (el ? el.getBoundingClientRect() : null);
   const visible = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
-  // where everything is before an update (hand cards and meld cards by id)
+  const topCardEl = () => $("#discardBtn .card:last-child");
+  let dropFrom = null; // a card just let go of in a drag: the next flight of it starts there
+  // where everything is before an update: hand and spread, cards on the table, seats
   function snap() {
-    const s = { deck: rectOf($("#deckBtn .card")), discard: rectOf($("#discardBtn .card, #discardBtn .empty")), plates: {}, hand: {}, meld: {} };
+    const s = { deck: rectOf($("#deckBtn .card:last-child")), discard: rectOf($("#discardBtn")), plates: {}, hand: {}, meld: {} };
     for (const p of document.querySelectorAll("#plates .plate")) s.plates[p.dataset.seat] = rectOf(p);
-    for (const c of document.querySelectorAll("#hand .card")) s.hand[c.dataset.id] = rectOf(c);
-    for (const c of document.querySelectorAll("#melds .card")) s.meld[c.dataset.id] = rectOf(c);
+    for (const c of document.querySelectorAll("#hand .card, #myZone .slots .card")) s.hand[c.dataset.id] = rectOf(c);
+    for (const c of document.querySelectorAll(".meld .card")) s.meld[c.dataset.id] = rectOf(c);
     s.top = V && V.top;
+    if (dropFrom && Date.now() - dropFrom.at < 4000) {
+      if (dropFrom.id != null) s.hand[dropFrom.id] = dropFrom.rect; else s.drawFrom = dropFrom.rect;
+      dropFrom = null;
+    }
     return s;
   }
   // a card (face or back) flies from rect `from` onto element `to`, which shows up when it lands
@@ -152,8 +157,7 @@
     const f = document.createElement("div");
     f.className = "flyer";
     f.innerHTML = html;
-    const card = f.firstElementChild;
-    card.style.setProperty("--cw", tr.width + "px");
+    f.firstElementChild.style.setProperty("--cw", tr.width + "px");
     document.body.appendChild(f);
     to.style.visibility = "hidden";
     const sx = from.width / tr.width;
@@ -166,6 +170,25 @@
     a.onfinish = done; a.oncancel = done;
     setTimeout(done, dur + delay + 400);
   }
+  // a short straight glide, for cards snapping into place
+  function glide(html, from, to, dur = 220) {
+    const tr = rectOf(to);
+    if (!visible(from) || !visible(tr) || still.matches) return;
+    const f = document.createElement("div");
+    f.className = "flyer";
+    f.innerHTML = html;
+    f.firstElementChild.style.setProperty("--cw", tr.width + "px");
+    document.body.appendChild(f);
+    to.style.visibility = "hidden";
+    const a = f.animate([
+      { transform: `translate(${from.left}px,${from.top}px) scale(${from.width / tr.width})` },
+      { transform: `translate(${tr.left}px,${tr.top}px) scale(1)` }
+    ], { duration: dur, easing: "cubic-bezier(.2,.9,.3,1.15)", fill: "both" });
+    const done = () => { f.remove(); to.style.visibility = ""; };
+    a.onfinish = done; a.oncancel = done;
+    setTimeout(done, dur + 400);
+  }
+  const cardEl = (id) => document.querySelector(`#hand .card[data-id="${id}"], #myZone .slots .card[data-id="${id}"]`);
   function plateEl(i) { return document.querySelector(`#plates [data-seat="${i}"]`); }
   function bumpPlate(i) { const p = plateEl(i); if (p) { p.classList.remove("bump"); void p.offsetWidth; p.classList.add("bump"); } }
   // play the events of the last update as flights, using where things were before
@@ -175,31 +198,25 @@
     for (const ev of events || []) {
       const mine = ev.pi === v.me;
       if (ev.t === "draw") {
-        const src = ev.from === "discard" ? before.discard : before.deck;
+        const src = (mine && before.drawFrom) || (ev.from === "discard" ? before.discard : before.deck);
         const face = mine ? v.hand.find((c) => c.id === ev.id) : ev.from === "discard" ? before.top : null;
-        const dest = mine ? document.querySelector(`#hand .card[data-id="${ev.id}"]`) : plateEl(ev.pi);
-        if (dest && !mine) { // a card back flies into the player's seat
-          const ghost = document.createElement("span"); ghost.className = "card back"; ghost.style.cssText = "position:absolute;left:50%;top:50%;width:1px;opacity:0";
-          dest.appendChild(ghost); setTimeout(() => ghost.remove(), 900);
-          fly(face ? cardHTML(face) : backHTML(), src, dest, k * 90, 440); bumpPlate(ev.pi);
-        } else if (dest) fly(face ? cardHTML(face) : backHTML(), src, dest, k * 90);
+        const dest = mine ? cardEl(ev.id) : plateEl(ev.pi);
+        if (dest) fly(face ? cardHTML(face) : backHTML(), src, dest, k * 90, mine ? 420 : 440);
+        if (!mine) bumpPlate(ev.pi);
         k++;
       } else if (ev.t === "discard") {
-        const c = v.top && v.top.id === ev.id ? v.top : null;
-        const from = (mine && before.hand[ev.id]) || before.plates[ev.pi];
-        const dest = $("#discardBtn .card");
-        if (c && dest) fly(cardHTML(c), from, dest, k * 90);
+        const dest = topCardEl();
+        if (v.top && v.top.id === ev.id && dest) fly(cardHTML(v.top), (mine && before.hand[ev.id]) || before.plates[ev.pi], dest, k * 90);
         k++;
         if (ev.target != null) setTimeout(() => { const s = document.querySelector(`#plates [data-seat="${ev.target}"] .stamp`); if (s) { s.classList.remove("hit"); void s.offsetWidth; s.classList.add("hit"); } }, 380 + k * 90);
       } else if (ev.t === "lay" || ev.t === "hit") {
-        // the cards that are new on the table fly there from the hand (or the player's seat)
+        // the cards that are new on the table fly there from the hand / spread (or the player's seat)
         const all = v.melds.flatMap((m) => m.cards);
         const ids = ev.t === "hit" ? [ev.id] : v.melds.filter((m) => m.owner === ev.pi).flatMap((m) => m.cards.map((c) => c.id)).filter((id) => !before.meld[id]);
         let j = 0;
         for (const id of ids) {
-          const dest = document.querySelector(`#melds .card[data-id="${id}"]`), c = all.find((x) => x.id === id);
-          const from = (mine && before.hand[id]) || before.plates[ev.pi];
-          if (dest && c) fly(cardHTML(c), from, dest, k * 90 + j++ * 60, 480);
+          const dest = document.querySelector(`.meld .card[data-id="${id}"]`), c = all.find((x) => x.id === id);
+          if (dest && c) fly(cardHTML(c), (mine && before.hand[id]) || before.plates[ev.pi], dest, k * 90 + j++ * 50, mine ? 360 : 480);
         }
         k++;
       }
@@ -211,7 +228,7 @@
     const key = `${mode}:${V.round}:${V.players.map((p) => p.score).join(",")}`;
     if (dealtFor === key) return;
     dealtFor = key;
-    const deck = rectOf($("#deckBtn .card"));
+    const deck = rectOf($("#deckBtn .card:last-child"));
     [...document.querySelectorAll("#hand .card")].forEach((el, i) => fly(backHTML(), deck, el, i * 55, 360));
     sfx("card");
   }
@@ -270,7 +287,7 @@
     const c = V.hand.find((x) => x.id === id);
     if (!c) { toast("Tippe zuerst die Karte an, die du abwerfen willst."); return; }
     if (G.isSkip(c) && target == null && V.rules.skipChoose && V.players.length > 2) return openTargets(id);
-    sel = null; layMode = false; assign.clear();
+    sel = null; staged.delete(id);
     doAct({ t: "discard", id, target });
   }
   function hit(meld) {
@@ -292,25 +309,69 @@
   });
   $("#targetCancel").addEventListener("click", () => { $("#targetPick").hidden = true; });
 
-  // laying the phase: tap cards into group 1 / 2
-  function startLay() {
-    if (!myTurn() || V.step !== "act" || me().laid) return;
-    layMode = true; assign.clear(); activeG = 1; sel = null;
+  // ---------- your spread: drop the phase into its slots, then lay it ----------
+  // card id -> group (1|2); only on this screen until "Auslegen"
+  const staged = new Map();
+  const phaseGroups = () => G.PHASES[me().phase];
+  const stagedIn = (g) => V.hand.filter((c) => staged.get(c.id) === g);
+  // could these cards still become the group? (numbers alike, a colour, a run without doubles)
+  function partialOk(cards, def) {
+    const nat = cards.filter((c) => !G.isWild(c));
+    if (cards.some(G.isSkip)) return false;
+    if (!nat.length) return true;
+    if (def.k === "set") return nat.every((c) => c.v === nat[0].v);
+    if (def.k === "color") return nat.every((c) => c.c === nat[0].c);
+    const vals = nat.map((c) => c.v);
+    return new Set(vals).size === vals.length && Math.max(...vals) - Math.min(...vals) < Math.max(def.n, cards.length);
+  }
+  // a group's cards in the order they lie: a run by number with the jokers in its gaps
+  function groupCards(g) {
+    const cards = stagedIn(g), def = phaseGroups()[g - 1];
+    const m = cards.length && G.makeGroup(cards, def);
+    if (m) return m.cards;
+    return [...cards].sort((a, b) => (a.v || 99) - (b.v || 99) || COL.indexOf(a.c) - COL.indexOf(b.c));
+  }
+  function groupState(g) {
+    const def = phaseGroups()[g - 1], cards = stagedIn(g);
+    if (!cards.length) return "";
+    if (G.makeGroup(cards, def)) return "ok";
+    return cards.length >= def.n || !partialOk(cards, def) ? "bad" : "";
+  }
+  const spreadReady = () => phaseGroups().every((_, i) => groupState(i + 1) === "ok") && staged.size < V.hand.length;
+  // move a card into group g (or back to the hand: g = 0); it glides from `from` into its new place
+  function stage(id, g, from) {
+    const c = V.hand.find((x) => x.id === id);
+    if (!c) return;
+    const r = from || rectOf(cardEl(id));
+    if (g) staged.set(id, g); else staged.delete(id);
+    if (sel === id) sel = null;
     renderGame();
+    glide(cardHTML(c), r, cardEl(id));
+    buzz(8);
   }
   function suggest() {
     const f = G.findPhase(V.hand, me().phase);
     if (!f) { toast("Mit diesen Karten geht die Phase noch nicht."); sfx("bad"); return; }
-    assign.clear();
-    f.forEach((g, i) => g.forEach((c) => assign.set(c.id, i + 1)));
+    const before = {};
+    for (const c of V.hand) before[c.id] = rectOf(cardEl(c.id));
+    staged.clear();
+    f.forEach((g, i) => g.forEach((c) => staged.set(c.id, i + 1)));
+    sel = null;
     renderGame();
+    f.flat().forEach((c, i) => setTimeout(() => glide(cardHTML(c), before[c.id], cardEl(c.id), 260), i * 40));
+  }
+  function unstageAll() {
+    const before = {};
+    for (const id of staged.keys()) before[id] = rectOf(cardEl(id));
+    const ids = [...staged.keys()];
+    staged.clear();
+    renderGame();
+    ids.forEach((id) => { const c = V.hand.find((x) => x.id === id); if (c) glide(cardHTML(c), before[id], cardEl(id), 260); });
   }
   function layNow() {
-    const gs = G.PHASES[me().phase];
-    const groups = gs.map((_, i) => [...assign].filter(([, g]) => g === i + 1).map(([id]) => id));
-    if (groups.some((g) => !g.length)) { toast(gs.length === 2 ? "Tippe die Karten für beide Gruppen an." : "Tippe die Karten für deine Phase an."); return; }
-    if (doAct({ t: "lay", groups }) && mode === "local") { layMode = false; assign.clear(); }
-    if (mode === "online") { layMode = false; assign.clear(); }
+    if (!myTurn() || V.step !== "act") { toast(V.step === "draw" && myTurn() ? "Zieh zuerst eine Karte." : "Auslegen geht, wenn du dran bist."); return; }
+    if (!spreadReady()) { toast("Die Felder passen noch nicht, grün heißt fertig."); sfx("bad"); return; }
+    doAct({ t: "lay", groups: phaseGroups().map((_, i) => groupCards(i + 1).map((c) => c.id)) });
   }
 
   // computer players in the shared-device mode (online the server moves them)
@@ -418,18 +479,43 @@
   }
 
   const meldLabel = (m) => m.k === "set" ? `${m.cards.length}× ${m.value}` : m.k === "run" ? `${m.start}–${m.start + m.len - 1}` : G.CNAME[m.color];
+  const meldHTML = (m, mi, fits) => `<button type="button" class="meld${fits ? " fits" : ""}" data-meld="${mi}" aria-label="${G.groupName(m)}">${m.cards.map((c) => cardHTML(c)).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
+  const selCard = () => (sel != null ? V.hand.find((c) => c.id === sel) : null);
+  // what the others have laid (your own groups lie in your spread)
   function renderMelds(canHit) {
-    const selCard = sel != null ? V.hand.find((c) => c.id === sel) : null;
+    const sc = selCard();
     const rows = V.players.map((p, i) => {
+      if (i === V.me) return "";
       const ms = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === i);
       if (!ms.length) return "";
       return `<div class="mrow"><div class="who">${p.avatar} ${esc(p.name)} <small>Phase ${p.phase} · ${G.phaseName(p.phase)}</small></div><div class="mgroups">` +
-        ms.map(([m, mi]) => {
-          const fits = canHit && selCard && G.fitOnto(m, selCard);
-          return `<button type="button" class="meld${fits ? " fits" : ""}" data-meld="${mi}"${fits ? "" : " tabindex=\"-1\""} aria-label="${G.groupName(m)}">${m.cards.map((c) => cardHTML(c)).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
-        }).join("") + "</div></div>";
+        ms.map(([m, mi]) => meldHTML(m, mi, canHit && sc && G.fitOnto(m, sc))).join("") + "</div></div>";
     }).join("");
-    $("#melds").innerHTML = rows || '<p class="nomelds">Noch hat niemand seine Phase ausgelegt.</p>';
+    $("#melds").innerHTML = rows;
+  }
+  // your spread: the phase's slots (drop cards in), or once laid, your groups on the table
+  function renderZone(turn) {
+    const z = $("#myZone"), P = me();
+    z.hidden = !P || (V.phase !== "play" && !P.laid);
+    if (z.hidden) { z.innerHTML = ""; return; }
+    const can = turn && V.step === "act";
+    if (P.laid) {
+      const sc = selCard();
+      const mine = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === V.me);
+      z.innerHTML = `<div class="zhead"><span class="tag done">Phase ${P.phase} ✓</span><span>${G.phaseName(P.phase)}</span><small>${V.phase === "play" ? "liegt. Jetzt anlegen, bei dir und bei den anderen." : ""}</small></div>` +
+        `<div class="mgroups">${mine.map(([m, mi]) => meldHTML(m, mi, can && sc && G.fitOnto(m, sc))).join("")}</div>`;
+      return;
+    }
+    const gs = phaseGroups(), ready = spreadReady();
+    z.innerHTML = `<div class="zhead"><span class="tag">Phase ${P.phase}</span><span>${G.phaseName(P.phase)}</span><small>${can ? (ready ? "passt, jetzt auslegen!" : "Karten hierher ziehen, sie rasten ein") : "Du kannst schon planen: Karten hierher ziehen"}</small></div>` +
+      `<div class="zgroups">${gs.map((g, i) => {
+        const cards = groupCards(i + 1), st = groupState(i + 1);
+        return `<div class="slotgroup ${st}" data-g="${i + 1}"><div class="glabel"><span>${G.groupName(g)}</span><span>${st === "ok" ? "✓ passt" : st === "bad" ? "passt nicht" : `${cards.length}/${g.n}`}</span></div>` +
+          `<div class="slots">${cards.map((c) => cardHTML(c, "", "button")).join("")}${'<span class="ph"></span>'.repeat(Math.max(0, g.n - cards.length))}</div></div>`;
+      }).join("")}</div>` +
+      `<div class="zacts"><button class="btn" type="button" data-z="suggest">Vorschlag</button>` +
+      `${staged.size ? '<button class="btn btn-ghost" type="button" data-z="clear">Zurück in die Hand</button>' : ""}` +
+      `<button class="btn${ready && can ? " btn-primary" : ""}" type="button" data-z="lay"${ready && can ? "" : " disabled"}>Auslegen</button></div>`;
   }
 
   function layoutHand() {
@@ -442,12 +528,14 @@
   }
   window.addEventListener("resize", () => { if (V && !$("#game").hidden) layoutHand(); });
 
+  // the discard pile as a loose heap: every card lies a little turned, the same way each time
+  const tilt = (c, i, n) => (i === n - 1 ? ((c.id * 37) % 9) - 4 : ((c.id * 53) % 21) - 10);
   function renderGame() {
     if (V.phase !== "roundEnd") peek = false;
     const turn = myTurn(), P = me();
-    if (!turn || V.step !== "act") { layMode = layMode && turn; if (!turn) { sel = null; layMode = false; assign.clear(); } }
     if (sel != null && !V.hand.some((c) => c.id === sel)) sel = null;
-    for (const id of [...assign.keys()]) if (!V.hand.some((c) => c.id === id)) assign.delete(id);
+    for (const id of [...staged.keys()]) if (!V.hand.some((c) => c.id === id)) staged.delete(id);
+    if (P && P.laid) staged.clear();
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
     const act = $("#plates .plate.active");
     if (act) act.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -457,10 +545,12 @@
     const drawing = turn && V.step === "draw";
     $("#deckPile").classList.toggle("can", drawing);
     $("#deckCap").textContent = `${V.deckCount} Karten`;
-    $("#discardBtn").innerHTML = V.top ? cardHTML(V.top) : '<span class="empty"></span>';
+    const pile = V.pile || (V.top ? [V.top] : []);
+    $("#discardBtn").innerHTML = pile.length ? pile.map((c, i) => cardHTML(c).replace('class="card', `style="transform:rotate(${tilt(c, i, pile.length)}deg) translate(${i === pile.length - 1 ? 0 : ((c.id * 7) % 9) - 4}px,${i === pile.length - 1 ? 0 : ((c.id * 11) % 7) - 3}px)" class="card`)).join("") : '<span class="empty"></span>';
     $("#discardPile").classList.toggle("can", drawing && V.top && !G.isSkip(V.top));
-    $("#discardPile").classList.toggle("drop", turn && V.step === "act" && sel != null && !layMode);
-    $("#discardCap").textContent = V.step === "act" && turn && sel != null && !layMode ? "hier abwerfen" : "Ablage";
+    const throwing = turn && V.step === "act" && sel != null;
+    $("#discardPile").classList.toggle("target", throwing);
+    $("#discardCap").textContent = throwing ? "hier abwerfen" : "Ablage";
 
     // log
     const lmEl = $("#lastMove"), lines = V.log.slice(-2), lmKey = lines.join("\n");
@@ -469,7 +559,8 @@
       lmEl.innerHTML = lines.map((l, i) => `<div${i < lines.length - 1 ? ' class="old"' : ""}>${esc(l)}</div>`).join("");
       lmEl.classList.remove("fresh"); void lmEl.offsetWidth; lmEl.classList.add("fresh");
     }
-    renderMelds(turn && V.step === "act" && P && P.laid && !layMode);
+    renderMelds(turn && V.step === "act" && P && P.laid);
+    renderZone(turn);
 
     // dock
     const end = V.phase === "roundEnd";
@@ -482,10 +573,10 @@
       av = C.avatar;
       if (turn) {
         who = mode === "local" && humans(V).length > 1 ? `${C.name}, du bist dran` : "Du bist dran";
-        hint = V.step === "draw" ? "Zieh eine Karte: vom Stapel oder die oberste der Ablage."
-          : layMode ? "Tippe die Karten an, sie kommen in die markierte Gruppe. „Vorschlag“ sucht eine Aufteilung."
-          : P.laid ? "Karte antippen: leuchtende Gruppe = anlegen, Ablage = abwerfen."
-          : "Leg deine Phase aus, wenn du sie hast, sonst wirf eine Karte ab.";
+        hint = V.step === "draw" ? "Zieh eine Karte: Stapel oder Ablage antippen oder auf deine Hand ziehen."
+          : P.laid ? "Anlegen: Karte auf eine leuchtende Gruppe ziehen. Zum Schluss eine Karte auf die Ablage."
+          : spreadReady() ? "Deine Phase passt: „Auslegen“, dann eine Karte abwerfen."
+          : "Karten in deine Phasen-Felder ziehen, dann auslegen. Zum Schluss eine auf die Ablage.";
       } else {
         who = `${C.name} ist dran`;
         hint = C.bot ? "Der Computer überlegt …" : mode === "online" && V.me < 0 ? "Du schaust zu." : "Warte auf deinen Zug.";
@@ -495,44 +586,20 @@
     $("#whoName").textContent = who;
     $("#whoHint").textContent = hint;
     $("#dock").classList.toggle("myturn", turn);
-
-    // my phase
-    const mp = $("#myPhase");
-    if (P) {
-      const can = !P.laid && G.findPhase(V.hand, P.phase);
-      mp.innerHTML = `<span class="tag${P.laid ? " done" : ""}">Phase ${P.phase}${P.laid ? " ✓" : ""}</span><span>${G.phaseName(P.phase)}</span>${can && turn && V.step === "act" ? ' <span class="tag done">geht!</span>' : ""}`;
-    } else mp.innerHTML = "";
-    mp.hidden = !P;
-    const gbox = $("#groups");
-    gbox.hidden = !layMode;
-    if (layMode) {
-      const gs = G.PHASES[P.phase];
-      gbox.innerHTML = gs.map((g, i) => {
-        const n = [...assign.values()].filter((x) => x === i + 1).length;
-        return `<button type="button" class="g${i + 1}${n >= g.n ? " full" : ""}" data-g="${i + 1}" aria-pressed="${activeG === i + 1}">${i + 1}: ${G.groupName(g)} (${n}/${g.n})</button>`;
-      }).join("");
-    }
     const acts = $("#acts");
     if (end) acts.innerHTML = peek ? '<button class="btn btn-primary" type="button" data-a="result">Ergebnis zeigen</button>' : "";
     else if (!P) acts.innerHTML = "";
-    else if (layMode) acts.innerHTML = '<button class="btn" type="button" data-a="suggest">Vorschlag</button><button class="btn btn-primary" type="button" data-a="lay">Auslegen</button><button class="btn btn-ghost" type="button" data-a="cancel">Abbrechen</button>';
-    else {
-      const canLay = turn && V.step === "act" && !P.laid, good = canLay && !!G.findPhase(V.hand, P.phase);
-      acts.innerHTML = (canLay ? `<button class="btn${good ? " btn-primary" : ""}" type="button" data-a="layMode">Phase auslegen</button>` : "") +
-        (turn && V.step === "act" ? `<button class="btn${!canLay || !good ? " btn-primary" : ""}" type="button" data-a="discard"${sel == null ? " disabled" : ""}>Abwerfen</button>` : "") +
-        `<button class="btn btn-ghost small" type="button" data-a="sort">${sortMode === "value" ? "Nach Farbe" : "Nach Zahl"}</button>`;
-    }
+    else acts.innerHTML = (turn && V.step === "act" ? `<button class="btn btn-primary" type="button" data-a="discard"${sel == null ? " disabled" : ""}>Abwerfen</button>` : "") +
+      `<button class="btn btn-ghost small" type="button" data-a="sort">${sortMode === "value" ? "Nach Farbe sortieren" : "Nach Zahl sortieren"}</button>`;
 
-    // hand
+    // hand: everything that is not in the spread
     const hand = $("#hand");
-    hand.innerHTML = hidden ? "" : sorted(V.hand).map((c) => {
-      const g = assign.get(c.id);
-      return cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : ""].join(" "), "button").replace("<button ", `<button${g ? ` data-g="${g}"` : ""} `);
-    }).join("");
+    hand.innerHTML = hidden ? "" : sorted(V.hand.filter((c) => !staged.has(c.id)))
+      .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : ""].join(" "), "button")).join("");
     freshId = null;
     layoutHand();
     $("#reactBtn").hidden = mode !== "online";
-    $("#keys").innerHTML = turn ? (V.step === "draw" ? "<kbd>D</kbd> Stapel · <kbd>A</kbd> Ablage" : "<kbd>←</kbd><kbd>→</kbd> Karte wählen · <kbd>Enter</kbd> abwerfen · <kbd>P</kbd> Phase auslegen · <kbd>S</kbd> sortieren") : "";
+    $("#keys").innerHTML = turn ? (V.step === "draw" ? "<kbd>D</kbd> Stapel · <kbd>A</kbd> Ablage · oder auf die Hand ziehen" : "Karten ziehen und ablegen · <kbd>←</kbd><kbd>→</kbd> Karte wählen · <kbd>Enter</kbd> abwerfen · <kbd>P</kbd> Phase auslegen · <kbd>S</kbd> sortieren") : "";
     renderClock();
 
     // shared device: hand the phone over
@@ -556,56 +623,162 @@
     }
   }
 
-  // taps
+  // ---------- taps ----------
+  let justDragged = 0;
+  const afterDrag = () => Date.now() - justDragged < 350;
   $("#hand").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-id]"); if (!b) return;
-    const id = +b.dataset.id;
-    if (!myTurn()) return notYou();
-    if (V.step === "draw") { toast("Zieh zuerst eine Karte: Stapel oder Ablage."); return; }
-    if (layMode) {
-      if (assign.get(id) === activeG) assign.delete(id); else assign.set(id, activeG);
-      const g = G.PHASES[me().phase][activeG - 1];
-      if ([...assign.values()].filter((x) => x === activeG).length >= g.n && G.PHASES[me().phase].length === 2) activeG = activeG === 1 ? 2 : 1;
-      buzz(8); renderGame(); return;
-    }
+    const b = e.target.closest("[data-id]"); if (!b || afterDrag()) return;
+    const id = +b.dataset.id, P = me();
+    if (!P) return;
+    if (P.laid && !(myTurn() && V.step === "act")) return notYou();
     sel = sel === id ? null : id;
     buzz(8); renderGame();
   });
-  $("#hand").addEventListener("dblclick", (e) => { const b = e.target.closest("[data-id]"); if (b && myTurn() && V.step === "act" && !layMode) discard(+b.dataset.id); });
-  $("#groups").addEventListener("click", (e) => { const b = e.target.closest("[data-g]"); if (b) { activeG = +b.dataset.g; renderGame(); } });
+  $("#hand").addEventListener("dblclick", (e) => { const b = e.target.closest("[data-id]"); if (b && myTurn() && V.step === "act") discard(+b.dataset.id); });
+  $("#myZone").addEventListener("click", (e) => {
+    if (afterDrag()) return;
+    const z = e.target.closest("[data-z]");
+    if (z) { if (z.dataset.z === "suggest") suggest(); else if (z.dataset.z === "clear") unstageAll(); else layNow(); return; }
+    const m = e.target.closest("[data-meld]");
+    if (m) return tapMeld(m);
+    const c = e.target.closest(".slots [data-id]");
+    if (c) return stage(+c.dataset.id, 0); // a card in a slot goes back to the hand
+    const g = e.target.closest(".slotgroup");
+    if (g && sel != null) return stage(sel, +g.dataset.g);
+    if (g) toast("Tippe zuerst eine Karte in der Hand an, dann das Feld, oder zieh sie hinein.");
+  });
   $("#acts").addEventListener("click", (e) => {
     const b = e.target.closest("[data-a]"); if (!b) return;
     const a = b.dataset.a;
-    if (a === "layMode") startLay();
-    else if (a === "suggest") suggest();
-    else if (a === "lay") layNow();
-    else if (a === "cancel") { layMode = false; assign.clear(); renderGame(); }
-    else if (a === "discard") discard(sel);
+    if (a === "discard") discard(sel);
     else if (a === "result") { peek = false; render(); }
     else if (a === "sort") { sortMode = sortMode === "value" ? "color" : "value"; store.set(K.sort, sortMode); renderGame(); }
   });
-  $("#deckBtn").addEventListener("click", () => draw("deck"));
+  $("#deckBtn").addEventListener("click", () => { if (!afterDrag()) draw("deck"); });
   $("#discardBtn").addEventListener("click", () => {
-    if (!V) return;
-    if (myTurn() && V.step === "act") { if (sel != null && !layMode) discard(sel); else toast("Tippe zuerst die Karte an, die du abwerfen willst."); return; }
+    if (!V || afterDrag()) return;
+    if (myTurn() && V.step === "act") { if (sel != null) discard(sel); else toast("Tippe zuerst die Karte an, die du abwerfen willst, oder zieh sie hierher."); return; }
     draw("discard");
   });
-  $("#melds").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-meld]"); if (!b) return;
+  function tapMeld(b) {
     if (!myTurn() || V.step !== "act") return;
     if (!me().laid) { toast("Anlegen geht erst, wenn deine eigene Phase liegt."); return; }
-    if (sel == null) { toast("Tippe zuerst eine Karte an, dann die Gruppe."); return; }
+    if (sel == null) { toast("Tippe zuerst eine Karte an, dann die Gruppe, oder zieh sie drauf."); return; }
     if (!b.classList.contains("fits")) { toast("Die Karte passt da nicht."); sfx("bad"); return; }
     hit(+b.dataset.meld);
+  }
+  $("#melds").addEventListener("click", (e) => { const b = e.target.closest("[data-meld]"); if (b && !afterDrag()) tapMeld(b); });
+
+  // ---------- drag & drop: pick a card up, drop it where it should go; it snaps into place ----------
+  let drag = null;
+  function dropTargets(src) {
+    const t = [], P = me(), turn = myTurn();
+    if (src.kind === "pile") return [{ el: $("#dock"), kind: "draw" }];
+    const c = V.hand.find((x) => x.id === src.id);
+    if (!c || !P) return t;
+    if (!P.laid && V.phase === "play") {
+      for (const g of document.querySelectorAll("#myZone .slotgroup")) if (+g.dataset.g !== staged.get(src.id)) t.push({ el: g, kind: "slot", g: +g.dataset.g });
+      if (src.kind === "staged") t.push({ el: $("#dock"), kind: "unstage" });
+    }
+    if (turn && V.step === "act") {
+      t.push({ el: $("#discardPile"), kind: "discard", box: $("#discardBtn") });
+      if (P.laid) for (const m of document.querySelectorAll(".meld")) if (G.fitOnto(V.melds[+m.dataset.meld], c)) t.push({ el: m, kind: "hit", meld: +m.dataset.meld });
+    }
+    return t;
+  }
+  document.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || !V || $("#game").hidden || hidden || drag) return;
+    const card = e.target.closest("#hand .card, #myZone .slots .card");
+    const pileBtn = e.target.closest("#deckBtn, #discardBtn");
+    let src = null;
+    if (card) src = { kind: card.closest("#hand") ? "hand" : "staged", id: +card.dataset.id, el: card };
+    else if (pileBtn && myTurn() && V.step === "draw") {
+      if (pileBtn.id === "discardBtn" && (!V.top || G.isSkip(V.top))) return;
+      src = { kind: "pile", from: pileBtn.id === "deckBtn" ? "deck" : "discard", el: pileBtn.querySelector(".card:last-child") };
+    }
+    if (!src || !src.el) return;
+    drag = Object.assign(src, { x0: e.clientX, y0: e.clientY, pid: e.pointerId, on: false, touch: e.pointerType !== "mouse" });
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.on) {
+      if (Math.hypot(dx, dy) < 8) return;
+      // in the hand a sideways swipe scrolls on touch screens
+      if (drag.kind === "hand" && drag.touch && Math.abs(dx) > Math.abs(dy)) { drag = null; return; }
+      startDrag();
+    }
+    e.preventDefault();
+    const r = drag.r0;
+    drag.ghost.style.transform = `translate(${r.left + dx}px,${r.top + dy}px)`;
+    let over = null;
+    for (const t of drag.targets) {
+      const b = rectOf(t.box || t.el);
+      if (e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 12 && e.clientY <= b.bottom + 12) over = t;
+    }
+    if (over !== drag.over) {
+      if (drag.over) drag.over.el.classList.remove("over");
+      if (over) over.el.classList.add("over");
+      drag.over = over;
+    }
+  }, { passive: false });
+  function startDrag() {
+    drag.on = true;
+    drag.r0 = rectOf(drag.el);
+    const c = drag.kind === "pile" ? (drag.from === "discard" ? V.top : null) : V.hand.find((x) => x.id === drag.id);
+    const g = document.createElement("div");
+    g.className = "ghost";
+    g.innerHTML = c ? cardHTML(c) : backHTML();
+    g.firstElementChild.style.setProperty("--cw", drag.r0.width + "px");
+    g.style.transform = `translate(${drag.r0.left}px,${drag.r0.top}px)`;
+    document.body.appendChild(g);
+    drag.ghost = g;
+    drag.el.classList.add("dragging");
+    drag.targets = dropTargets(drag);
+    for (const t of drag.targets) t.el.classList.add("target");
+    if (drag.kind === "hand" && me() && me().laid && myTurn() && V.step === "act") { sel = drag.id; for (const t of drag.targets) if (t.kind === "hit") t.el.classList.add("fits"); }
+    document.body.style.cursor = "grabbing";
+  }
+  function stopDrag() {
+    for (const t of drag.targets || []) t.el.classList.remove("target", "over");
+    drag.el.classList.remove("dragging");
+    document.body.style.cursor = "";
+  }
+  // no fitting place: the card flies back where it came from
+  function flyBack() {
+    const g = drag.ghost, from = rectOf(g.firstElementChild), to = drag.r0;
+    const a = g.animate([{ transform: `translate(${from.left}px,${from.top}px)` }, { transform: `translate(${to.left}px,${to.top}px)` }], { duration: 220, easing: "ease-out", fill: "both" });
+    const done = () => g.remove();
+    a.onfinish = done; setTimeout(done, 600);
+  }
+  document.addEventListener("pointerup", (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag;
+    if (!d.on) { drag = null; return; }
+    justDragged = Date.now();
+    stopDrag();
+    const t = d.over, at = rectOf(d.ghost.firstElementChild);
+    drag = null;
+    if (!t) { drag = d; flyBack(); drag = null; if (d.kind === "hand" && me() && me().laid) { sel = null; renderGame(); } return; }
+    d.ghost.remove();
+    if (t.kind === "draw") { dropFrom = { rect: at, at: Date.now() }; draw(d.from); }
+    else if (t.kind === "slot") stage(d.id, t.g, at);
+    else if (t.kind === "unstage") stage(d.id, 0, at);
+    else if (t.kind === "discard") { dropFrom = { id: d.id, rect: at, at: Date.now() }; staged.delete(d.id); discard(d.id); }
+    else if (t.kind === "hit") { dropFrom = { id: d.id, rect: at, at: Date.now() }; sel = d.id; hit(t.meld); }
+  });
+  document.addEventListener("pointercancel", (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    if (drag.on) { stopDrag(); flyBack(); }
+    drag = null;
   });
 
-  // keys: D/A draw, arrows pick a card, Enter throws it, P lays the phase, S sorts, Esc cancels
+  // keys: D/A draw, arrows pick a card, Enter throws it, P lays the phase (or suggests), S sorts, Esc cancels
   document.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
     const open = ["#menu", "#reactBar", "#targetPick"].find((s) => !$(s).hidden);
     if (e.key === "Escape") {
       if (open) $(open).hidden = true;
-      else if (layMode) { layMode = false; assign.clear(); renderGame(); }
       else if (sel != null) { sel = null; renderGame(); }
       return;
     }
@@ -614,13 +787,13 @@
     if (k === "d") draw("deck");
     else if (k === "a") draw("discard");
     else if (k === "s") { sortMode = sortMode === "value" ? "color" : "value"; store.set(K.sort, sortMode); renderGame(); }
-    else if (k === "p" && V.step === "act" && !me().laid) layMode ? layNow() : startLay();
+    else if (k === "p" && V.step === "act" && !me().laid) spreadReady() ? layNow() : suggest();
     else if ((k === "arrowleft" || k === "arrowright") && V.step === "act") {
       e.preventDefault();
-      const ids = sorted(V.hand).map((c) => c.id), i = ids.indexOf(sel);
+      const ids = sorted(V.hand.filter((c) => !staged.has(c.id))).map((c) => c.id), i = ids.indexOf(sel);
       sel = ids[i < 0 ? (k === "arrowleft" ? ids.length - 1 : 0) : Math.max(0, Math.min(ids.length - 1, i + (k === "arrowleft" ? -1 : 1)))];
       renderGame();
-    } else if (k === "enter" && sel != null && V.step === "act" && !layMode) { e.preventDefault(); discard(sel); }
+    } else if (k === "enter" && sel != null && V.step === "act") { e.preventDefault(); discard(sel); }
   });
 
   // ---------- house rules ----------
@@ -893,7 +1066,7 @@
     if (nx) nx.focus(); else e.target.blur();
   });
   function startLocal(state) {
-    L = state; mode = "local"; peek = false; sel = null; layMode = false; assign.clear(); viewer = null; hidden = false;
+    L = state; mode = "local"; peek = false; sel = null; staged.clear(); viewer = null; hidden = false;
     if (L.phase === "play") G.resetClock(L);
     store.set(K.local, L); render(); if (!hidden) dealIn(); wake(); scheduleBot();
   }

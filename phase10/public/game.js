@@ -464,7 +464,7 @@
     return {
       me, phase: S.phase, step: S.step, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level || 2, rules: S.rules, dealer: S.dealer,
       hand: me >= 0 ? S.players[me].hand.slice() : [],
-      top: S.discard[S.discard.length - 1] || null, discardCount: S.discard.length, deckCount: S.deck.length,
+      top: S.discard[S.discard.length - 1] || null, pile: S.discard.slice(-4), discardCount: S.discard.length, deckCount: S.deck.length,
       melds: S.melds.map((m) => ({ k: m.k, n: m.n, owner: m.owner, cards: m.cards.slice(), value: m.value, color: m.color, start: m.start, len: m.len })),
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => ({ name: p.name, bot: p.bot, avatar: avatarOf(p, i), phase: p.phase, score: p.score, laid: p.laid, skipped: p.skipped, count: p.hand.length })),

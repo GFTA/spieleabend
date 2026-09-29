@@ -19,9 +19,14 @@ schafft, gewinnt, bei Gleichstand mit den wenigsten Punkten.
 Die Phasen: 2 Drillinge · Drilling + 4er-Folge · Vierling + 4er-Folge · 7er-Folge ·
 8er-Folge · 9er-Folge · 2 Vierlinge · 7 einer Farbe · Fünfling + Zwilling · Fünfling + Drilling.
 
-- **Auslegen**: „Phase auslegen“, dann Karten antippen (sie kommen in Gruppe 1 oder 2),
-  „Vorschlag“ sucht eine passende Aufteilung. Anlegen: Karte antippen, dann die
-  leuchtende Gruppe. Abwerfen: Karte antippen, dann die Ablage (oder doppelt tippen).
+- **Spielbrett**: Stapel und Ablage in der Mitte (mit Kartenhaufen), darunter deine
+  Phasen-Felder, darunter die Hand. Die Gruppen der anderen liegen offen auf dem Brett.
+- **Ziehen und Ablegen mit Maus oder Finger**: Karte vom Stapel oder der Ablage auf die
+  Hand ziehen; Karten aus der Hand in die Phasen-Felder ziehen, sie rasten dort ein (auch
+  schon vor dem Ziehen zum Planen) und lassen sich zurück in die Hand ziehen; auf die
+  Ablage ziehen zum Abwerfen; auf eine eigene ausgelegte Gruppe ziehen zum Anlegen. Passt
+  kein Ziel, fliegt die Karte zurück. Antippen und Tasten gehen weiterhin. „Vorschlag“
+  füllt die Felder automatisch, „Auslegen“ legt sie hin.
 - **Animationen**: Gezogene, abgeworfene, ausgelegte und angelegte Karten fliegen sichtbar
   dorthin, wo sie hingehen, auch bei den Zügen der anderen; zu Rundenbeginn wird ausgeteilt.
 - **Hausregeln**: Aussetzen frei wählen (ab 3 Spielern), Zugzeit (45 s).

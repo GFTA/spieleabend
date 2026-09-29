@@ -83,34 +83,62 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 @keyframes stamp{from{transform:scale(1.8);opacity:0}to{transform:none;opacity:1}}
 .plate.bump{animation:bump .35s ease-out}
 @keyframes bump{40%{transform:scale(1.08)}}
-.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 16px}
-.piles{display:flex;align-items:flex-start;justify-content:center;gap:28px}
-.pile{display:flex;flex-direction:column;align-items:center;gap:6px}
-.pile .card{--cw:calc(clamp(64px,19vw,88px) * var(--cs))}
-.pile button{border:0;padding:0;background:none;border-radius:12px}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:12px 16px}
+.board{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+/* the stack with some depth, the discard pile as a loose heap */
+.piles{display:flex;align-items:center;justify-content:center;gap:clamp(28px,9vw,72px);padding:6px 0}
+.pile{--pw:calc(clamp(66px,min(19vw,12vh),96px) * var(--cs));display:flex;flex-direction:column;align-items:center;gap:8px}
+.pile button{position:relative;border:0;padding:0;background:none;border-radius:12px;width:var(--pw);aspect-ratio:2/3;touch-action:none;transition:transform .15s,box-shadow .2s}
+.pile .card{--cw:var(--pw);position:absolute;left:0;top:0}
+#deckBtn .card:nth-child(1){transform:translate(5px,6px)}
+#deckBtn .card:nth-child(2){transform:translate(2.5px,3px)}
 .pile .cap{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
-.pile.can .card{box-shadow:0 0 0 3px var(--accent),0 0 22px -4px var(--accent);animation:glow 1.4s ease-in-out infinite}
-.pile.drop .card{box-shadow:0 0 0 3px #fff,0 0 22px -4px #fff}
+.pile.can button{box-shadow:0 0 0 3px var(--accent),0 0 22px -2px var(--accent);animation:glow 1.4s ease-in-out infinite}
+.pile.target button{box-shadow:0 0 0 3px #fff,0 0 22px -2px #fff}
+.pile.over button{box-shadow:0 0 0 4px #fff,0 0 30px 0 #fff;transform:scale(1.06)}
 @keyframes glow{50%{box-shadow:0 0 0 3px var(--accent),0 0 6px -4px var(--accent)}}
-.pile .empty{width:calc(clamp(64px,19vw,88px) * var(--cs));aspect-ratio:2/3;border-radius:12px;box-shadow:inset 0 0 0 2px var(--line)}
+.pile .empty{position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 2px var(--line)}
 .lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
 .lastmove.fresh{animation:pop .35s ease-out}
 .lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
 @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
-/* the melds on the table, per player */
-.melds{width:100%;max-width:720px;display:flex;flex-direction:column;gap:10px}
-.mrow{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:16px;background:var(--felt);box-shadow:inset 0 0 0 1.5px var(--line)}
+/* what the others have laid, one panel per player */
+.melds{width:100%;max-width:900px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.mrow{flex:1 1 260px;max-width:440px;display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
 .mrow .who{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
 .mrow .who small{color:var(--muted);font-weight:700}
 .mgroups{display:flex;flex-wrap:wrap;gap:8px}
-.meld{--cw:calc(clamp(34px,9.5vw,46px) * var(--cs));display:flex;align-items:center;padding:6px;border:0;border-radius:12px;background:rgba(0,0,0,.18);box-shadow:inset 0 0 0 1.5px transparent;transition:box-shadow .2s,transform .2s}
-.meld .card + .card{margin-left:calc(var(--cw) * -.45)}
+.meld{--cw:calc(clamp(36px,9.5vw,48px) * var(--cs));display:flex;align-items:center;padding:6px 8px;border:0;border-radius:12px;background:var(--surface);transition:box-shadow .2s,transform .2s}
+.meld .card + .card{margin-left:calc(var(--cw) * -.2)}
 .meld .card{box-shadow:1px 0 4px rgba(0,0,0,.35)}
 .meld .mlabel{font-size:11px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
-.meld.fits{box-shadow:inset 0 0 0 2.5px var(--accent);cursor:pointer;transform:translateY(-2px)}
-.meld.fresh{animation:meldin .5s ease-out}
-@keyframes meldin{from{box-shadow:inset 0 0 0 3px #fff}}
-.nomelds{font-size:13px;color:var(--muted);text-align:center}
+.meld.fits{box-shadow:0 0 0 2.5px var(--accent);cursor:pointer}
+.meld.over{box-shadow:0 0 0 3px #fff;transform:scale(1.05)}
+/* your own spread: slots to drop the phase into, later the groups you laid */
+.myzone{width:100%;max-width:900px;align-self:center;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:18px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.zhead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;flex-wrap:wrap}
+.zhead .tag{padding:3px 8px;border-radius:8px;background:var(--surface)}
+.zhead .tag.done{background:var(--green);color:#fff}
+.zhead small{color:var(--muted);font-weight:700}
+.zgroups{display:flex;flex-wrap:wrap;gap:10px}
+.slotgroup{--cw:calc(clamp(40px,10.5vw,54px) * var(--cs));flex:1 1 auto;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:14px;background:rgba(0,0,0,.14);box-shadow:inset 0 0 0 2px var(--line);transition:box-shadow .2s,background .2s,transform .15s;cursor:pointer}
+.slotgroup .glabel{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;color:var(--muted)}
+.slotgroup.ok{box-shadow:inset 0 0 0 2px var(--green)}
+.slotgroup.ok .glabel{color:var(--green)}
+.slotgroup.bad{box-shadow:inset 0 0 0 2px var(--red)}
+.slotgroup.bad .glabel{color:var(--red)}
+.slotgroup.target{box-shadow:inset 0 0 0 2px var(--accent)}
+.slotgroup.over{box-shadow:inset 0 0 0 3px #fff;background:rgba(255,255,255,.08);transform:scale(1.02)}
+.slots{display:flex;flex-wrap:wrap;gap:5px;min-height:calc(var(--cw) * 1.5)}
+.slots .card{cursor:grab;touch-action:none}
+.slots .ph{width:var(--cw);aspect-ratio:2/3;border-radius:calc(var(--cw) * .14);box-shadow:inset 0 0 0 2px var(--line);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.04) 6px 12px)}
+.zacts{display:flex;gap:8px;flex-wrap:wrap}
+.zacts .btn{flex:1;padding:10px;font-size:14px;min-width:0}
+.dock.target{box-shadow:0 -3px 0 #fff}
+.dock.over{box-shadow:0 -5px 0 #fff;background:var(--surface)}
+.card.dragging{opacity:.25}
+.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;will-change:transform}
+.ghost .card{box-shadow:0 16px 30px rgba(0,0,0,.55);transform:rotate(-4deg) scale(1.06)}
 /* dock with the hand */
 .dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .2s,background .2s}
 .dock.myturn{box-shadow:0 -2px 0 var(--accent)}
@@ -121,24 +149,15 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .myphase{font-size:13px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .myphase .tag{padding:3px 8px;border-radius:8px;background:var(--surface);font-weight:800}
 .myphase .tag.done{background:var(--green);color:#fff}
-.groups{display:flex;gap:6px;flex-wrap:wrap}
-.groups button{border:0;border-radius:10px;padding:7px 10px;font-weight:800;font-size:13px;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
-.groups button[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--accent)}
-.groups button.full{background:var(--green);color:#fff}
-.groups .g1{border-bottom:3px solid #7fd1ff} .groups .g2{border-bottom:3px solid #ff9ad5}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .acts .btn{flex:1;padding:11px 10px;font-size:15px;min-width:0}
-.hand{--cw:calc(clamp(56px,16vw,82px) * var(--cs));--step:calc(var(--cw) + 6px);display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;padding:16px 4px 4px;scrollbar-width:none;min-height:calc(var(--cw) * 1.5 + 22px)}
+.hand{align-items:flex-start;--cw:calc(clamp(56px,16vw,82px) * var(--cs));--step:calc(var(--cw) + 6px);display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;padding:16px 4px 4px;scrollbar-width:none;min-height:calc(var(--cw) * 1.5 + 22px)}
 .hand::-webkit-scrollbar{display:none}
 .hand::before,.hand::after{content:"";flex:1 0 0}
-.hand .card{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.hand .card{cursor:pointer;transition:transform .15s,box-shadow .15s;touch-action:pan-x}
 .hand .card + .card{margin-left:calc(var(--step) - var(--cw))}
 .hand .card.sel{transform:translateY(-14px);box-shadow:0 0 0 3px var(--accent),0 10px 18px rgba(0,0,0,.5)}
 .hand .card.fresh{transform:translateY(-8px);box-shadow:0 0 0 3px #fff,0 8px 16px rgba(0,0,0,.5)}
-.hand .card[data-g]::after{content:attr(data-g);position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-family:var(--ui);font-size:12px;font-weight:800;background:#7fd1ff;color:#0d2233}
-.hand .card[data-g="2"]::after{background:#ff9ad5;color:#33101f}
-.hand .card[data-g]{transform:translateY(-10px)}
-.hand .card.hidden-card{visibility:hidden}
 .hand.shake{animation:shake .35s}
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
 .flyer{position:fixed;left:0;top:0;z-index:40;pointer-events:none;margin:0!important}
@@ -217,6 +236,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
   .topbar{padding:14px 0 4px;gap:12px;width:100%;max-width:1100px;align-self:center}
   .roundinfo{display:block}
   .plate .pav{font-size:28px}
+  .arena{padding:12px 24px}
   .dock{width:100%;max-width:1000px;align-self:center;border-radius:22px;padding:14px 18px;box-shadow:inset 0 0 0 1.5px var(--line)}
   .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
   .dock .keys{display:block}
@@ -331,19 +351,20 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
     </div>
 
     <div class="arena" id="arena">
-      <div class="piles">
-        <div class="pile" id="deckPile"><button id="deckBtn" type="button" aria-label="Vom Stapel ziehen"><span class="card back"></span></button><span class="cap" id="deckCap"></span></div>
-        <div class="pile" id="discardPile"><button id="discardBtn" type="button" aria-label="Ablage"></button><span class="cap" id="discardCap">Ablage</span></div>
+      <div class="board">
+        <div class="piles">
+          <div class="pile" id="deckPile"><button id="deckBtn" type="button" aria-label="Vom Stapel ziehen"><span class="card back"></span><span class="card back"></span><span class="card back"></span></button><span class="cap" id="deckCap"></span></div>
+          <div class="pile" id="discardPile"><button id="discardBtn" type="button" aria-label="Ablage"></button><span class="cap" id="discardCap">Ablage</span></div>
+        </div>
+        <div class="lastmove" id="lastMove" aria-live="polite"></div>
+        <div class="melds" id="melds"></div>
       </div>
-      <div class="lastmove" id="lastMove" aria-live="polite"></div>
-      <div class="melds" id="melds"></div>
+      <div class="myzone" id="myZone" hidden></div>
     </div>
 
     <div class="dock" id="dock">
       <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
       <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
-      <div class="myphase" id="myPhase"></div>
-      <div class="groups" id="groups" hidden></div>
       <div class="acts" id="acts"></div>
       <div class="hand" id="hand"></div>
       <div class="keys" id="keys"></div>
