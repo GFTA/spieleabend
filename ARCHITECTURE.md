@@ -580,16 +580,13 @@ networks:
     name: ${TUNNEL_NETWORK:?TUNNEL_NETWORK in .env setzen}
 ```
 
-`.env` im Spielordner: `TUNNEL_NETWORK=proxy` (aktuelles Netzwerk auf dem
-Mini-PC, siehe `uno/.env`), plus bei Portkollision `<SPIEL>_PORT=<frei>`.
+`.env` im Spielordner: `TUNNEL_NETWORK=<netzwerk-von-cloudflared>`, plus bei Portkollision `<SPIEL>_PORT=<frei>`.
 
 Start: `docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build`
 
 **`container_name` muss exakt dem Hostnamen entsprechen, den der
 Cloudflare-Tunnel-Ingress-Eintrag erwartet** (`http://<container_name>:8080`)
-— das ist auf dem Mini-PC bereits eingerichtet (Tunnel „debian-main“ +
-DNS-Record `<spielid>.cool-kidz.net`), dort nichts ändern, nur den
-passenden Container danebenstellen.
+— Tunnel-Ingress und DNS-Record `<spielid>.cool-kidz.net` werden außerhalb dieses Repos verwaltet, der Container muss dazu passen.
 
 ## Repo-Integration
 
@@ -600,7 +597,7 @@ passenden Container danebenstellen.
   `start/public/index.html` angefasst werden muss
 - Icon `start/public/<spielid>.svg`
 - `spiele-start` liest `games.json` und `public/` per Volume live aus dem Repo: auf dem
-  Mini-PC reicht `git pull`, damit die Kachel erscheint (kein Rebuild der Startseite)
+  Server reicht `git pull`, damit die Kachel erscheint (kein Rebuild der Startseite)
 - Zeile in der Tabelle in diesem Repo-Root-`README.md`
 
 ## Checkliste: neues Spiel hinzufügen
@@ -621,6 +618,6 @@ Die einzelnen Schritte, falls man ohne Generator arbeitet:
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen
 5. Freien Port wählen, `docker-compose.yml`/`.tunnel.yml` nach obigem Muster
-6. Auf dem Mini-PC: `.env` mit `TUNNEL_NETWORK`, Tunnel-Ingress +
+6. Auf dem Server: `.env` mit `TUNNEL_NETWORK`, Tunnel-Ingress +
   DNS-Eintrag für `<spielid>.cool-kidz.net` beim Nutzer erfragen (das ist
   remote verwaltet, nicht Teil dieses Repos)

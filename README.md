@@ -3,7 +3,7 @@
 Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 
 - **Jeder sein Handy**: Einer erstellt einen Raum, die anderen scannen den QR-Code.
-  Dafür läuft ein kleiner Node.js-Server, z. B. zu Hause auf einem Mini-PC.
+  Dafür läuft ein kleiner Node.js-Server, z. B. auf einem eigenen Server.
 - **Einzelspieler**: allein gegen Computer-Gegner, geht auch ganz ohne Server.
 
 Alle Spiele teilen sich ein einheitliches Design- und Server-System (Tisch-Designs,
@@ -27,7 +27,7 @@ Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](
 
 Jedes Spiel ist ein eigener Ordner mit Engine, Oberfläche, Dockerfile und Tests; den Server-Teil (Räume, Warteraum, Revanche, Computer-Gegner …) teilen sich alle in `shared/room-server.js`.
 
-## Installation auf dem Mini-PC (Docker)
+## Installation auf dem Server (Docker)
 
 ```sh
 git clone https://github.com/GFTA/spieleabend.git
