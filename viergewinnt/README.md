@@ -27,7 +27,7 @@ voll, ist es unentschieden. In jeder Runde beginnt der andere.
   wo sie landet. Tasten: 1–9 (0 für Spalte 10) wirft ein, ←/→ und Enter, P für Pop Out,
   Esc schließt Fenster.
 
-## Auf dem Mini-PC installieren
+## Auf dem Server installieren
 
 Ein einzelnes Node.js-Programm (`server.js`) ohne Datenbank, Spielstände landen in
 `data/rooms.json`. Läuft neben Uno (8080) und Schiffe versenken (8081) im WLAN auf
