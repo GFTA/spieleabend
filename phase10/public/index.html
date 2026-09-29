@@ -239,6 +239,29 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 }
 .keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
 .keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+/* wide desktop: piles left, laid phases right, bigger cards */
+@media (min-width:1100px) and (min-height:700px){
+  .topbar{max-width:none;padding-inline:0}
+  .arena{padding:12px 0;gap:16px}
+  .board{display:grid;grid-template-columns:auto minmax(0,auto);justify-content:center;align-items:center;justify-items:center;column-gap:clamp(32px,6vw,110px);row-gap:6px}
+  .board:has(.melds:empty){grid-template-columns:auto}
+  .piles{grid-column:1;grid-row:1;gap:clamp(28px,3vw,56px)}
+  .pile{--pw:calc(clamp(80px,min(11.5vh,7vw),125px) * var(--cs))}
+  .pile .cap{font-size:14px}
+  .lastmove{grid-column:1;grid-row:2;font-size:16px;max-width:520px}
+  .board:has(.melds:empty) .piles,.board:has(.melds:empty) .lastmove{grid-column:1}
+  .melds{grid-column:2;grid-row:1/3;max-width:none;gap:14px}
+  .melds:empty{display:none}
+  .mrow{flex:1 1 320px;max-width:560px;padding:12px 14px}
+  .mrow .who{font-size:15px}
+  .meld{--cw:calc(clamp(44px,6.2vh,66px) * var(--cs))}
+  .myzone{max-width:1400px;padding:14px 18px}
+  .slotgroup{--cw:calc(clamp(50px,7vh,72px) * var(--cs))}
+  .hand{--cw:calc(clamp(66px,min(9.5vh,5.2vw),100px) * var(--cs));--step:calc(var(--cw) + 8px)}
+  .dock{max-width:1400px}
+  .dock .who b{font-size:20px}.dock .who small{font-size:15px}
+  .plates{gap:10px}
+}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
@@ -302,10 +325,6 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
     <details class="houserules">
       <summary><span class="label">Die 10 Phasen</span></summary>
       <ol class="phaselist" id="phaseListHome"></ol>
-    </details>
-    <details class="houserules">
-      <summary><span class="label">Aussehen</span><span class="rules-sum" id="lookSum"></span></summary>
-      <div class="look" id="lookHome"></div>
     </details>
     <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
     <p class="hint">Zieh eine Karte, leg deine Phase aus, sobald du sie hast, leg danach Karten bei allen an und wirf eine ab. Wer keine Karten mehr hat, beendet die Runde. Wer seine Phase geschafft hat, geht zur nächsten.</p>

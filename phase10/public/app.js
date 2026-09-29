@@ -24,7 +24,7 @@
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
   const avi = (a) => (a ? `<i class="av-i" aria-hidden="true">${a}</i>` : "");
 
-  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"]];
+  const LEVELS = [[1, "Leicht"], [2, "Normal"], [3, "Profi"], [0, "Zufällig"]];
   const GOALS = [[10, "Alle 10 Phasen", "das ganze Spiel"], [5, "Phasen 1–5", "kurze Partie"]];
   const ICON = {
     person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
@@ -47,7 +47,7 @@
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let goalLocal = G.normGoal(store.get(K.goal) || 10);
   let localRules = G.normRules(store.get(K.rules));
-  let levelLocal = G.normLevel(store.get(K.level) || 2);
+  let levelLocal = G.normLevel(store.get(K.level));
   let lastTurn = null, dealtFor = null, freshId = null;
 
   // ---------- helpers ----------
@@ -878,7 +878,7 @@
     avatars: G.AVATARS, setAvatar: (a) => { myAvatar = a; store.set(K.avatar, a); },
     // game length, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
-      for (const [id, list, cur] of [["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
+      for (const [id, list, cur] of [["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level == null ? 2 : R.level]]) {
         const el = $(id), k = cur + ":" + host;
         if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = segHTML(list, cur); for (const b of el.children) b.disabled = !host; }
       }

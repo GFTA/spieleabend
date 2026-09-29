@@ -11,7 +11,7 @@
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Ada Algo", "Bit Bert", "Byte Bea", "Kalle Kabel"];
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
-  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
+  const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi", 0: "Zufällig" };
   const GOALS = [10, 5];                       // play all 10 phases, or a short game up to phase 5
   const COLORS = ["r", "y", "g", "b"];
   const CNAME = { r: "Rot", y: "Gelb", g: "Grün", b: "Blau" };
@@ -51,7 +51,9 @@
     return o;
   }
   const normGoal = (n) => (GOALS.includes(+n) ? +n : 10);
-  const normLevel = (n) => (LEVELS[+n] ? +n : 2);
+  const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
+  // level 0 = random: every computer player got its own strength when the game started
+  const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
 
@@ -191,7 +193,7 @@
   // players: [{ name, bot, avatar }] (2-6); goal: last phase (10 or 5); level: computer strength
   function newGame(players, goal, rules, level) {
     const S = {
-      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), phase: 1, score: 0, hand: [], laid: false, skipped: false })),
+      players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), phase: 1, score: 0, hand: [], laid: false, skipped: false })),
       goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
       round: 0, turn: 0, dealer: rand(players.length), log: [], last: null, deadline: 0, history: []
     };
@@ -433,7 +435,7 @@
   }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const P = S.players[pi], level = S.level || 2;
+    const P = S.players[pi], level = lvOf(S, pi);
     if (S.step === "draw") {
       const top = S.discard[S.discard.length - 1];
       let want = false;
@@ -462,7 +464,7 @@
   function view(S, pi) {
     const me = S.players[pi] ? pi : -1, end = S.phase === "roundEnd";
     return {
-      me, phase: S.phase, step: S.step, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level || 2, rules: S.rules, dealer: S.dealer,
+      me, phase: S.phase, step: S.step, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level == null ? 2 : S.level, rules: S.rules, dealer: S.dealer,
       hand: me >= 0 ? S.players[me].hand.slice() : [],
       top: S.discard[S.discard.length - 1] || null, pile: S.discard.slice(-4), discardCount: S.discard.length, deckCount: S.deck.length,
       melds: S.melds.map((m) => ({ k: m.k, n: m.n, owner: m.owner, cards: m.cards.slice(), value: m.value, color: m.color, start: m.start, len: m.len })),
