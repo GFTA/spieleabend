@@ -23,7 +23,7 @@ löscht die Punkte dieser Runde); die Regeln stehen in `public/game.js`, die Obe
     npm ci && npm start          # http://localhost:8080 (PORT ändert das)
     npm test
 
-Auf dem Mini-PC, vom Repo-Ordner aus (der Build braucht `../shared`):
+Auf dem Server, vom Repo-Ordner aus (der Build braucht `../shared`):
 
     cd @@ID@@
     docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build

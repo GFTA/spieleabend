@@ -103,7 +103,7 @@ const sibling = games.map((g) => path.join(repo, g.id, ".env")).find((f) => fs.e
 if (sibling) {
   fs.copyFileSync(sibling, path.join(repo, id, ".env"));
   fs.chmodSync(path.join(repo, id, ".env"), 0o600);
-} else envNote = `\n  (Keine .env eines anderen Spiels gefunden: ${id}/.env selbst anlegen mit TUNNEL_NETWORK=proxy und PARTY_SECRET=…)`;
+} else envNote = `\n  (Keine .env eines anderen Spiels gefunden: ${id}/.env selbst anlegen mit TUNNEL_NETWORK=<netzwerk-von-cloudflared> und PARTY_SECRET=…)`;
 
 fs.copyFileSync(path.join(tpl, "public", "icon.svg"), startIcon);
 
@@ -125,7 +125,7 @@ Fertig: ${id}/ (läuft schon als kleines Würfelspiel „Pig“).${envNote}
 Als Nächstes:
   1. Regeln in ${id}/public/game.js (Engine) und ${id}/public/app.js + index.html (Oberfläche) ersetzen.
      Tests: ${id}/test/ anpassen, dann  cd ${id} && npm ci && npm test
-  2. Cloudflare: Tunnel-Ingress und DNS für ${sub}.cool-kidz.net auf http://${id}:8080 anlegen; ggf. AdGuard-Rewrite.
+  2. Cloudflare: Tunnel-Ingress und DNS für ${sub}.cool-kidz.net auf http://${id}:8080 anlegen.
   3. Starten:  cd ${id} && docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
   4. Startseite aktualisieren:  docker restart spiele-start
   5. Committen und pushen.`);
