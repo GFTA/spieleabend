@@ -40,6 +40,16 @@
     "status": "http://wuerfelpoker:8080/info"
   },
   {
+    "id": "kniffel",
+    "name": "Kniffel",
+    "title": "Kniffel",
+    "desc": "Fünf Würfel, drei Würfe, 13 Felder im Block. Mit Bonus, optionalem Joker und Computer-Gegnern in drei Stufen.",
+    "players": "2–8 Spieler + Zuschauer",
+    "url": "https://kniffel.cool-kidz.net/",
+    "max": 8,
+    "status": "http://kniffel:8080/info"
+  },
+  {
     "id": "maedn",
     "name": "Mensch ärgere dich nicht",
     "title": "Mensch ärgere dich nicht",

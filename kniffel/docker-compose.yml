@@ -1,0 +1,19 @@
+services:
+  kniffel:
+    build:
+      context: ..
+      dockerfile: kniffel/Dockerfile
+      args:
+        GAME: kniffel
+    image: kniffel:latest
+    container_name: kniffel
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${KNIFFEL_PORT:-8087}:8080"
+    volumes:
+      - kniffel-data:/data
+
+volumes:
+  kniffel-data:
