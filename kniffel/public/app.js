@@ -450,23 +450,8 @@
 
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   Spieleabend.avatarPicker({ avatars: G.AVATARS, get: () => myAvatar, set: (a) => { myAvatar = a; store.set(K.avatar, a); } });
   const myName = () => { const n = $("#myName").value.trim(); if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); } return n; };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, rules: localRules, avatar: myAvatar });
-  });
 
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (!b) return; localLevel = b.dataset.level; store.set(K.level, localLevel); renderHome(); });
   $("#rulesLocal").addEventListener("change", (e) => {
