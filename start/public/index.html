@@ -151,6 +151,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 /* in a party the host picks the game: no own start button on the cards */
 .inparty:not(.single) .game .actions{display:none}
 .partybox:empty{display:none}
+.partybox:not(:empty){margin-top:auto}
+.partybox:not(:empty)+.actions{margin-top:0}
 .partybox .btn{width:100%}
 </style>
 </head>
