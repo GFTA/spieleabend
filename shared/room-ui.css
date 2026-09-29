@@ -84,3 +84,14 @@
 body:has(#game:not([hidden])) .setfab{display:none}
 #settings .sheet{display:flex;flex-direction:column;gap:12px}
 #settings .look{display:flex;flex-direction:column;gap:8px}
+
+/* wide screens: the chat is a sidebar on the right, the game keeps the rest of the width */
+.ondesk{display:none}
+@media (min-width:1000px) and (min-height:560px){
+  .onphone{display:none}.ondesk{display:inline}
+  #chat{inset:0 0 0 auto;width:340px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;align-items:stretch;justify-content:flex-start;gap:0;z-index:15;
+    background:var(--bg2);box-shadow:inset 1.5px 0 0 var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+  #chat .sheet{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;width:100%}
+  #chat .chatlog{flex:1;max-height:none}
+  body.chatopen{right:340px}
+}

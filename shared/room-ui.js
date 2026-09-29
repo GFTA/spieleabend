@@ -102,7 +102,7 @@
     <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
     <button class="btn btn-primary btn-block" id="settingsClose" type="button">Fertig</button></div></div>`);
   document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
-    <button class="btn btn-primary btn-block" id="chatClose" type="button">Weiterspielen</button></div></div>`);
+    <button class="btn btn-primary btn-block" id="chatClose" type="button"><span class="onphone">Weiterspielen</span><span class="ondesk">Chat einklappen</span></button></div></div>`);
 
   // ---------- behavior ----------
   // app: {
@@ -286,9 +286,14 @@
       sendChat(text); input.value = "";
     });
     renderChat();
-    $("#chatBtn").addEventListener("click", () => { $("#chat").hidden = false; unread = 0; renderChat(); });
+    // on a wide screen the chat is a sidebar on the right that pushes the game aside, the button folds it in and out
+    const wide = matchMedia("(min-width:1000px) and (min-height:560px)");
+    const syncChat = () => { document.body.classList.toggle("chatopen", !$("#chat").hidden && wide.matches); window.dispatchEvent(new Event("resize")); };
+    new MutationObserver(syncChat).observe($("#chat"), { attributes: true, attributeFilter: ["hidden"] });
+    wide.addEventListener && wide.addEventListener("change", syncChat);
+    $("#chatBtn").addEventListener("click", () => { $("#chat").hidden = wide.matches ? !$("#chat").hidden : false; unread = 0; renderChat(); });
     $("#chatClose").addEventListener("click", () => { $("#chat").hidden = true; });
-    $("#chat").addEventListener("click", (e) => { if (e.target.id === "chat") $("#chat").hidden = true; });
+    $("#chat").addEventListener("click", (e) => { if (e.target.id === "chat" && !wide.matches) $("#chat").hidden = true; });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#chat").hidden) { $("#chat").hidden = true; e.stopPropagation(); } }, true);
 
     function joinUrl() {
