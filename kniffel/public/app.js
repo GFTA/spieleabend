@@ -30,7 +30,6 @@
   let localLevel = G.BOT_LEVELS[store.get(K.level)] ? store.get(K.level) : "normal";
   let localRules = G.normRules(store.get(K.rules) || {});
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
-  const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
 
   // ---------- helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
@@ -350,7 +349,7 @@
     $("#reRanking").innerHTML = rankingHTML(true);
     UI.roundEndFooter({ over: true });
     const k = `${V.turn}:${w.join(",")}`;
-    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); }
+    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (me >= 0) Spieleabend.profile.result("kniffel", k, { won: w.includes(me), draw: !w.length, online: mode === "online" }); }
   }
 
   // ---------- start screen ----------
@@ -426,7 +425,7 @@
     },
     bubble: (pi, text) => bubble(pi, text),
     toast, render: () => render(), maxPlayers: 8, watchers: true,
-    cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
+    avatars: G.AVATARS, setAvatar: (a) => { myAvatar = a; store.set(K.avatar, a); },
     // goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
       $("#levelLobbyBox").hidden = !R.members.some((m) => m.bot);

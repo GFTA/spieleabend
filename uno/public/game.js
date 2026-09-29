@@ -51,7 +51,7 @@
     { k: "turnTimer", name: "Zugzeit 30 Sekunden", desc: "Wer zu lange überlegt, zieht automatisch eine Karte und ist fertig.", onlineOnly: true }
   ];
   const TURN_MS = 30000;
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
   const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
   // how often a computer player remembers to call UNO

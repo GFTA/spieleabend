@@ -10,7 +10,7 @@
   const COLORS = ["Rot", "Blau", "Grün", "Gelb"]; // by seat, clockwise around the board
   const SEATS = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] }; // two players sit opposite each other
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Bit-Berta", "Dr. Würfel"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const GOALS = { 1: "Wer zuerst fertig ist", 2: "Alle Plätze ausspielen" };

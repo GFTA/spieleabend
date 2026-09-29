@@ -32,7 +32,8 @@ Renderer (`public/app.js`).
 | Datei | Inhalt |
 |---|---|
 | `kit.css` | Basis-Palette, die fünf Tisch-Designs (nur Basisfarben) und alle Bausteine, die überall gleich aussehen (Knöpfe-Grundlagen, Felder, Panels, Segmente, Toggles, Toast, Avatar-Raster, Reaktionsblasen, Konfetti, Startseiten-Link …) |
-| `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (`?name=`/`?av=`-Übernahme, Start-Avatar), `avatarPicker()`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
+| `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (Profil + `?name=`/`?av=`), `avatarPicker()`/`pickerHTML()`, `profile`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
+| `avatars.js` / `profile.js` | Avatar-Liste, Farben; Profil mit Statistik (s. „Profil, Avatar & Statistik“) |
 | `room-ui.css` / `room-ui.js` | Warteraum und Spielmenü (s. u.) |
 
 Reihenfolge in `index.html`: `kit.css`, `room-ui.css`, dann der eigene `<style>` (Spielfarben
@@ -137,63 +138,31 @@ function applyLook() { /* … */ }
 Dieser Block steht **direkt nach** der `let look = …`-Zeile und **vor** dem
 ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 
-### Avatare (identische Liste in jedem `game.js`)
+### Profil, Avatar & Statistik (`shared/avatars.js`, `shared/profile.js`)
 
-```js
-const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
-```
+**Ein Profil pro Browser, in allen Spielen gleich:** Name, Avatar, Farbe und Statistik.
 
-In `app.js`:
+- `shared/avatars.js` (UMD): `AVATARS` (74 Emoji, die ersten 16 sind die alte Liste), `COLORS`
+  (12 Hex-Farben, nur diese werden akzeptiert), `isColor()`. Jedes `game.js` liest `AVATARS` von dort
+  (`require("../../shared/avatars.js")` bzw. `self.SAAvatars`); der Server liefert die Datei neben `kit.js` aus.
+- `shared/profile.js`: `window.SAProfile` mit `get()`, `set(patch)`, `onChange()`, `result(spiel, schlüssel, {won, draw, online})`,
+  `importLegacy()`, `reset(spiel?)`, `resetAll()`. Form: `{v:1, name, av, col, u, stats:{spiel:{g,w,d,cs,bs,og,ow,k,i}}}`.
+- **Speicherort:** Cookie `sa_profile` mit `Domain=.cool-kidz.net` (gilt für alle Spiel-Subdomains und die Startseite)
+  plus Spiegel in localStorage `spieleabend.profile`; der neuere Zeitstempel `u` gewinnt. Auf anderen Hosts (IP im WLAN) ist es host-bezogen.
+- `kit.js`: `identity()` nimmt `?name=`/`?av=` (Vorrang), sonst das Profil; das `#myName`-Feld schreibt ins Profil.
+  `avatarPicker()`/`pickerHTML()` zeigen Farbwahl (`.avcols`) und Avatar-Raster (`.avgrid`, scrollt, feste Spaltenzahl gibt es nicht).
+- **Farbe** geht als validierter Hex-Wert mit `create`/`join`/`avatar` zum Server (`colorOf()` in `room-server.js`) und
+  steht in `members`, Chat, Zuschauer- und Party-Daten. Sie erscheint in Warteraum, Chat, Party-Liste und Profil, nicht auf den Spielplaketten.
+- **Krönchen** 👑 (`.avc.crown::after`) trägt der Host in Warteraum und Party-Liste.
+- **Statistik:** jedes Spiel meldet beendete Partien über `Spieleabend.profile.result()` (Spiele mit Runden nur bei `last.over`);
+  die alte Bilanz eines Browsers wird einmal per `importLegacy()` (nach Name) übernommen. Die Spielstartseite verlinkt
+  nur noch auf `profile.html` der Startseite (`data-start-link="profile.html"`).
+- **Startseite:** `start/public/profile.html` (Bearbeiten, Summen, Statistik je Spiel, Zurücksetzen mit Doppel-Tipp).
+  Der `start`-Container hat kein `shared/`: `start/public/avatars.js` und `profile.js` sind **Kopien** — nach jeder Änderung
+  `cp shared/avatars.js shared/profile.js start/public/` (ein Test in `start/test/profile.test.js` prüft die Gleichheit).
+- App-Vertrag für `RoomUI`: `avatars: G.AVATARS` und `setAvatar(a)` (statt früher `cycleAvatar`).
 
-```js
-const randomAvatar = () => G.AVATARS[Math.floor(Math.random() * G.AVATARS.length)];
-let myAvatar = G.AVATARS.includes(store.get(K.avatar)) ? store.get(K.avatar) : randomAvatar();
-store.set(K.avatar, myAvatar);
-let localAvatars = Array.isArray(store.get(K.avatars)) ? store.get(K.avatars) : [];
-const avatarFor = (i) => (G.AVATARS.includes(localAvatars[i]) ? localAvatars[i] : G.AVATARS[i % G.AVATARS.length]);
-const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
-```
-
-UI: ein `<button class="avbtn" id="myAvatar">` (eigener Avatar, online) bzw.
-`data-av="i"` pro lokalem Sitzplatz — Klick zyklet mit `nextAvatar` durch die
-Liste. Bots zeigen immer 🤖 statt Avatar. Dieselbe `.avbtn`-CSS-Klasse
-(50×50px, 14px radius, 28px Emoji, in Karten-Reihen 42×42px) in jedem Spiel.
-
-Das aufklappbare Avatar-Raster hat **keine feste Spaltenzahl**, sonst ragt es
-auf 320px-Handys rechts raus:
-
-```css
-.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;/* … */}
-.avgrid button{/* … */;padding:0;min-width:0}
-```
-
-### Name & Avatar von der Startseite
-
-`games.cool-kidz.net` hat einen „Du“-Bereich (Avatar-Button, Name, Raster mit
-derselben `AVATARS`-Liste), gespeichert unter `spieleabend.me`. Wie das Design
-wird beides an jeden „Spielen“/„Beitreten“-Link gehängt: `?name=…&av=…`
-(Name nur, wenn nicht leer; Avatar immer). Die Startseite aktualisiert beim
-Tippen nur die `href`s (`updateLinks()`), rendert die Karten nicht neu — sonst
-wären halb eingetippte Raum-Codes weg.
-
-Jedes Spiel übernimmt das direkt nach `let myAvatar = …`, bevor irgendwas
-gerendert wird, dauerhaft in seine eigenen Schlüssel (`K.me`, `K.avatar`) und
-räumt die URL auf:
-
-```js
-{
-  // name and avatar picked on the games.cool-kidz.net start page (same hand-off as ?table=)
-  const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
-  if (qa && G.AVATARS.includes(qa)) { myAvatar = qa; store.set(K.avatar, myAvatar); }
-  if (qn) store.set(K.me, qn);
-  if (q.has("name") || q.has("av")) {
-    q.delete("name"); q.delete("av");
-    history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
-  }
-}
-```
-
-`#myName` hat überall `maxlength="18"` — die Übernahme kürzt genauso.
+`#myName` hat überall `maxlength="18"`.
 
 ### Sonstige geteilte UI-Konventionen
 
@@ -605,7 +574,7 @@ die README-Tabelle ein (Punkte 1, 2, 4 und 5 unten sind damit erledigt). Danach 
 Die einzelnen Schritte, falls man ohne Generator arbeitet:
 
 1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
-2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, geteilte `AVATARS`-Liste, responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
+2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: fünf `TABLES` (inkl. „Blüte“ mit pastelligen Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, `shared/avatars.js` + `shared/profile.js` einbinden (Profil, Statistik-Hook `profile.result`, „Profil & Statistik“-Link), responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
 3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`
 4. `start/games.json` + `start/public/<id>.svg` + Root-`README.md` ergänzen

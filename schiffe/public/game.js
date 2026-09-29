@@ -30,7 +30,7 @@
   const COLS = "ABCDEFGHIJKLMNOP";
   const MAX_PLAYERS = 4;
   const BOT_NAMES = ["Admiral Byte", "Käpt'n Blech", "Maat Robo", "Lotse Chip"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   // computer players always wear the robot; people keep a valid animal (or get one by seat)
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);

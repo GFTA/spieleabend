@@ -14,7 +14,7 @@
   const HAND_MS = 11000;     // online: how long a finished hand stays on the table
   const BLIND_HANDS = 8;    // house rule: blinds double after this many hands
   const CHIPS = [1000, 2000, 5000];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
   const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
   const SUITS = ["♠", "♥", "♦", "♣"];

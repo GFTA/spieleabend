@@ -13,7 +13,7 @@ const PORT = process.env.PORT ? +process.env.PORT : 8080;
 const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC = path.join(__dirname, "public");
 const GAMES_FILE = process.env.GAMES_FILE || path.join(__dirname, "games.json");
-const TYPES = { ".html": "text/html; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png" };
 
 const games = () => JSON.parse(fs.readFileSync(GAMES_FILE, "utf8"));
 
@@ -56,8 +56,8 @@ async function partyRoute(req, res, url) {
     }
     if (req.method !== "POST") return json(res, 405, { error: "POST" });
     const b = await readJson(req);
-    if (url.pathname === "/party/create") return json(res, 200, parties.create(b.name, b.avatar));
-    if (url.pathname === "/party/join") return json(res, 200, parties.join(b.code, b.name, b.avatar));
+    if (url.pathname === "/party/create") return json(res, 200, parties.create(b.name, b.avatar, b.color));
+    if (url.pathname === "/party/join") return json(res, 200, parties.join(b.code, b.name, b.avatar, b.color));
     if (url.pathname === "/party/act") return json(res, 200, await parties.act(b.code, b.secret, b));
     return json(res, 404, { error: "Nicht gefunden" });
   } catch (e) {
@@ -86,7 +86,7 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(file, (e, body) => {
     if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
     const ext = path.extname(file);
-    res.writeHead(200, { "content-type": TYPES[ext] || "application/octet-stream", "cache-control": ext === ".html" ? "no-store" : "public, max-age=86400" });
+    res.writeHead(200, { "content-type": TYPES[ext] || "application/octet-stream", "cache-control": ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=86400" });
     res.end(body);
   });
 });

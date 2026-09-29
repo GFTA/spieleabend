@@ -58,29 +58,45 @@
     return { render, apply, get: () => cur };
   }
 
-  // ---------- name and avatar ----------
-  // The avatar to start with: a valid stored one, one picked on the start page (?av=), or a
-  // random one; a name from the start page (?name=) is stored for the name field.
+  // ---------- name and avatar (the profile: shared/profile.js) ----------
+  const P = window.SAProfile, COLORS = window.SAAvatars.COLORS;
+  // The name and avatar to start with: a hand-off from the start page (?name=&av=), else the
+  // profile, else what this game stored before (which the profile then adopts).
   function identity({ me, avatar, avatars }) {
-    let a = avatars.includes(store.get(avatar)) ? store.get(avatar) : avatars[Math.floor(Math.random() * avatars.length)];
     const q = new URLSearchParams(location.search), qn = (q.get("name") || "").trim().slice(0, 18), qa = q.get("av");
-    if (qa && avatars.includes(qa)) a = qa;
-    if (qn) store.set(me, qn);
+    const p = P.get();
+    const name = qn || p.name || String(store.get(me) || "").trim().slice(0, 18);
+    let a = qa && avatars.includes(qa) ? qa : avatars.includes(p.av) ? p.av : avatars.includes(store.get(avatar)) ? store.get(avatar) : avatars[Math.floor(Math.random() * avatars.length)];
+    if (name) store.set(me, name);
     dropParams("name", "av");
     store.set(avatar, a);
+    if (name !== p.name || a !== p.av) P.set({ name, av: a });
+    const nameField = $("#myName");
+    if (nameField) nameField.addEventListener("input", () => P.set({ name: nameField.value.trim() }));
     return a;
+  }
+  // colour swatches + avatar grid; data-col / data-pick buttons
+  function pickerHTML(avatars, cur, col) {
+    return `<div class="avcols" role="group" aria-label="Farbe">` +
+      `<button type="button" data-col="" class="avnone" aria-pressed="${!col}" aria-label="Keine Farbe">∅</button>` +
+      COLORS.map((c) => `<button type="button" data-col="${c}" aria-pressed="${c === col}" style="background:${c}" aria-label="Farbe ${c}"></button>`).join("") + `</div>` +
+      avatars.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === cur}">${a}</button>`).join("");
   }
   // the avatar button next to the name field (#myAvatar) opens a grid (#avatarGrid) to pick from
   function avatarPicker({ avatars, get, set }) {
-    $("#myAvatar").addEventListener("click", () => {
-      const g = $("#avatarGrid");
-      g.innerHTML = avatars.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === get()}">${a}</button>`).join("");
-      g.hidden = !g.hidden;
+    const btn = $("#myAvatar"), grid = $("#avatarGrid");
+    const paint = () => { btn.style.background = P.get().col || ""; };
+    paint();
+    btn.addEventListener("click", () => {
+      grid.innerHTML = pickerHTML(avatars, get(), P.get().col);
+      grid.hidden = !grid.hidden;
     });
-    $("#avatarGrid").addEventListener("click", (e) => {
+    grid.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-col]");
+      if (c) { P.set({ col: c.dataset.col }); paint(); grid.innerHTML = pickerHTML(avatars, get(), P.get().col); return; }
       const b = e.target.closest("[data-pick]"); if (!b) return;
-      set(b.dataset.pick);
-      $("#avatarGrid").hidden = true; $("#myAvatar").textContent = b.dataset.pick;
+      set(b.dataset.pick); P.set({ av: b.dataset.pick });
+      grid.hidden = true; btn.textContent = b.dataset.pick;
     });
   }
 
@@ -127,7 +143,7 @@
       ? `${location.protocol}//${location.hostname}:8090/` : "https://games.cool-kidz.net/") + search;
   document.addEventListener("DOMContentLoaded", () => {
     if (/^https?:$/.test(location.protocol) && !/(^|\.)cool-kidz\.net$/.test(location.hostname))
-      for (const a of document.querySelectorAll("[data-start-link]")) a.href = startUrl();
+      for (const a of document.querySelectorAll("[data-start-link]")) a.href = startUrl(a.dataset.startLink);
   });
 
   // ---------- sound and haptics: synthesized effects (no files), the on/off switch, screen wake lock ----------
@@ -180,5 +196,5 @@
     return { sfx, buzz, isOn: () => on, wake };
   }
 
-  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, toast, confetti, showBubble, sound, dropParams };
+  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, profile: P, toast, confetti, showBubble, sound, dropParams };
 })();

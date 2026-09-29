@@ -9,7 +9,7 @@
   const MAX_PLAYERS = 6;
   const HAND = 10;
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Ada Algo", "Bit Bert", "Byte Bea", "Kalle Kabel"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const GOALS = [10, 5];                       // play all 10 phases, or a short game up to phase 5

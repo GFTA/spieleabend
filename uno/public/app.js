@@ -37,7 +37,6 @@
   let goalLocal = 500, goalOnline = 500;
   let localLevel = G.BOT_LEVELS[store.get("passuno.level")] ? store.get("passuno.level") : "normal";
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: "passuno.avatar", avatars: G.AVATARS });
-  const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
   let lastTurn = null;
 
   // ---------- helpers ----------
@@ -507,7 +506,7 @@
     if (V.phase === "roundEnd") {
       renderRoundEnd();
       const k = `${V.round}:${V.last.winner}:${V.players[V.last.winner].score}`;
-      if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); }
+      if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (V.last.over && me >= 0) Spieleabend.profile.result("uno", k, { won: V.last.winner === me, online: mode === "online" }); }
     }
   }
 
@@ -851,7 +850,7 @@
     },
     bubble: (pi, text) => bubble(pi, text),
     toast, render: () => render(), maxPlayers: 10, watchers: true,
-    cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
+    avatars: G.AVATARS, setAvatar: (a) => { myAvatar = a; store.set(K.avatar, a); },
     // goal, computer strength and house rules; the host picks, everyone sees it
     renderSettings(host) {
       $("#levelLobbyBox").hidden = !R.members.some((m) => m.bot);

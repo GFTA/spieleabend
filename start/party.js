@@ -28,8 +28,9 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
       if (!parties.has(c)) return c;
     }
   }
-  function member(name, avatar) {
-    return { name, avatar: String(avatar || "").slice(0, 8), secret: crypto.randomUUID(), ready: false, streams: new Set(), seen: now() };
+  const cleanColor = (c) => (/^#[0-9a-f]{6}$/i.test(c) ? String(c).toLowerCase() : "");
+  function member(name, avatar, color) {
+    return { name, avatar: String(avatar || "").slice(0, 8), color: cleanColor(color), secret: crypto.randomUUID(), ready: false, streams: new Set(), seen: now() };
   }
 
   // what one member gets to see: the list of people, and how to get into the running game
@@ -42,7 +43,7 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
     }
     return {
       code: p.code, you: p.members.indexOf(me), host: p.members.indexOf(p.host), game,
-      members: p.members.map((m) => ({ name: m.name, avatar: m.avatar, ready: m.ready, online: online(m) }))
+      members: p.members.map((m) => ({ name: m.name, avatar: m.avatar, color: m.color, ready: m.ready, online: online(m) }))
     };
   }
   function push(p) {
@@ -54,24 +55,24 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
   }
   function touch(p) { p.touched = now(); }
 
-  function create(name, avatar) {
+  function create(name, avatar, color) {
     name = clean(name);
     if (!name) throw new PartyError("Bitte gib deinen Namen ein.");
     if (parties.size >= MAX_PARTIES) throw new PartyError("Gerade sind zu viele Partys offen. Versuch es später nochmal.");
-    const me = member(name, avatar);
+    const me = member(name, avatar, color);
     const p = { code: newCode(), members: [me], host: me, game: null, launching: false, touched: now() };
     parties.set(p.code, p);
     return { secret: me.secret, view: view(p, me) };
   }
   function find(code) { return parties.get(String(code || "").toUpperCase().trim()); }
-  function join(code, name, avatar) {
+  function join(code, name, avatar, color) {
     const p = find(code);
     if (!p) throw new PartyError("Diese Party gibt es nicht. Prüf den Code.", 404);
     name = clean(name);
     if (!name) throw new PartyError("Bitte gib deinen Namen ein.");
     if (p.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) throw new PartyError(`Der Name „${name}“ ist in dieser Party schon vergeben.`);
     if (p.members.length >= MAX_MEMBERS) throw new PartyError("Die Party ist voll.");
-    const me = member(name, avatar);
+    const me = member(name, avatar, color);
     p.members.push(me); touch(p); push(p);
     return { secret: me.secret, view: view(p, me) };
   }
@@ -119,7 +120,7 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
         const r = await fetchImpl(base + "/party-room", {
           method: "POST", signal: ctl.signal,
           headers: { "content-type": "application/json", "x-party-secret": secret },
-          body: JSON.stringify({ party: p.code, members: people.map((m) => ({ name: m.name, avatar: m.avatar, ready: m.ready })) })
+          body: JSON.stringify({ party: p.code, members: people.map((m) => ({ name: m.name, avatar: m.avatar, color: m.color, ready: m.ready })) })
         });
         out = await r.json().catch(() => ({}));
         if (!r.ok) throw new PartyError(out.error || `${g.name} kann gerade keinen Raum anlegen.`, 502);
@@ -151,7 +152,7 @@ function createParties({ games, secret, fetchImpl = fetch, now = Date.now }) {
     me.seen = now(); touch(p);
     switch (body && body.t) {
       case "ready": me.ready = !!body.on; push(p); break;
-      case "avatar": me.avatar = String(body.avatar || "").slice(0, 8); push(p); break;
+      case "avatar": me.avatar = String(body.avatar || "").slice(0, 8); if (body.color !== undefined) me.color = cleanColor(body.color); push(p); break;
       case "launch": await launch(p, me, String(body.game || "")); break;
       case "leave": remove(p, me); break;
       case "kick": {

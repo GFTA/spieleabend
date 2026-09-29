@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<title>Profil · Spieleabend</title>
+<link rel="icon" href="uno.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#1a1426; --bg2:#231a33; --surface:#2b2140; --line:#3d3057;
+  --text:#f4effb; --muted:#a99cc2;
+  --red:#e0393e; --green:#2fa35b;
+  --accent:#f2c230;
+  --display:"Bowlby One", "Arial Black", Impact, system-ui, sans-serif;
+  --ui:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root[data-table="felt"]{--bg:#0f2a1f;--bg2:#15372a;--surface:#1c4636;--line:#2b5c48;--text:#eef7f1;--muted:#9cc3b1}
+:root[data-table="ocean"]{--bg:#0e1a2b;--bg2:#15243a;--surface:#1c3050;--line:#2b4468;--text:#eef3fb;--muted:#9fb4d3}
+:root[data-table="light"]{color-scheme:light;--bg:#eceff5;--bg2:#ffffff;--surface:#e2e7f0;--line:#cbd3e1;--text:#1b2030;--muted:#5b6479}
+:root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70}
+*{box-sizing:border-box}
+html{background:var(--bg);overflow-x:hidden}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent}
+main{max-width:640px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 40px;display:flex;flex-direction:column;gap:16px}
+a{color:inherit}
+.back{align-self:flex-start;text-decoration:none;font-weight:800;color:var(--muted)}
+h1{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(28px,9vw,40px);line-height:1}
+h2{margin:0;font-family:var(--display);font-weight:400;font-size:20px}
+.card{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hint{margin:0;color:var(--muted);font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:14px;padding:12px 16px;font:inherit;font-weight:800;font-size:15px;text-decoration:none;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:none}
+.field{width:100%;border:0;border-radius:14px;padding:13px 14px;font:inherit;font-size:16px;background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
+.who{display:flex;gap:16px;align-items:center}
+.avc{position:relative;display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--avc,transparent);line-height:1;flex:none}
+.avc.crown::after{content:"👑";position:absolute;top:-10px;left:50%;font-size:15px;line-height:1;transform:translateX(-50%) rotate(-10deg);filter:drop-shadow(0 1px 1px rgba(0,0,0,.45));pointer-events:none}
+.avc.big{width:88px;height:88px;font-size:50px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.avc.big.crown::after{font-size:38px;top:-26px}
+.who .side{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.cols{display:flex;flex-wrap:wrap;gap:10px}
+.cols button{width:32px;height:32px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--surface);color:var(--muted);font-size:16px;line-height:1;box-shadow:inset 0 0 0 1.5px var(--line)}
+.cols button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--accent)}
+.avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:4px;padding:8px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line);max-height:230px;overflow-y:auto;overscroll-behavior:contain}
+.avs button{border:0;background:transparent;font-size:28px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0;cursor:pointer}
+.avs button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.total{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.total div{padding:12px 6px;border-radius:16px;background:var(--bg)}
+.total b{display:block;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1}
+.total span{font-size:12px;color:var(--muted);font-weight:600}
+.stats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.stat{display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;background:var(--bg)}
+.stat img{flex:none;width:46px;height:46px;border-radius:12px;background:var(--surface)}
+.stat .txt{flex:1;min-width:0}
+.stat b{font-size:16px;display:block;overflow-wrap:anywhere}
+.stat .nums{font-weight:800}
+.stat small{display:block;color:var(--muted);font-size:12.5px}
+.stat.none{opacity:.6}
+.stat .btn{flex:none;padding:8px 12px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">‹ Spieleabend</a>
+  <h1>Dein Profil</h1>
+
+  <section class="card" aria-label="Avatar und Name">
+    <div class="who">
+      <span class="avc big crown" id="preview"></span>
+      <div class="side">
+        <label class="label" for="name">Name</label>
+        <input class="field" id="name" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="Dein Name">
+      </div>
+    </div>
+    <p class="hint">Als Host einer Party oder eines Raums trägst du das Krönchen.</p>
+    <div class="label">Farbe</div>
+    <div class="cols" id="cols" role="group" aria-label="Farbe"></div>
+    <div class="label">Avatar</div>
+    <div class="avs" id="avs"></div>
+  </section>
+
+  <section class="card" aria-label="Statistik">
+    <h2>Statistik</h2>
+    <div class="total" id="total"></div>
+    <ul class="stats" id="stats"></ul>
+    <p class="hint">Jede beendete Partie zählt, als Spieler, online wie gegen den Computer. Die Werte liegen in diesem Browser (ein Cookie für alle Spiele auf cool-kidz.net), auf einem anderen Gerät fängst du neu an.</p>
+    <div class="row">
+      <button class="btn" type="button" id="resetStats" data-confirm="Alle Statistiken löschen">Alle Statistiken zurücksetzen</button>
+      <button class="btn" type="button" id="resetAll" data-confirm="Profil komplett löschen">Ganzes Profil zurücksetzen</button>
+    </div>
+  </section>
+</main>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  const { AVATARS, COLORS } = window.SAAvatars, P = window.SAProfile;
+
+  // the design chosen on the start page (same origin, same storage key)
+  try {
+    const t = JSON.parse(localStorage.getItem("spieleabend.table"));
+    const themes = { felt: "#15372a", ocean: "#15243a", light: "#eceff5", blossom: "#f7c6d9" };
+    if (themes[t]) { document.documentElement.dataset.table = t; $('meta[name="theme-color"]').setAttribute("content", themes[t]); }
+  } catch (e) {}
+
+  let games = [];
+  let p = P.get();
+  if (!p.av) { P.set({ av: AVATARS[Math.floor(Math.random() * AVATARS.length)] }); p = P.get(); }
+
+  function renderWho() {
+    const pv = $("#preview");
+    pv.textContent = p.av; pv.style.setProperty("--avc", p.col || "transparent");
+    $("#cols").innerHTML = `<button type="button" data-col="" aria-pressed="${!p.col}" aria-label="Keine Farbe">∅</button>` +
+      COLORS.map((c) => `<button type="button" data-col="${c}" aria-pressed="${c === p.col}" style="background:${c}" aria-label="Farbe ${c}"></button>`).join("");
+    for (const b of document.querySelectorAll("#avs button")) b.setAttribute("aria-pressed", String(b.dataset.pick === p.av));
+  }
+  $("#avs").innerHTML = AVATARS.map((a) => `<button type="button" data-pick="${a}" aria-label="Avatar ${a}">${a}</button>`).join("");
+  $("#name").value = p.name;
+  $("#name").addEventListener("input", (e) => { p = P.set({ name: e.target.value.trim() }); });
+  $("#cols").addEventListener("click", (e) => { const b = e.target.closest("[data-col]"); if (!b) return; p = P.set({ col: b.dataset.col }); renderWho(); });
+  $("#avs").addEventListener("click", (e) => { const b = e.target.closest("[data-pick]"); if (!b) return; p = P.set({ av: b.dataset.pick }); renderWho(); });
+
+  const pct = (w, g) => (g ? Math.round((w / g) * 100) : 0);
+  function renderStats() {
+    const st = p.stats;
+    let g = 0, w = 0;
+    for (const id of Object.keys(st)) { g += st[id].g; w += st[id].w; }
+    $("#total").innerHTML = `<div><b>${g}</b><span>Partien</span></div><div><b>${w}</b><span>Siege</span></div><div><b>${pct(w, g)} %</b><span>Siegquote</span></div>`;
+    $("#stats").innerHTML = games.map((x) => {
+      const s = st[x.id];
+      if (!s || !s.g) return `<li class="stat none"><img src="${esc(x.id)}.svg" alt="" width="46" height="46"><div class="txt"><b>${esc(x.name)}</b><small>Noch nicht gespielt</small></div></li>`;
+      const extra = [s.d ? `${s.d}× unentschieden` : "", s.bs ? `beste Serie ${s.bs}` : "", s.cs > 1 ? `gerade ${s.cs} in Folge` : "", s.og ? `online ${s.ow} von ${s.og}` : ""].filter(Boolean).join(" · ");
+      return `<li class="stat"><img src="${esc(x.id)}.svg" alt="" width="46" height="46"><div class="txt"><b>${esc(x.name)}</b>` +
+        `<span class="nums">${s.g} ${s.g === 1 ? "Partie" : "Partien"} · ${s.w} ${s.w === 1 ? "Sieg" : "Siege"} · ${pct(s.w, s.g)} %</span>${extra ? `<small>${esc(extra)}</small>` : ""}</div>` +
+        `<button class="btn" type="button" data-reset="${esc(x.id)}" data-confirm="Sicher?">Zurücksetzen</button></li>`;
+    }).join("");
+  }
+
+  // deleting needs a second tap within 3 seconds
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-confirm]"); if (!b) return;
+    if (!b.dataset.armed) {
+      b.dataset.armed = "1"; b.dataset.label = b.textContent; b.textContent = b.dataset.confirm === "Sicher?" ? "Sicher? Nochmal" : "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
+      setTimeout(() => { if (b.isConnected && b.dataset.armed) { delete b.dataset.armed; b.textContent = b.dataset.label; b.classList.remove("btn-danger"); } }, 3000);
+      return;
+    }
+    if (b.dataset.reset) p = P.reset(b.dataset.reset);
+    else if (b.id === "resetStats") p = P.reset();
+    else if (b.id === "resetAll") { p = P.resetAll(); p = P.set({ av: AVATARS[Math.floor(Math.random() * AVATARS.length)] }); $("#name").value = ""; }
+    renderWho(); renderStats();
+  });
+
+  renderWho(); renderStats();
+  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((j) => { games = j; renderStats(); }).catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@
 
   const MAX_PLAYERS = @@MAX@@;
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Pixel Paula", "Byte Ben", "Turbo Tina", "Nano Nick", "Zack Zora", "Bit Bruno"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const TARGETS = { 30: "Bis 30", 50: "Bis 50", 100: "Bis 100" };

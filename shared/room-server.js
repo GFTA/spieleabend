@@ -51,6 +51,8 @@ module.exports = function roomServer(g) {
   const BOT_MS = +process.env.BOT_MS || 1100; // how long a computer player "thinks" (default bot plan)
   const BOT_AVATAR = Game.BOT_AVATAR || "🤖";
   const avatarOf = (a) => (Game.AVATARS.includes(a) ? a : Game.AVATARS[crypto.randomInt(Game.AVATARS.length)]);
+  const COLORS = require("./avatars.js").COLORS;
+  const colorOf = (c) => (COLORS.includes(c) ? c : "");
 
   const TYPES = {
     ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -193,7 +195,7 @@ module.exports = function roomServer(g) {
     schedule(room);
     const clock = turnTimers.get(room.code);
     const members = room.members.map((m, i) => ({
-      name: m.name, online: !!m.bot || on.has(i), bot: !!m.bot, avatar: m.bot && !m.standIn ? BOT_AVATAR : avatarOf(m.avatar),
+      name: m.name, online: !!m.bot || on.has(i), bot: !!m.bot, avatar: m.bot && !m.standIn ? BOT_AVATAR : avatarOf(m.avatar), color: m.bot ? "" : colorOf(m.color),
       lobby: !!room.state && !inGame(room, i), ready: !!m.ready
     }));
     const seen = watchers(room.code), fields = g.roomFields(room);
@@ -249,7 +251,7 @@ module.exports = function roomServer(g) {
       const name = cleanName(m && m.name);
       if (!name || seen.has(name.toLowerCase())) continue;
       seen.add(name.toLowerCase());
-      list.push({ name, avatar: avatarOf(m.avatar), ready: !!m.ready });
+      list.push({ name, avatar: avatarOf(m.avatar), color: colorOf(m.color), ready: !!m.ready });
     }
     if (!list.length) return { error: "Die Party ist leer." };
     if (rooms.size >= MAX_ROOMS) return { error: "Der Server ist voll." };
@@ -257,7 +259,7 @@ module.exports = function roomServer(g) {
     const rest = list.filter((m) => !seated.includes(m));
     const watch = MAX_WATCHERS ? rest.slice(0, MAX_WATCHERS) : [];
     const r = Object.assign({ code: newCode(), host: 0, party: String(body.party || "").replace(/[^A-Z]/g, "").slice(0, 8) || null }, g.newRoom({}), {
-      members: seated.map((m) => ({ name: m.name, secret: crypto.randomUUID(), avatar: m.avatar, ready: m.ready })), state: null, touched: Date.now()
+      members: seated.map((m) => ({ name: m.name, secret: crypto.randomUUID(), avatar: m.avatar, color: m.color, ready: m.ready })), state: null, touched: Date.now()
     });
     rooms.set(r.code, r); saveRooms();
     return { code: r.code, max: MAX_PLAYERS, seats: r.members.map((m) => ({ name: m.name, secret: m.secret })),
@@ -283,7 +285,7 @@ module.exports = function roomServer(g) {
         if (!name) return err("Bitte gib deinen Namen ein.");
         if (rooms.size >= MAX_ROOMS) return err("Der Server ist voll. Versuch es später nochmal.");
         const r = Object.assign({ code: newCode(), host: 0 }, g.newRoom(msg), {
-          members: [{ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar) }], state: null, touched: Date.now()
+          members: [{ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar), color: colorOf(msg.color) }], state: null, touched: Date.now()
         });
         rooms.set(r.code, r);
         attach(ws, r, 0);
@@ -306,10 +308,10 @@ module.exports = function roomServer(g) {
           if (!MAX_WATCHERS) return err(`Der Raum ist voll (${MAX_PLAYERS} Spieler).`);
           // full room (or asked to only watch): watch instead
           if (watchers(r.code).length >= MAX_WATCHERS) return err("Der Raum ist voll, auch zum Zuschauen.");
-          ws.watchAvatar = avatarOf(msg.avatar);
+          ws.watchAvatar = avatarOf(msg.avatar); ws.watchColor = colorOf(msg.color);
           return watch(ws, r, name);
         }
-        r.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar), lobby: !!r.state });
+        r.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(msg.avatar), color: colorOf(msg.color), lobby: !!r.state });
         attach(ws, r, r.members.length - 1);
         broadcast(r); saveRooms();
         return;
@@ -326,7 +328,7 @@ module.exports = function roomServer(g) {
         if (room.members.length >= MAX_PLAYERS) return err(`Der Raum ist voll (${MAX_PLAYERS} Spieler).`);
         const name = ws.watchName;
         if (room.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) return err(`Der Name „${name}“ ist schon vergeben.`);
-        room.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(ws.watchAvatar), lobby: !!room.state });
+        room.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(ws.watchAvatar), color: colorOf(ws.watchColor), lobby: !!room.state });
         attach(ws, room, room.members.length - 1);
         broadcast(room); saveRooms();
         return;
@@ -392,8 +394,10 @@ module.exports = function roomServer(g) {
         return;
       }
       case "avatar": { // change your own avatar, only in the waiting room
-        if (!room || room.state || ws.pid == null || ws.pid < 0 || !Game.AVATARS.includes(msg.avatar)) return;
-        room.members[ws.pid].avatar = msg.avatar;
+        if (!room || room.state || ws.pid == null || ws.pid < 0) return;
+        const m = room.members[ws.pid];
+        if (Game.AVATARS.includes(msg.avatar)) m.avatar = msg.avatar;
+        if (msg.color !== undefined) m.color = colorOf(msg.color);
         broadcast(room); saveRooms();
         return;
       }
@@ -435,7 +439,7 @@ module.exports = function roomServer(g) {
         if (now - (ws.lastChat || 0) < 1000) return err("Nicht so schnell, eine Nachricht pro Sekunde.");
         ws.lastChat = now;
         const me = ws.pid >= 0 ? room.members[ws.pid] : null;
-        const line = { id: (room.chatSeq = (room.chatSeq || 0) + 1), at: now, pi: ws.pid, name: me ? me.name : ws.watchName, avatar: me ? avatarOf(me.avatar) : avatarOf(ws.watchAvatar), text };
+        const line = { id: (room.chatSeq = (room.chatSeq || 0) + 1), at: now, pi: ws.pid, name: me ? me.name : ws.watchName, avatar: me ? avatarOf(me.avatar) : avatarOf(ws.watchAvatar), color: me ? colorOf(me.color) : colorOf(ws.watchColor), text };
         room.chat = (room.chat || []).concat(line).slice(-CHAT_KEEP);
         room.touched = now;
         for (const s of sockets.get(room.code) || []) if (s.pid != null) send(s, { t: "chat", line });
@@ -553,14 +557,16 @@ module.exports = function roomServer(g) {
   // Scripts get a content hash in their URL (app.js?v=1a2b3c4d), so a phone or a CDN
   // holding an old copy can never mix old and new files after an update.
   // The shared base (kit.css/.js) and waiting room + menu (room-ui.css/.js) are served next to the game's files.
-  const SHARED = { "/kit.css": path.join(__dirname, "kit.css"), "/kit.js": path.join(__dirname, "kit.js"), "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css"), "/home-ui.js": path.join(__dirname, "home-ui.js") };
-  const SCRIPTS = ["/kit.css", "/room-ui.css", "/kit.js", "/room-ui.js", "/home-ui.js", "/game.js", "/app.js"];
+  const SHARED = { "/avatars.js": path.join(__dirname, "avatars.js"), "/profile.js": path.join(__dirname, "profile.js"), "/kit.css": path.join(__dirname, "kit.css"), "/kit.js": path.join(__dirname, "kit.js"), "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css"), "/home-ui.js": path.join(__dirname, "home-ui.js") };
+  const SCRIPTS = ["/kit.css", "/room-ui.css", "/avatars.js", "/profile.js", "/kit.js", "/room-ui.js", "/home-ui.js", "/game.js", "/app.js"];
   const fileOf = (p) => SHARED[p] || path.join(PUBLIC, p);
   const hash = crypto.createHash("sha1");
   for (const p of SCRIPTS) hash.update(fs.readFileSync(fileOf(p)));
   const VERSION = hash.digest("hex").slice(0, 10);
   const INDEX = fs.readFileSync(path.join(PUBLIC, "index.html"), "utf8")
     .replace('<link rel="stylesheet" href="kit.css">', `<link rel="stylesheet" href="kit.css?v=${VERSION}">`)
+    .replace('<script src="avatars.js"></script>', `<script src="avatars.js?v=${VERSION}"></script>`)
+    .replace('<script src="profile.js"></script>', `<script src="profile.js?v=${VERSION}"></script>`)
     .replace('<script src="kit.js"></script>', `<script src="kit.js?v=${VERSION}"></script>`)
     .replace('<link rel="stylesheet" href="room-ui.css">', `<link rel="stylesheet" href="room-ui.css?v=${VERSION}">`)
     .replace('<script src="room-ui.js"></script>', `<script src="room-ui.js?v=${VERSION}"></script>`)

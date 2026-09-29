@@ -77,7 +77,7 @@ test("aim help knows where no ship can lie any more", () => {
 });
 
 test("avatars: people keep theirs, computer players wear the robot", () => {
-  assert.strictEqual(G.AVATARS.length, 16);
+  assert.ok(G.AVATARS.length >= 16);
   const S = G.newGame([{ name: "A", avatar: "🐙" }, { name: "B", avatar: "nope" }, { name: "C", bot: true, avatar: "🐙" }], 1, 10);
   assert.deepStrictEqual(S.players.map((p) => p.avatar), ["🐙", G.AVATARS[1], "🤖"]);
   assert.deepStrictEqual(G.view(S, 0).players.map((p) => p.avatar), ["🐙", G.AVATARS[1], "🤖"]);

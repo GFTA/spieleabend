@@ -10,7 +10,7 @@
   const MAX_ROLLS = 3;
   const TURN_MS = 30000;
   const BONUS_AT = 63, BONUS = 35, EXTRA_KNIFFEL = 100;
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_NAMES = ["Robo", "Pixel", "Byte", "Turbo", "Nova", "Blitz", "Chip", "Zappy", "Kiwi", "Rocket"];
   const BOT_LEVELS = { easy: "Einfach", normal: "Normal", hard: "Schwer" };
 

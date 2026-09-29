@@ -105,7 +105,7 @@
   //   bubble(pi, text, name) -> show a short text over a player (reactions; chat lines during a game)
   //   memberExtra(m, i) -> html after the name (colour dot, ...)
   //   renderSettings(host) -> fill the settings slot and the house rules
-  //   cycleAvatar() -> the next avatar for me (also stored by the app)
+  //   avatars -> the list to pick from; setAvatar(a) -> remember my new avatar
   //   menu: { open(), local(box), player(box), skip(V) -> may the host skip the current player, standIn }
   // }
   // returns { send, resume, update, renderLobby, rematchStatus, armed, detectServer(path, flag), roomCode(), ... }; update() runs on every render
@@ -152,6 +152,7 @@
     }
     // send now, or for create/join: connect first and send as soon as the socket is open
     function send(m) {
+      if ((m.t === "create" || m.t === "join") && m.color === undefined) m.color = window.Spieleabend.profile.get().col;
       if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; }
       if (m.t === "create" || m.t === "join") {
         queue.push(m); wantOnline = true; retry = 0; connect();
@@ -215,7 +216,7 @@
     const mine = (line) => { const r = R(), s = store.get(app.onlineKey); return !!r && line.pi === r.you && (r.you >= 0 || (s && s.watch === line.name)); };
     const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
     function renderChat() {
-      const html = chat.length ? chat.map((l) => `<li class="${mine(l) ? "me" : ""}"><span class="av" aria-hidden="true">${esc(l.avatar || "")}</span><div><b>${esc(l.name || "?")}</b> <time>${hhmm(l.at)}</time><p>${esc(l.text)}</p></div></li>`).join("")
+      const html = chat.length ? chat.map((l) => `<li class="${mine(l) ? "me" : ""}"><span class="av avc" style="--avc:${esc(l.color || "transparent")}" aria-hidden="true">${esc(l.avatar || "")}</span><div><b>${esc(l.name || "?")}</b> <time>${hhmm(l.at)}</time><p>${esc(l.text)}</p></div></li>`).join("")
         : '<li class="empty">Noch keine Nachrichten.</li>';
       for (const id of ["#chatLobbyLog", "#chatLog"]) { const el = $(id); el.innerHTML = html; el.scrollTop = el.scrollHeight; }
       renderBadge();
@@ -302,7 +303,7 @@
       $("#sitBtn").hidden = !watcher || r.members.length >= max;
       $("#members").innerHTML = r.members.map((m, i) =>
         `<li class="${i === r.you ? "me" : ""}">${m.bot ? `<span class="botico">${ICONS.bot}</span>` : `<span class="on${m.online ? "" : " off"}"></span>`}` +
-        (i === r.you ? `<button class="av" type="button" data-myav aria-label="Avatar wechseln">${m.avatar}</button>` : `<span class="av" aria-hidden="true">${m.avatar || ""}</span>`) +
+        (i === r.you ? `<button class="av avc${i === r.host ? " crown" : ""}" type="button" data-myav style="--avc:${esc(m.color || "transparent")}" aria-label="Avatar wechseln">${m.avatar}</button>` : `<span class="av avc${i === r.host ? " crown" : ""}" style="--avc:${esc(m.color || "transparent")}" aria-hidden="true">${m.avatar || ""}</span>`) +
         `<span class="nm">${esc(m.name)}</span>${app.memberExtra ? app.memberExtra(m, i) : ""}` +
         `${i === r.host ? '<span class="tag">Host</span>' : ""}${i === r.you ? '<span class="tag">du</span>' : ""}${m.bot ? '<span class="tag">Computer</span>' : ""}` +
         `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("");
@@ -409,10 +410,22 @@
     });
     $("#addBot").addEventListener("click", () => send({ t: "bot" }));
     $("#sitBtn").addEventListener("click", () => send({ t: "sit" }));
+    const lobbyAv = document.createElement("div");
+    lobbyAv.className = "avgrid"; lobbyAv.id = "lobbyAv"; lobbyAv.hidden = true;
+    $("#members").after(lobbyAv);
+    const fillLobbyAv = () => { const r = R(); lobbyAv.innerHTML = window.Spieleabend.pickerHTML(app.avatars, r && r.members[r.you] ? r.members[r.you].avatar : "", window.Spieleabend.profile.get().col); };
     $("#members").addEventListener("click", (e) => {
       const b = e.target.closest("[data-unbot]");
       if (b) return send({ t: "unbot", i: +b.dataset.unbot });
-      if (e.target.closest("[data-myav]")) send({ t: "avatar", avatar: app.cycleAvatar() });
+      if (e.target.closest("[data-myav]")) { lobbyAv.hidden = !lobbyAv.hidden; if (!lobbyAv.hidden) fillLobbyAv(); }
+    });
+    lobbyAv.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-col]"), a = e.target.closest("[data-pick]");
+      if (!c && !a) return;
+      const P = window.Spieleabend.profile;
+      if (c) P.set({ col: c.dataset.col }); else { app.setAvatar(a.dataset.pick); P.set({ av: a.dataset.pick }); lobbyAv.hidden = true; }
+      send({ t: "avatar", avatar: a ? a.dataset.pick : undefined, color: P.get().col });
+      if (!lobbyAv.hidden) fillLobbyAv();
     });
 
     // ---------- in-game menu ----------

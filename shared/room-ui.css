@@ -19,8 +19,8 @@
 .members .tag.wait{background:var(--surface);color:var(--muted)}
 .members .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
 .members .rm{flex:none;width:34px;height:34px;margin:-6px -4px -6px 0;border-radius:10px;border:0;background:transparent;color:var(--muted);font-size:20px}
-.members .av{font-size:20px;line-height:1;border:0;background:transparent;padding:0;flex:none}
-.members button.av{cursor:pointer;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--accent);padding:3px}
+.members .av{font-size:21px;line-height:1;border:0;padding:0;flex:none}
+.members button.av{cursor:pointer;box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
 .botico{width:18px;height:18px;flex:none;color:var(--muted)}
 .botico svg{width:100%;height:100%;display:block}
 .nowplaying{display:block;padding:12px 14px;border-radius:14px;background:var(--bg2);font-size:14px;line-height:1.45;box-shadow:inset 0 0 0 1.5px var(--accent)}
@@ -69,7 +69,7 @@
 .chatlog li{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:14px;line-height:1.35}
 .chatlog li.me{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .chatlog li.empty{justify-content:center;color:var(--muted);background:none;box-shadow:none}
-.chatlog .av{font-size:20px;line-height:1;flex:none}
+.chatlog .av{width:30px;height:30px;font-size:18px}
 .chatlog div{min-width:0;flex:1}
 .chatlog b{font-weight:800}
 .chatlog time{color:var(--muted);font-size:11px;margin-left:4px}

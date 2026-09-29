@@ -11,7 +11,7 @@
   const MAX_PLAYERS = 2;
   const COLORS = ["Rot", "Gelb"];
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const CLOCK_MS = 15000, GRACE = 600;

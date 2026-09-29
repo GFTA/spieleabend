@@ -41,12 +41,14 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
 
   const a = client(port), b = client(port), c = client(port);
   await a.open; await b.open; await c.open;
-  a.send({ t: "create", name: "Anna", size: 8, goal: 1, rules: { popout: true }, avatar: "🐙" });
+  a.send({ t: "create", name: "Anna", size: 8, goal: 1, rules: { popout: true }, avatar: "🐙", color: "#e0393e" });
   const joined = await a.next((m) => m.t === "joined");
-  b.send({ t: "join", code: joined.code.toLowerCase(), name: "Ben", avatar: "💣" });
+  b.send({ t: "join", code: joined.code.toLowerCase(), name: "Ben", avatar: "💣", color: "red" });
   await b.next((m) => m.t === "joined");
   const lobby = await a.next((m) => m.t === "room" && m.members.length === 2);
   assert.strictEqual(lobby.members[0].avatar, "🐙");
+  assert.strictEqual(lobby.members[0].color, "#e0393e");
+  assert.strictEqual(lobby.members[1].color, "", "colours outside the palette are dropped");
   assert.ok(Game.AVATARS.includes(lobby.members[1].avatar));
   assert.strictEqual(lobby.size, 8);
   assert.deepStrictEqual(lobby.rules, { popout: true, five: false, clock: false });
@@ -57,6 +59,8 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   a.send({ t: "bot" });
   assert.match((await a.next((m) => m.t === "error")).msg, /Mehr als 2/);
 
+  b.send({ t: "avatar", color: "#2d6fd6" });
+  assert.strictEqual((await a.next((m) => m.t === "room" && m.members[1] && m.members[1].color === "#2d6fd6")).members[1].avatar, lobby.members[1].avatar, "a colour change keeps the avatar");
   b.send({ t: "avatar", avatar: "🦖" });
   await a.next((m) => m.t === "room" && m.members[1].avatar === "🦖");
   b.send({ t: "start" });
@@ -101,7 +105,7 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   await a.next((m) => m.t === "room" && m.members.length === 1 && m.watchers.length === 0);
   a.send({ t: "bot" });
   const withBot = await a.next((m) => m.t === "room" && m.members.length === 2 && m.members[1].bot);
-  assert.deepStrictEqual(withBot.members[1], { name: "Robo Rudi", bot: true, avatar: "🤖", online: true, lobby: false, ready: false });
+  assert.deepStrictEqual(withBot.members[1], { name: "Robo Rudi", bot: true, avatar: "🤖", color: "", online: true, lobby: false, ready: false });
   a.send({ t: "settings", level: 1 });
   a.send({ t: "start" });
   v = (await a.next((m) => m.t === "room" && m.view)).view;

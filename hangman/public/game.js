@@ -8,7 +8,7 @@
 
   const MAX_PLAYERS = 8;
   const BOT_NAMES = ["Robo Rudi", "Käpt'n Chip", "Lexi Logik", "Bit Bert", "Wortwurm", "Ada Algo", "Byte Bea", "Kalle Kabel"];
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
+  const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const GOALS = [3, 5, 8];                      // rounds per game

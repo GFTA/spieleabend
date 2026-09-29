@@ -21,7 +21,6 @@
   const LOOK = Spieleabend.look({ key: K.look, sizeLabel: "Größe" });
 
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
-  const nextAvatar = (a) => G.AVATARS[(G.AVATARS.indexOf(a) + 1) % G.AVATARS.length];
   const avi = (a) => (a ? `<i class="av-i" aria-hidden="true">${a}</i>` : "");
 
   const TARGETS = Object.entries(G.TARGETS).map(([v, name]) => [+v, name]);
@@ -280,25 +279,13 @@
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
   }
 
-  // Bilanz: results per name on this device (only yourself)
+  // Statistik lebt im Profil (shared/profile.js, gilt für alle Spiele); die alte Bilanz dieses Browsers wird einmal übernommen
+  const profile = Spieleabend.profile;
+  { const old = (store.get(K.stats) || {})[profile.get().name]; if (old) profile.importLegacy("@@KEY@@", { rounds: old.rounds || old.games, wins: old.wins }); }
   function record(key) {
-    const st = store.get(K.stats) || {};
-    if (st._last === key) return;
-    st._last = key;
-    if (V.me >= 0) {
-      const p = V.players[V.me], s = st[p.name] || (st[p.name] = { rounds: 0, wins: 0 });
-      s.rounds++;
-      if (V.last.winners.includes(V.me)) s.wins++;
-    }
-    store.set(K.stats, st);
-  }
-  function renderStats() {
-    const st = store.get(K.stats) || {};
-    const rows = Object.keys(st).filter((k) => k !== "_last").map((name) => ({ name, ...st[name] }))
-      .sort((a, b) => b.wins - a.wins || b.rounds - a.rounds).slice(0, 8);
-    $("#statsPanel").hidden = !rows.length;
-    $("#statsList").innerHTML = rows.map((r) =>
-      `<li><span>${esc(r.name)}<small>${r.rounds ? Math.round((r.wins / r.rounds) * 100) : 0} % gewonnen</small></span><b>${r.wins} von ${r.rounds}</b></li>`).join("");
+    const i = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot);
+    if (i < 0) return;
+    profile.result("@@KEY@@", key, { won: V.last.winners.includes(i), draw: !V.last.winners.length, online: mode === "online" });
   }
 
   function segHTML(list, cur) {
@@ -308,7 +295,6 @@
   function renderHome() {
     LOOK.render();
     $("#myAvatar").textContent = myAvatar;
-    renderStats();
     for (const b of document.querySelectorAll("#modeTabs button")) b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
     // never hide the online form on a web address: a failed check (ad blocker, slow
     // network) must not lock people out; connecting will tell if there really is no server
@@ -344,7 +330,7 @@
     },
     bubble: (pi, text, name) => bubble(pi, text, name),
     toast, render: () => render(), maxPlayers: G.MAX_PLAYERS, watchers: true,
-    cycleAvatar: () => { myAvatar = nextAvatar(myAvatar); store.set(K.avatar, myAvatar); return myAvatar; },
+    avatars: G.AVATARS, setAvatar: (a) => { myAvatar = a; store.set(K.avatar, a); },
     // the settings the host picks in the waiting room; everyone sees them
     renderSettings(host) {
       for (const [id, list, cur] of [["#targetOnline", TARGETS, R.target], ["#goalOnline", GOALS, R.goal], ["#levelOnline", LEVELS, R.level || 2]]) {
@@ -376,12 +362,6 @@
   Spieleabend.avatarPicker({ avatars: G.AVATARS, get: () => myAvatar, set: (a) => { myAvatar = a; store.set(K.avatar, a); } });
 
   // ---------- start screen ----------
-  $("#statsReset").addEventListener("click", (e) => { // second tap within 3 s deletes
-    const b = e.currentTarget;
-    if (b.dataset.armed) { store.del(K.stats); delete b.dataset.armed; b.textContent = "Bilanz löschen"; b.classList.remove("btn-danger"); renderStats(); return; }
-    b.dataset.armed = "1"; b.textContent = "Sicher? Nochmal tippen"; b.classList.add("btn-danger");
-    setTimeout(() => { delete b.dataset.armed; b.textContent = "Bilanz löschen"; b.classList.remove("btn-danger"); }, 3000);
-  });
   for (const [id, key] of [["target", "target"], ["goal", "goal"], ["level", "level"]]) {
     $(`#${id}Online`).addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b && R && R.you === R.host) wsSend({ t: "settings", [key]: +b.dataset.v }); });
   }

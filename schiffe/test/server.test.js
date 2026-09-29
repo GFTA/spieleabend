@@ -72,7 +72,7 @@ test("create, join, place and play over WebSockets, with a computer player", asy
 
   a.send({ t: "bot" });
   const withBot = await b.next((m) => m.t === "room" && m.members.length === 3);
-  assert.deepStrictEqual(withBot.members[2], { name: "Admiral Byte", bot: true, avatar: "🤖", online: true, lobby: false, ready: false });
+  assert.deepStrictEqual(withBot.members[2], { name: "Admiral Byte", bot: true, avatar: "🤖", color: "", online: true, lobby: false, ready: false });
 
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);

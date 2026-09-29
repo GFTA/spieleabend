@@ -84,7 +84,13 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .field::placeholder{color:var(--muted)}
 .avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px;padding:8px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
 .avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0;cursor:pointer}
-.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+/* avatar with colour; the host wears a crown */
+.avc{position:relative;display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--avc,transparent);line-height:1;flex:none}
+.avc.crown::after{content:"👑";position:absolute;top:-10px;left:50%;font-size:15px;line-height:1;transform:translateX(-50%) rotate(-10deg);filter:drop-shadow(0 1px 1px rgba(0,0,0,.45));pointer-events:none}
+.avgrid{max-height:min(300px,48vh);overflow-y:auto;overscroll-behavior:contain}
+.avgrid .avcols{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:2px 2px 8px}
+.avgrid .avcols button{width:28px;height:28px;aspect-ratio:auto;border-radius:50%;padding:0;font-size:15px;color:var(--muted);background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line)}
+.avgrid .avcols button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
 .me .hint{margin:0;color:var(--muted);font-size:13px}
 
 /* party: play together, the host picks the game */
@@ -100,7 +106,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .plink .btn{padding:10px 14px;font-size:14px}
 .pmembers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .pmembers li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:var(--surface)}
-.pmembers .av{font-size:24px;line-height:1}
+.pmembers .av{font-size:21px;line-height:1}
 .pmembers .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
 .pmembers .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--green)}
 .pmembers .dot.off{background:var(--muted);opacity:.6}
@@ -139,6 +145,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     </div>
     <div class="avgrid" id="avatarGrid" hidden></div>
     <p class="hint">Name, Avatar und Design nimmst du in jedes Spiel mit, das du von hier aus öffnest.</p>
+    <a class="btn btn-ghost" href="profile.html">Profil &amp; Statistik</a>
   </section>
 
   <div class="modes" id="modes" role="group" aria-label="Spielart">
@@ -159,6 +166,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <footer>Läuft auf dem Mini-PC zu Hause · Code auf github.com/GFTA/spieleabend</footer>
 </main>
 
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
 <script>
 (() => {
   "use strict";
@@ -186,29 +195,37 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   });
   applyTable();
 
-  // name and avatar, handed to the games the same way as the design (?name=…&av=…)
-  const AVATARS = ["🦊", "🐼", "🐸", "🐯", "🦁", "🐨", "🐙", "🦄", "🐵", "🐧", "🦉", "🐢", "🐳", "🦖", "👻", "🤠"];
-  let me = { name: "", avatar: "" };
-  try { me = Object.assign(me, JSON.parse(localStorage.getItem("spieleabend.me")) || {}); } catch (e) {}
-  if (!AVATARS.includes(me.avatar)) me.avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-  const saveMe = () => { try { localStorage.setItem("spieleabend.me", JSON.stringify(me)); } catch (e) {} };
-  saveMe();
+  // name, avatar and colour: the profile (profile.js, one cookie for every game), handed to the games as ?name=…&av=…
+  const { AVATARS, COLORS } = window.SAAvatars, P = window.SAProfile;
+  let me = { name: "", avatar: "", color: "" };
+  function loadMe() { const p = P.get(); me = { name: p.name, avatar: p.av, color: p.col }; }
+  loadMe();
+  if (!me.avatar) { me.avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)]; P.set({ av: me.avatar }); }
   function renderMe() {
-    $("#myAvatar").textContent = me.avatar;
-    $("#avatarGrid").innerHTML = AVATARS.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === me.avatar}" aria-label="Avatar ${a}">${a}</button>`).join("");
+    const b = $("#myAvatar");
+    b.textContent = me.avatar; b.style.background = me.color || "";
+    if (!$("#avatarGrid").hidden) $("#avatarGrid").innerHTML = pickerHTML();
   }
+  function pickerHTML() {
+    return `<div class="avcols" role="group" aria-label="Farbe"><button type="button" data-col="" aria-pressed="${!me.color}" aria-label="Keine Farbe">∅</button>` +
+      COLORS.map((c) => `<button type="button" data-col="${c}" aria-pressed="${c === me.color}" style="background:${c}" aria-label="Farbe ${c}"></button>`).join("") + `</div>` +
+      AVATARS.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === me.avatar}" aria-label="Avatar ${a}">${a}</button>`).join("");
+  }
+  const tellParty = () => { if (party && saved) act({ t: "avatar", avatar: me.avatar, color: me.color }).catch(() => {}); };
   $("#myName").value = me.name;
-  $("#myName").addEventListener("input", (e) => { me.name = e.target.value; saveMe(); updateLinks(); });
+  $("#myName").addEventListener("input", (e) => { me.name = e.target.value; P.set({ name: me.name.trim() }); updateLinks(); });
   $("#myAvatar").addEventListener("click", () => {
     const g = $("#avatarGrid");
     g.hidden = !g.hidden;
+    if (!g.hidden) g.innerHTML = pickerHTML();
     $("#myAvatar").setAttribute("aria-expanded", String(!g.hidden));
   });
   $("#avatarGrid").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-pick]"); if (!b) return;
-    me.avatar = b.dataset.pick; saveMe();
-    $("#avatarGrid").hidden = true; $("#myAvatar").setAttribute("aria-expanded", "false");
-    renderMe(); updateLinks();
+    const c = e.target.closest("[data-col]"), b = e.target.closest("[data-pick]");
+    if (c) { me.color = c.dataset.col; P.set({ col: me.color }); }
+    else if (b) { me.avatar = b.dataset.pick; P.set({ av: me.avatar }); $("#avatarGrid").hidden = true; $("#myAvatar").setAttribute("aria-expanded", "false"); }
+    else return;
+    renderMe(); updateLinks(); tellParty();
   });
   renderMe();
 
@@ -378,7 +395,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     box.innerHTML = `<h3>Deine Party</h3>
       <div class="pcode" aria-label="Party-Code">${esc(party.code)}</div>
       <div class="plink"><code>${esc(link)}</code><button class="btn" type="button" data-p="copy">Kopieren</button></div>
-      <ul class="pmembers">${party.members.map((m, i) => `<li><span class="dot${m.online ? "" : " off"}" title="${m.online ? "hier" : "gerade im Spiel oder weg"}"></span><span class="av">${esc(m.avatar)}</span><span class="nm">${esc(m.name)}</span>${m.ready ? '<span class="tag ok">Bereit</span>' : ""}${i === party.host ? '<span class="tag">Host</span>' : ""}${i === party.you ? '<span class="tag">du</span>' : ""}${host && i !== party.you ? `<button class="rm" type="button" data-kick="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("")}</ul>
+      <ul class="pmembers">${party.members.map((m, i) => `<li><span class="dot${m.online ? "" : " off"}" title="${m.online ? "hier" : "gerade im Spiel oder weg"}"></span><span class="av avc${i === party.host ? " crown" : ""}" style="--avc:${esc(/^#[0-9a-f]{6}$/.test(m.color) ? m.color : "transparent")}">${esc(m.avatar)}</span><span class="nm">${esc(m.name)}</span>${m.ready ? '<span class="tag ok">Bereit</span>' : ""}${i === party.host ? '<span class="tag">Host</span>' : ""}${i === party.you ? '<span class="tag">du</span>' : ""}${host && i !== party.you ? `<button class="rm" type="button" data-kick="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("")}</ul>
       ${game}
       <p>${host ? "Du bist der Host: Wähl unten ein Spiel." : "Der Host wählt das Spiel, dann geht es für alle automatisch los."} „Bereit“ zeigt, wer mitspielen will, falls das Spiel zu wenige Plätze hat.</p>
       <div class="row"><button class="btn${mine.ready ? "" : " btn-primary"}" type="button" data-p="ready">${mine.ready ? "Nicht bereit" : "Bereit"}</button><button class="btn" type="button" data-p="leave">Party verlassen</button></div>
@@ -397,7 +414,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     try {
       if (b.dataset.kick) return void await act({ t: "kick", index: +b.dataset.kick });
       switch (b.dataset.p) {
-        case "create": if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar }); break;
+        case "create": if (needName()) return; await enter("party/create", { name: me.name.trim(), avatar: me.avatar, color: me.color }); break;
         case "ready": await act({ t: "ready", on: !party.members[party.you].ready }); break;
         case "leave": await act({ t: "leave" }); leaveLocal(""); break;
         case "copy":
@@ -412,7 +429,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     const input = $("#partyCode"), code = input.value.toUpperCase().replace(/[^A-Z]/g, "");
     if (code.length !== 4) { input.focus(); input.select(); return; }
     if (needName()) { prefill = code; return; }
-    enter("party/join", { code, name: me.name.trim(), avatar: me.avatar });
+    enter("party/join", { code, name: me.name.trim(), avatar: me.avatar, color: me.color });
   });
   $("#party").addEventListener("input", (e) => { if (e.target.id === "partyCode") e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   $("#games").addEventListener("click", async (e) => {
