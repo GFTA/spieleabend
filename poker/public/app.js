@@ -27,7 +27,7 @@
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "poker.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, onChange: () => renderHome() });
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
-  let chipsLocal = G.normChips(store.get(K.chips)), chipsOnline = chipsLocal;
+  let chipsLocal = G.normChips(store.get(K.chips));
   let localLevel = G.BOT_LEVELS[store.get(K.level)] ? store.get(K.level) : "normal";
   let localRules = G.normRules(store.get(K.rules) || {});
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
@@ -554,7 +554,6 @@
     const sh = $("#serverHint");
     sh.hidden = serverState === "ok";
     sh.textContent = serverState === "checking" ? "Suche den Spiel-Server …" : "Unter dieser Adresse antwortet kein Poker-Server. „Einzelspieler“ geht immer.";
-    $("#chipsOnline").innerHTML = chipButtons(chipsOnline);
     $("#chipsLocal").innerHTML = chipButtons(chipsLocal);
     $("#myAvatar").textContent = myAvatar;
     const saved = store.get(K.local);
@@ -594,7 +593,6 @@
   // ---------- events ----------
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
   const pickChips = (e, set) => { const b = e.target.closest("[data-chips]"); if (b) { set(+b.dataset.chips); store.set(K.chips, +b.dataset.chips); renderHome(); } };
-  $("#chipsOnline").addEventListener("click", (e) => pickChips(e, (c) => { chipsOnline = c; }));
   $("#chipsLocal").addEventListener("click", (e) => pickChips(e, (c) => { chipsLocal = c; }));
 
   // ---------- waiting room and menu: shared (room-ui.js), plus this game's own parts ----------
@@ -653,23 +651,8 @@
 
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   Spieleabend.avatarPicker({ avatars: G.AVATARS, get: () => myAvatar, set: (a) => { myAvatar = a; store.set(K.avatar, a); } });
   const myName = () => { const n = $("#myName").value.trim(); if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); } return n; };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, chips: chipsOnline, rules: localRules, avatar: myAvatar });
-  });
 
   $("#levelLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-level]"); if (!b) return; localLevel = b.dataset.level; store.set(K.level, localLevel); renderHome(); });
   $("#rulesLocal").addEventListener("change", (e) => {
