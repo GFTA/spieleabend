@@ -1,4 +1,4 @@
-// Poker UI: one-phone mode (with a hand-off screen between the humans) and online rooms
+// Poker UI: single player (with computers) and online rooms
 // share one table. The hole cards are private; everything else is on the table.
 (() => {
   "use strict";
@@ -37,7 +37,7 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   const money = G.money;
   const isBot = (i) => !!(V && V.players[i] && V.players[i].bot);
-  const myTurn = () => !!V && V.phase === "play" && V.cur === V.me && V.me >= 0 && !isBot(V.cur) && !hidden && !!V.opts;
+  const myTurn = () => !!V && V.phase === "play" && V.cur === V.me && V.me >= 0 && !isBot(V.cur) && !!V.opts;
 
   const RANKS = { 10: "10", 11: "B", 12: "D", 13: "K", 14: "A" };
   const cardHTML = (id, cls = "") => id == null
@@ -181,30 +181,9 @@
   }
 
 
-  // one person (with computers): always theirs; several: whoever is on, behind a hand-off screen
-  let hidden = false, viewer = null;
   const lBot = (i) => !!(L && L.players[i] && L.players[i].bot);
-  const humansIn = () => (L ? L.players.map((p, i) => i).filter((i) => !L.players[i].bot && !L.players[i].out) : []);
-  function localViewerFor() {
-    const hs = humansIn();
-    if (hs.length <= 1) return hs.length ? hs[0] : L.players.findIndex((p) => !p.bot);
-    if (L.phase === "play" && !lBot(L.cur)) return L.cur;
-    return viewer != null ? viewer : hs[0];
-  }
-  function updateHandoff() {
-    if (humansIn().length <= 1 || L.phase !== "play" || lBot(L.cur)) { hidden = false; return; }
-    if (viewer !== L.cur) { hidden = true; viewer = L.cur; }
-  }
-  function renderHandoff() {
-    const P = V.players[V.me];
-    $("#hoAvatar").textContent = P.avatar;
-    $("#hoName").textContent = P.name;
-    $("#hoMeta").textContent = `Hand ${V.hand} · Blinds ${money(V.blinds.sb)}/${money(V.blinds.bb)} · Pot ${money(V.pot)} · du hast ${money(P.chips)} Chips. Sieh nur nach, wenn sonst niemand mitschaut.`;
-    $("#hoBtn").textContent = `Ich bin ${P.name}, Karten zeigen`;
-  }
-  $("#hoBtn").addEventListener("click", () => { hidden = false; render(); sfx("deal", 2); });
 
-  // ---------- one-phone mode ----------
+  // ---------- single player (with computers) ----------
   let botT = null, botKey = null, tickT = null;
   function scheduleLocal() {
     clearTimeout(tickT);
@@ -326,17 +305,16 @@
 
   function render() {
     if (mode === "local" && L) {
-      updateHandoff();
-      V = G.view(L, localViewerFor());
+      V = G.view(L, 0);
       showScreen("game"); renderGame();
       scheduleLocal();
     } else if (mode === "online" && R) {
       const meM = R.members[R.you], waiting = !!(R.view && meM && meM.lobby);
       if (!waiting) watching = false;
-      if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; $("#handoff").hidden = true; }
-      else { V = R.view; hidden = false; showScreen("game"); renderGame(); }
+      if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; }
+      else { V = R.view; showScreen("game"); renderGame(); }
     } else {
-      V = null; $("#roundEnd").hidden = true; $("#handoff").hidden = true;
+      V = null; $("#roundEnd").hidden = true;
       clearTimeout(botT); clearTimeout(tickT); botKey = null; stackShown = {}; suspenseUntil = 0;
       showScreen("home"); renderHome();
     }
@@ -359,8 +337,6 @@
     const key = `${V.hand}:${V.turn}`;
     if (key !== lastTurnKey && lastTurnKey !== null && myTurn() && (mode === "online" || V.players.some((p) => p.bot))) { sfx("turn"); buzz([40, 60, 40]); }
     lastTurnKey = key;
-    $("#handoff").hidden = !(mode === "local" && hidden);
-    if (mode === "local" && hidden) renderHandoff();
     const over = V.phase === "roundEnd" && V.last && V.last.over;
     if (over && overKey !== `${V.hand}:${V.turn}:${V.seq}`) { overKey = `${V.hand}:${V.turn}:${V.seq}`; overReady = Math.max(Date.now(), suspenseUntil) + 2800; setTimeout(render, overReady - Date.now() + 100); }
     const showEnd = !!over && Date.now() >= overReady;
@@ -459,9 +435,9 @@
     $("#dock").classList.toggle("myturn", mine);
     const spectator = V.me < 0;
     // own cards
-    $("#hole").innerHTML = spectator ? "" : hidden ? cardHTML(null) + cardHTML(null) : V.hole.map((c) => cardHTML(c, p && p.folded ? "dim" : "")).join("");
+    $("#hole").innerHTML = spectator ? "" : V.hole.map((c) => cardHTML(c, p && p.folded ? "dim" : "")).join("");
     $("#hole").hidden = spectator;
-    const hi = V.handNow, live = !spectator && !hidden && hi && !(p && (p.folded || p.out)) && (V.phase === "play" || V.phase === "runout");
+    const hi = V.handNow, live = !spectator && hi && !(p && (p.folded || p.out)) && (V.phase === "play" || V.phase === "runout");
     $("#handNow").textContent = live ? G.label(hi.key) + (hi.tableOnly ? " · liegt am Tisch" : "") : "";
     const meter = $("#meter");
     meter.hidden = !live;
@@ -674,7 +650,7 @@
         LOOK.render();
       },
       local(box) {
-        box.append(UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; hidden = false; viewer = null; render(); }));
+        box.append(UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; render(); }));
       },
       player() {},
       skip: (v) => v.phase === "play" && v.cur !== v.me,
@@ -720,12 +696,12 @@
     const { names, bots } = HOME.roster($("#myName").value);
     const list = names.map((n, i) => ({ name: n, bot: bots[i], avatar: bots[i] ? "🤖" : myAvatar }));
     L = G.newGame(list, chipsLocal, Object.assign({}, localRules, { turnTimer: false }), false);
-    mode = "local"; viewer = null; hidden = false; lastTurnKey = null; lastHand = null;
+    mode = "local"; lastTurnKey = null; lastHand = null;
     store.set(K.local, L); render(); wake();
   });
   $("#resumeBtn").addEventListener("click", () => {
     L = store.get(K.local); if (!L) return render();
-    mode = "local"; viewer = null; hidden = false; render(); wake();
+    mode = "local"; render(); wake();
   });
 
   $("#foldBtn").addEventListener("click", tryFold);
@@ -738,7 +714,7 @@
   $("#hintBtn").addEventListener("click", showHint);
   $("#reBtn").addEventListener("click", () => doAct({ t: "next" }));
   $("#reBack").addEventListener("click", () => {
-    if (mode === "local") { store.del(K.local); L = null; mode = null; hidden = false; viewer = null; render(); }
+    if (mode === "local") { store.del(K.local); L = null; mode = null; render(); }
     else if (R && R.members[R.you] && R.members[R.you].lobby) { watching = false; render(); }
     else if (V && V.phase === "roundEnd") wsSend({ t: "lobby" });
     else wsSend({ t: "end" });

@@ -1,4 +1,4 @@
-// Schiffe versenken UI: one-phone pass-and-play and online rooms share one table renderer.
+// Schiffe versenken UI: single player (with computers) and online rooms share one table renderer.
 (() => {
   "use strict";
   const G = window.SchiffeGame;
@@ -37,7 +37,6 @@
   let mode = null;        // "local" | "online" | null
   let L = null;           // local engine state
   let shown = -1;         // local: whose fleet is on screen (-1: nobody's)
-  let hidden = true;      // local: hand-off screen is up
   let R = null;           // last online room message
   let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
@@ -363,6 +362,10 @@
     if (pick === i) { orient = 1 - orient; renderGame(); return; } // second tap turns it
     pickUp(i); buzz(8); renderGame();
   });
+  $("#fleetBtn").addEventListener("click", () => {
+    if (!draft || draft.some((s) => !s.cells)) { toast("Erst alle Schiffe aufs Feld setzen."); return; }
+    doAct({ t: "place", ships: draft.map((s) => s.cells) }, mode === "local" ? shown : null);
+  });
   $("#editBtn").addEventListener("click", () => doAct({ t: "unready" }));
 
   // ---------- rendering ----------
@@ -370,22 +373,10 @@
     for (const s of ["home", "lobby", "game"]) $("#" + s).hidden = s !== id;
   }
 
-  // who has to hold the shared phone right now, or -1 (computer's turn, round over)
-  function localNeed() {
-    if (L.phase === "place") return L.players.findIndex((p) => !p.bot && !p.ready);
-    if (L.phase === "play" && !L.players[L.cur].bot) return L.cur;
-    return -1;
-  }
   function localViewer() {
     const hs = humans();
-    if (hs.length <= 1) { shown = hs.length ? hs[0] : -1; hidden = false; return; }
-    if (L.phase === "roundEnd") { hidden = false; return; }
-    const need = localNeed();
-    if (need < 0) return;
-    if (need === shown) { hidden = false; return; }
-    if (L.phase === "place" || shown < 0) hidden = true; // otherwise: "pass the phone" button in the dock
+    shown = hs.length ? hs[0] : -1;
   }
-  const passing = () => mode === "local" && L && L.phase === "play" && !hidden && shown >= 0 && localNeed() >= 0 && localNeed() !== shown;
 
   function render() {
     if (mode === "local" && L) {
@@ -393,18 +384,15 @@
       V = G.view(L, shown);
       showScreen("game");
       renderGame();
-      $("#handoff").hidden = !hidden;
-      if (hidden) renderHandoff();
       scheduleClock();
     } else if (mode === "online" && R) {
-      $("#handoff").hidden = true;
       const meM = R.members[R.you], waiting = !!(R.view && meM && meM.lobby);
       if (!waiting) watching = false;
       if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; }
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
       V = null;
-      $("#handoff").hidden = true; $("#roundEnd").hidden = true;
+      $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
     UI.update();
@@ -536,7 +524,7 @@
   // shot clock: a bar that runs out, beeps in the last seconds when it is your shot
   let clockEnd = 0, clockT = null, clockBeep = null;
   function renderClock() {
-    const on = V.phase === "play" && V.clockMs > 0 && V.clock > 0 && !passing() && !V.players[V.cur].bot && (mode === "online" || V.cur === V.me);
+    const on = V.phase === "play" && V.clockMs > 0 && V.clock > 0 && !V.players[V.cur].bot && (mode === "online" || V.cur === V.me);
     $("#clock").hidden = !on;
     clearInterval(renderClock.t);
     if (!on) return;
@@ -556,11 +544,11 @@
   // one-phone mode keeps the clock itself, but only while the player really holds the phone
   function scheduleClock() {
     clearTimeout(clockT);
-    if (mode !== "local" || !L || hidden || shown !== L.cur) return;
+    if (mode !== "local" || !L || shown !== L.cur) return;
     const ms = G.nextDeadline(L);
     if (ms < 0) return;
     clockT = setTimeout(() => {
-      if (mode !== "local" || !L || hidden || shown !== L.cur) return;
+      if (mode !== "local" || !L || shown !== L.cur) return;
       const ev = G.tick(L);
       if (ev.length) { handleEvents(ev, G.view(L, shown)); store.set(K.local, L); render(); scheduleBot(); }
       else scheduleClock();
@@ -695,14 +683,14 @@
     anim = null;
 
     // dock: status and buttons
-    const show = { fireBtn: false, weapons: false, readyBtn: false, editBtn: false, passBtn: false, resultBtn: false };
+    const show = { fireBtn: false, weapons: false, fleetBtn: false, editBtn: false, resultBtn: false };
     let who = "", hint = "";
     const curName = V.cur >= 0 ? V.players[V.cur].name : "";
     if (V.phase === "place") {
       if (placing) {
         who = mode === "local" ? `${P.name}, stell deine Flotte auf` : "Stell deine Flotte auf";
         hint = pick != null ? `Tippe aufs Feld, wo es hin soll (${oriName(draft[pick].key, orient)}), oder zieh es hin.` : "Schiffe ziehen zum Verschieben, antippen dreht sie.";
-        show.readyBtn = true;
+        show.fleetBtn = true;
       } else {
         const wait = V.players.filter((p) => !p.ready).map((p) => p.name);
         who = "Warte auf die anderen";
@@ -713,15 +701,8 @@
       who = "Runde vorbei";
       hint = "Alle Flotten sind aufgedeckt. Tippe oben auf die Namen.";
       show.resultBtn = peek;
-    } else if (passing()) {
-      const ls = V.lastShot;
-      const mine = ls && ls.pi === shown && ls.turn === V.turn - 1;
-      who = mine ? (ls.res === "miss" ? "Wasser!" : ls.res === "hit" ? "Treffer!" : "Versenkt!") : `${V.players[localNeed()].name} ist dran`;
-      hint = mine ? `Als Nächstes ist ${V.players[localNeed()].name} dran.` : "Gib das Handy weiter.";
-      show.passBtn = true;
-      $("#passBtn").textContent = `Weitergeben an ${V.players[localNeed()].name}`;
     } else if (myTurn()) {
-      who = mode === "local" && humans().length > 1 ? `${P.name}, du bist dran` : "Du bist dran";
+      who = "Du bist dran";
       if (!canShoot(focus)) hint = "Tippe oben auf einen Gegner, um auf seine Flotte zu zielen.";
       else if (aimCell != null && aimAt === focus) hint = `${WEAPON[weapon].aimed(aimCell)}. Nochmal antippen zum Feuern.`;
       else hint = WEAPON[weapon].hint(V.players[focus].name);
@@ -749,7 +730,7 @@
     fb.textContent = aimed ? WEAPON[weapon].fire(aimCell) : WEAPON[weapon].idle;
     fb.className = "btn " + (weapon === "shot" ? "btn-danger" : "btn-primary");
     renderClock();
-    $("#readyBtn").disabled = !!draft && placing && draft.some((s) => !s.cells);
+    $("#fleetBtn").disabled = !!draft && placing && draft.some((s) => !s.cells);
     const salvo = V.rules.salvo && myTurn();
     $("#shots").hidden = !salvo;
     if (salvo) {
@@ -805,7 +786,7 @@
       else if (aimCell != null || weapon !== "shot") { aimCell = null; weapon = "shot"; if (V) renderGame(); }
       return;
     }
-    if (open || $("#game").hidden || !$("#handoff").hidden || !$("#roundEnd").hidden || !V) return;
+    if (open || $("#game").hidden || !$("#roundEnd").hidden || !V) return;
     const k = e.key.toLowerCase();
     if (V.phase === "place") {
       if (k === "r") { if (!dragTurn()) { $("#rotBtn").click(); preview(hoverCell); } e.preventDefault(); }
@@ -849,7 +830,6 @@
     focus = V.me; renderGame();
   });
   $("#fireBtn").addEventListener("click", fire);
-  $("#passBtn").addEventListener("click", () => { shown = -1; hidden = true; render(); });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
   // ---------- house rules ----------
@@ -899,24 +879,6 @@
     wsSend({ t: "react", e: b.dataset.e });
   });
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#reactBar, #reactBtn")) $("#reactBar").hidden = true; });
-
-  function renderHandoff() {
-    const need = localNeed();
-    if (need < 0) { hidden = false; $("#handoff").hidden = true; return; }
-    const p = L.players[need];
-    $("#hoName").textContent = p.name;
-    $("#hoAvatar").textContent = p.avatar || "";
-    if (L.phase === "place") {
-      $("#hoMeta").textContent = "Stell deine Flotte auf. Die anderen schauen bitte weg!";
-      $("#hoLog").innerHTML = "";
-    } else {
-      const others = L.players.filter((x, i) => i !== need && !x.out).map((x) => `${x.name} ${x.fleet.filter((s) => !s.sunk).length}`).join(" · ");
-      $("#hoMeta").textContent = `Du hast noch ${p.fleet.filter((s) => !s.sunk).length} Schiffe. Die anderen: ${others}`;
-      $("#hoLog").innerHTML = L.log.slice(-4).map((l) => `<li>${esc(l)}</li>`).join("");
-    }
-    $("#hoBtn").textContent = `Ich bin ${p.name}, Flotte zeigen`;
-  }
-  $("#hoBtn").addEventListener("click", () => { shown = localNeed(); hidden = false; if (L.phase === "play") G.resetClock(L); render(); });
 
   function scoreList(el, winners) {
     const ranked = V.players.map((p, i) => ({ ...p, i })).sort((a, b) => b.wins - a.wins || b.hits - a.hits);
@@ -1074,7 +1036,7 @@
       },
       local(box) {
         box.append(
-          UI.armed("Runde neu starten", () => { L.round--; G.startRound(L); shown = -1; hidden = true; peek = false; draftKey = null; store.set(K.local, L); render(); scheduleBot(); }),
+          UI.armed("Runde neu starten", () => { L.round--; G.startRound(L); shown = -1; peek = false; draftKey = null; store.set(K.local, L); render(); scheduleBot(); }),
           UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; clearTimeout(botT); render(); })
         );
       },
@@ -1141,7 +1103,7 @@
   });
 
   function startLocal(state) {
-    L = state; mode = "local"; shown = -1; hidden = true; focus = null; pref = null; peek = false; draftKey = null;
+    L = state; mode = "local"; shown = -1; focus = null; pref = null; peek = false; draftKey = null;
     if (L.phase === "play") G.resetClock(L);
     store.set(K.local, L); render(); wake(); scheduleBot();
   }
@@ -1155,17 +1117,10 @@
     startLocal(s);
   });
 
-  // ---------- waiting room: ready up, or watch the game that runs ----------
-  $("#readyBtn").addEventListener("click", () => {
-    if ($("#readyBtn").dataset.act === "watch") { watching = true; render(); return; }
-    const me = R && R.members[R.you];
-    if (me) wsSend({ t: "ready", on: !me.ready });
-  });
-
   // host closes the room for everyone; tap twice, like the menu actions
 
   $("#reBtn").addEventListener("click", () => {
-    if (mode === "local") { shown = -1; hidden = true; peek = false; }
+    if (mode === "local") { shown = -1; peek = false; }
     doAct({ t: "next" }, mode === "local" ? 0 : null);
   });
   $("#reLook").addEventListener("click", () => { peek = true; render(); });

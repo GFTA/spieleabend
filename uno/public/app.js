@@ -24,7 +24,6 @@
 
   let mode = null;        // "local" | "online" | null
   let L = null;           // local engine state
-  let hidden = false;     // local: hand-off screen is up
   let R = null;           // last online room message
   let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
@@ -153,21 +152,8 @@
       if (fresh.length) incoming[i] = (incoming[i] || []).concat(fresh);
     });
   }
-  let hold = null, holdT = null; // keep showing the drawer's hand while their card flies in
-  // With computer players on a shared phone, the hand on screen belongs to the last human
-  // who looked; bots play without a hand-off, and two humans in a row still get one.
-  let viewer = null;
   const isBot = (i) => !!(L && L.players[i] && L.players[i].bot);
-  const firstHuman = () => L.players.findIndex((p) => !p.bot);
-  function localViewer() {
-    if (hold != null) return hold;
-    if (!isBot(L.cur)) return L.cur;
-    return viewer != null && !isBot(viewer) ? viewer : firstHuman();
-  }
-  function afterTurnChange() {
-    if (isBot(L.cur)) hidden = false;
-    else hidden = L.cur !== viewer;
-  }
+  const localViewer = () => L.players.findIndex((p) => !p.bot);
   let localBotT = null, localBotKey = null, localUnoDecided = null;
   const localForgot = new Set();
   function scheduleLocalBot() {
@@ -198,14 +184,6 @@
       trackIncoming(snap, res.events);
       if (!res.ok) { if (!isBot(who)) toast(res.error); store.set(K.local, L); render(); return false; }
       sel = null;
-      if (L.phase !== "roundEnd" && L.turn !== before) {
-        afterTurnChange();
-        // drew a card that does not fit: let them watch it arrive before passing the phone
-        if (hidden && (res.events || []).some((e) => e.t === "drew" && e.pi === who) && incoming[who]) {
-          hold = who; clearTimeout(holdT);
-          holdT = setTimeout(() => { hold = null; render(); }, 450 + 110 * (incoming[who].length - 1) + 700);
-        }
-      }
       store.set(K.local, L);
       render();
       seatFlights(res.events);
@@ -364,7 +342,7 @@
     if (open || $("#game").hidden) return;
     const k = e.key.toLowerCase();
     if (k === "u" && !$("#unoCall").hidden) { $("#unoBig").click(); e.preventDefault(); }
-    else if (k === "d" && $("#handoff").hidden) { tryDraw(); e.preventDefault(); }
+    else if (k === "d") { tryDraw(); e.preventDefault(); }
     else if (k === "h") showHint();
     else if (k === "s") toggleSort();
   });
@@ -385,18 +363,15 @@
       V = G.view(L, localViewer());
       showScreen("game");
       renderGame();
-      $("#handoff").hidden = !(hidden && hold == null && !isBot(L.cur) && L.phase !== "roundEnd");
-      if (!$("#handoff").hidden) renderHandoff();
       scheduleLocalBot();
     } else if (mode === "online" && R) {
-      $("#handoff").hidden = true;
       const meM = R.members[R.you], waiting = !!(R.view && meM && meM.lobby);
       if (!waiting) watching = false;
       if (!R.view || (waiting && !watching)) { V = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; }
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
       V = null;
-      $("#handoff").hidden = true; $("#roundEnd").hidden = true;
+      $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
     UI.update();
@@ -511,7 +486,7 @@
     // cards that just came from the pile fly in from it
     const ids = new Set(V.hand.map((c) => c.id));
     if (mode === "local") {
-      if ((!hidden || hold === V.me) && incoming[V.me]) {
+      if (incoming[V.me]) {
         flyIn(incoming[V.me].filter((id) => ids.has(id)));
         delete incoming[V.me];
       }
@@ -705,7 +680,7 @@
   }
   // flights for what others just did, after the screen was redrawn (online and shared phone)
   function seatFlights(events) {
-    if (!V || (mode === "local" && hidden && hold == null)) return;
+    if (!V) return;
     for (const ev of events || []) {
       if ((ev.t === "drew" || ev.t === "took" || ev.t === "penalty") && ev.pi !== V.me) flyToSeat(ev.pi, ev.n || (ev.t === "penalty" ? 2 : 1));
       if (ev.t === "swap") {
@@ -774,15 +749,6 @@
     if (s && (s.offsetLeft < hand.scrollLeft || s.offsetLeft + cw > hand.scrollLeft + hand.clientWidth)) hand.scrollLeft = s.offsetLeft - W / 2;
   }
   window.addEventListener("resize", () => { if (V && !$("#game").hidden) { layoutHand(); renderSeats(); } });
-
-  function renderHandoff() {
-    $("#hoAvatar").textContent = V.players[V.me].avatar || "";
-    $("#hoName").textContent = V.players[V.me].name;
-    const others = V.players.filter((_, i) => i !== V.me).map((p) => `${p.name} ${p.count}`).join(" · ");
-    $("#hoMeta").textContent = `Du hast ${V.hand.length} Karten. Die anderen: ${others}`;
-    $("#hoLog").innerHTML = V.log.slice(-4).map((l) => `<li>${esc(l)}</li>`).join("");
-    $("#hoBtn").textContent = `Ich bin ${V.players[V.me].name}, Karten zeigen`;
-  }
 
   function scoreList(el, winner) {
     const ranked = V.players.map((p, i) => ({ ...p, i })).sort((a, b) => b.score - a.score);
@@ -927,7 +893,7 @@
       local(box) {
         box.append(
           UI.armed(`${L.players[localViewer()].name}: Runde aufgeben`, () => doAct({ t: "surrender" }, localViewer())),
-          UI.armed("Runde neu mischen", () => { L.round--; G.startRound(L); hidden = false; store.set(K.local, L); render(); scheduleLocalUno(); }),
+          UI.armed("Runde neu mischen", () => { L.round--; G.startRound(L); store.set(K.local, L); render(); scheduleLocalUno(); }),
           UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; render(); })
         );
       },
@@ -969,12 +935,12 @@
     const { names, bots } = HOME.roster($("#myName").value);
     L = G.newGame(names, goalLocal, Object.assign({}, localRules, { jumpIn: false, turnTimer: false }));
     L.players.forEach((p, i) => { p.bot = bots[i]; p.avatar = p.bot ? "🤖" : myAvatar; });
-    mode = "local"; viewer = 0; hidden = false;
+    mode = "local";
     store.set(K.local, L); render(); wake();
   });
   $("#resumeBtn").addEventListener("click", () => {
     L = store.get(K.local); if (!L) return render();
-    mode = "local"; viewer = 0; hidden = false;
+    mode = "local";
     render(); wake(); scheduleLocalUno();
   });
 
@@ -982,7 +948,6 @@
 
   // host closes the room for everyone; tap twice, like the menu actions
 
-  $("#hoBtn").addEventListener("click", () => { hidden = false; viewer = L.cur; render(); });
   $("#keepBtn").addEventListener("click", () => doAct({ t: "keep" }));
   function showHint() {
     if (!myTurn()) return;

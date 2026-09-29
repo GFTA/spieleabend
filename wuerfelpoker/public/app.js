@@ -1,5 +1,5 @@
-// Würfelpoker UI: one-phone mode and online rooms share one table. All dice and holds are
-// public, so there is no hand-off screen; everybody watches every roll.
+// Würfelpoker UI: single player and online rooms share one table. All dice and holds are
+// public, so everybody watches every roll.
 (() => {
   "use strict";
   const G = window.DiceGame;
@@ -62,13 +62,9 @@
     })
   });
 
-  // ---------- one-phone mode ----------
-  let viewer = null; // the human whose name the phone shows while a computer plays
+  // ---------- single player (with computers) ----------
   const lBot = (i) => !!(L && L.players[i] && L.players[i].bot);
-  function localViewer() {
-    if (!lBot(L.cur)) return L.cur;
-    return viewer != null && !lBot(viewer) ? viewer : L.players.findIndex((p) => !p.bot);
-  }
+  const localViewer = () => L.players.findIndex((p) => !p.bot);
   let botT = null, botKey = null;
   function scheduleLocalBot() {
     if (mode !== "local" || !L || L.phase !== "play" || !lBot(L.cur)) { clearTimeout(botT); botKey = null; return; }
@@ -90,7 +86,6 @@
       const pi = actor == null ? L.cur : actor;
       const res = G.act(L, pi, a);
       if (!res.ok) { if (!lBot(pi)) toast(res.error); return false; }
-      if (!lBot(pi)) viewer = pi;
       handleEvents(res.events);
       store.set(K.local, L);
       render();
@@ -501,12 +496,12 @@
     const { names, bots } = HOME.roster($("#myName").value);
     L = G.newGame(names, goalLocal, Object.assign({}, localRules, { turnTimer: false }));
     L.players.forEach((p, i) => { p.bot = bots[i]; p.avatar = p.bot ? "🤖" : myAvatar; });
-    mode = "local"; viewer = null; hold = null; lastTurnKey = null;
+    mode = "local"; hold = null; lastTurnKey = null;
     store.set(K.local, L); render(); wake();
   });
   $("#resumeBtn").addEventListener("click", () => {
     L = store.get(K.local); if (!L) return render();
-    mode = "local"; viewer = null; hold = null; render(); wake();
+    mode = "local"; hold = null; render(); wake();
   });
 
   // ---------- waiting room: ready up, or watch the game that runs ----------

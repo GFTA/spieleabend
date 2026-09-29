@@ -41,7 +41,6 @@
   let sel = null;         // selected hand card id
   let peek = false;       // round over, looking at the table
   let inflight = false;
-  let hidden = false, viewer = null; // shared device: whose hand is shown, and the hand-off screen
   let sortMode = store.get(K.sort) === "color" ? "color" : "value";
   let server = null, serverState = "checking";
   const webHost = /^https?:$/.test(location.protocol);
@@ -55,7 +54,7 @@
   // ---------- helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   const humans = (st) => st.players.map((_, i) => i).filter((i) => !st.players[i].bot);
-  const myTurn = () => !!V && V.phase === "play" && V.me >= 0 && V.cur === V.me && !hidden && (mode === "online" || !V.players[V.cur].bot);
+  const myTurn = () => !!V && V.phase === "play" && V.me >= 0 && V.cur === V.me && (mode === "online" || !V.players[V.cur].bot);
   const pname = (i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name);
   const me = () => (V && V.me >= 0 ? V.players[V.me] : null);
   const COL = "rygbws";
@@ -394,28 +393,10 @@
     }, ms + 30);
   }
 
-  // ---------- shared device: whose hand is shown ----------
-  // one person (with computers): always theirs; several people: whoever is on, behind a hand-off screen
   function localViewerFor() {
     const hs = humans(L);
-    if (hs.length <= 1) return hs.length ? hs[0] : -1;
-    if (L.phase === "play" && !L.players[L.cur].bot) return L.cur;
-    return viewer != null ? viewer : hs[0];
+    return hs.length ? hs[0] : -1;
   }
-  function updateHandoff() {
-    const hs = humans(L);
-    if (hs.length <= 1 || L.phase !== "play" || L.players[L.cur].bot) { hidden = false; return; }
-    if (viewer !== L.cur) { hidden = true; viewer = L.cur; }
-  }
-  function renderHandoff() {
-    const P = V.players[V.me];
-    $("#hoAvatar").textContent = P.avatar;
-    $("#hoName").textContent = P.name;
-    $("#hoMeta").textContent = `Phase ${P.phase}: ${G.phaseName(P.phase)}${P.laid ? " (liegt schon)" : ""}. Die anderen: ${V.players.filter((_, i) => i !== V.me).map((p) => `${p.name} Phase ${p.phase}`).join(" · ")}`;
-    $("#hoLog").innerHTML = V.log.slice(-4).map((l) => `<li>${esc(l)}</li>`).join("");
-    $("#hoBtn").textContent = `Ich bin ${P.name}, Karten zeigen`;
-  }
-  $("#hoBtn").addEventListener("click", () => { hidden = false; render(); dealIn(); });
 
   // ---------- rendering ----------
   function showScreen(id) {
@@ -423,7 +404,6 @@
   }
   function render() {
     if (mode === "local" && L) {
-      updateHandoff();
       V = G.view(L, localViewerFor());
       showScreen("game");
       renderGame();
@@ -435,7 +415,7 @@
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
       V = null;
-      $("#roundEnd").hidden = true; $("#handoff").hidden = true;
+      $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
     UI.update();
@@ -568,17 +548,13 @@
 
     // hand: everything that is not in the spread
     const hand = $("#hand");
-    hand.innerHTML = hidden ? "" : sorted(V.hand.filter((c) => !staged.has(c.id)))
+    hand.innerHTML = sorted(V.hand.filter((c) => !staged.has(c.id)))
       .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : ""].join(" "), "button")).join("");
     freshId = null;
     layoutHand();
     $("#reactBtn").hidden = mode !== "online";
     $("#keys").innerHTML = turn ? (V.step === "draw" ? "<kbd>D</kbd> Stapel · <kbd>A</kbd> Ablage · oder auf die Hand ziehen" : "Karten ziehen und ablegen · <kbd>←</kbd><kbd>→</kbd> Karte wählen · <kbd>Enter</kbd> abwerfen · <kbd>P</kbd> Phase auslegen · <kbd>S</kbd> sortieren") : "";
     renderClock();
-
-    // shared device: hand the phone over
-    $("#handoff").hidden = !(mode === "local" && hidden && !end);
-    if (mode === "local" && hidden && !end) renderHandoff();
 
     // turn change feedback
     const key = `${V.round}:${V.turn}:${V.cur}`;
@@ -661,7 +637,7 @@
     return t;
   }
   document.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || !V || $("#game").hidden || hidden || drag) return;
+    if (e.button !== 0 || !V || $("#game").hidden || drag) return;
     const card = e.target.closest("#hand .card, #myZone .slots .card");
     const pileBtn = e.target.closest("#deckBtn, #discardBtn");
     let src = null;
@@ -953,7 +929,7 @@
       },
       local(box) {
         box.append(
-          UI.armed("Runde neu geben", () => { L.players.forEach((p) => { p.phase = p.phaseAtStart || p.phase; }); L.round--; L.dealer = (L.dealer + L.players.length - 1) % L.players.length; G.startRound(L); peek = false; viewer = null; store.set(K.local, L); render(); dealIn(); scheduleBot(); }),
+          UI.armed("Runde neu geben", () => { L.players.forEach((p) => { p.phase = p.phaseAtStart || p.phase; }); L.round--; L.dealer = (L.dealer + L.players.length - 1) % L.players.length; G.startRound(L); peek = false; store.set(K.local, L); render(); dealIn(); scheduleBot(); }),
           UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; clearTimeout(botT); clearTimeout(clockT); render(); })
         );
       },
@@ -1009,9 +985,9 @@
   });
 
   function startLocal(state) {
-    L = state; mode = "local"; peek = false; sel = null; staged.clear(); viewer = null; hidden = false;
+    L = state; mode = "local"; peek = false; sel = null; staged.clear();
     if (L.phase === "play") G.resetClock(L);
-    store.set(K.local, L); render(); if (!hidden) dealIn(); wake(); scheduleBot();
+    store.set(K.local, L); render(); dealIn(); wake(); scheduleBot();
   }
   $("#startLocal").addEventListener("click", () => {
     const { names, bots } = HOME.roster($("#myName").value);
@@ -1025,7 +1001,7 @@
 
   $("#reBtn").addEventListener("click", () => {
     peek = false;
-    if (mode === "local") { viewer = null; doAct({ t: "next" }, 0); if (!hidden) dealIn(); }
+    if (mode === "local") { doAct({ t: "next" }, 0); dealIn(); }
     else doAct({ t: "next" });
   });
   $("#reLook").addEventListener("click", () => { peek = true; render(); });

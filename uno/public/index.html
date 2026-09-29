@@ -196,14 +196,9 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
 /* ---------- overlays ---------- */
 .sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
-#handoff{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
-#handoff .pass{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-#handoff .name{font-family:var(--display);font-size:clamp(34px,11vw,60px);line-height:1.05;text-align:center;word-break:break-word;text-wrap:balance}
-#handoff .meta{color:var(--muted);text-align:center;max-width:36ch}
 .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:440px}
 .log li{background:var(--bg2);border-radius:12px;padding:9px 12px;font-size:14px;box-shadow:inset 0 0 0 1px var(--line)}
 .log li:last-child{box-shadow:inset 0 0 0 1.5px var(--accent)}
-#handoff .btn{max-width:440px}
 .picker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .picker button{border:0;border-radius:18px;aspect-ratio:1.4;font-weight:800;font-size:18px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
 .scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -227,7 +222,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .avrow{display:flex;gap:8px}
 .avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
 .avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-#hoAvatar{font-size:64px;line-height:1}
 .look .seg{grid-template-columns:repeat(4,1fr)}
 .look .seg.three{grid-template-columns:repeat(3,1fr)}
 .swatch{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.5)}
@@ -405,15 +399,6 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
       <div class="hand" id="hand"></div>
     </div>
   </section>
-</div>
-
-<div class="overlay" id="handoff" hidden>
-  <div class="pass">Handy weitergeben an</div>
-  <div id="hoAvatar" aria-hidden="true"></div>
-  <div class="name" id="hoName"></div>
-  <div class="meta" id="hoMeta"></div>
-  <ul class="log" id="hoLog"></ul>
-  <button class="btn btn-primary btn-block" id="hoBtn" type="button"></button>
 </div>
 
 <div class="overlay" id="picker" hidden>

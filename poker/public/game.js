@@ -441,6 +441,13 @@
     }
     if (canRaise && e > Math.min(0.85, strong + 0.12) && Math.random() < 0.8) return raiseBy(frac + 0.2);
     if (canRaise && Math.random() < bluff * 0.5 && e > odds * 0.6) return raiseBy(0.75);
+    // before the flop, equity against everybody at once is small: judge cheap calls against an average hand, big raises against damped pot odds
+    if (v.street === "pre") {
+      const cheap = o.call <= v.blinds.bb * 2 && o.call <= me.chips * 0.1;
+      const need = cheap ? fair * (level === "easy" ? 0.7 : 0.8) : Math.max(fair * 1.1, odds * 0.7);
+      if (e > need) return { t: "call" };
+      return { t: "fold" };
+    }
     if (e > odds + (level === "easy" ? -0.04 : 0.02)) return { t: "call" };
     if (level === "hard" && Math.random() < bluff && o.call <= v.pot * 0.35) return { t: "call" };
     return { t: "fold" };
