@@ -19,16 +19,16 @@
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="room-ui.css">
 <style>
-:root{--board:#efe2c2;--board2:#d9c69d;--spot:#fffaf0;--spotline:#5b4a2e;--path:#8a7550;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230;--c4:#8a4fd0;--c5:#1fb5c9;--c6:#f28a1f;--c7:#ec6fb2}
+:root{--board:#c2ad80;--board2:#a08a5c;--spot:#fffaf0;--spotline:#4a3b22;--path:#5f4d2c;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230;--c4:#8a4fd0;--c5:#1fb5c9;--c6:#f28a1f;--c7:#ec6fb2}
 .c0{--sc:var(--c0);--st:#fff}.c1{--sc:var(--c1);--st:#fff}.c2{--sc:var(--c2);--st:#fff}.c3{--sc:var(--c3);--st:#231a05}
 .c4{--sc:var(--c4);--st:#fff}.c5{--sc:var(--c5);--st:#0b2a30}.c6{--sc:var(--c6);--st:#2a1603}.c7{--sc:var(--c7);--st:#3a0f27}
 /* table designs; "Nacht" is the default without an attribute */
-:root[data-table="vulkan"]{--sea:#3a1c1a;--board:#efe0cc;--board2:#d4bd9a}
-:root[data-table="mint"]{--ring:#12352a;--sea:#cfe9e0;--board:#f7fbf0;--board2:#d5e6c9}
-:root[data-table="felt"]{--sea:#10363a;--board:#e8e3c6;--board2:#cfc79f}
-:root[data-table="ocean"]{--sea:#123057;--board:#e2e9f1;--board2:#b9c7d8;--spotline:#3c4a60;--path:#7487a3}
-:root[data-table="light"]{--ring:#1b2030;--sea:#cfe0f3;--board:#fbf5e6;--board2:#e3d6b6}
-:root[data-table="blossom"]{--ring:#3a1a2b;--sea:#e6d9f4;--board:#fff1f5;--board2:#efc9d8}
+:root[data-table="vulkan"]{--sea:#3a1c1a;--board:#c9a984;--board2:#a8875f}
+:root[data-table="mint"]{--ring:#12352a;--sea:#cfe9e0;--board:#9dbfa9;--board2:#7fa38d}
+:root[data-table="felt"]{--sea:#10363a;--board:#aaa47a;--board2:#8b855d}
+:root[data-table="ocean"]{--sea:#123057;--board:#8299b8;--board2:#647d9f;--spotline:#26344a;--path:#3d5273}
+:root[data-table="light"]{--ring:#1b2030;--sea:#cfe0f3;--board:#d0bf92;--board2:#b09e70}
+:root[data-table="blossom"]{--ring:#3a1a2b;--sea:#e6d9f4;--board:#dfb0c4;--board2:#c68fa8}
 /* The page itself never scrolls: iOS Safari ignores overflow:hidden on body and would
    otherwise slide the whole page and pull its toolbar over the board. Only inner
    areas (start screen, waiting room) scroll. */
@@ -79,9 +79,9 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .spot.target{cursor:pointer;z-index:1}
 .spot.target::after{content:"";position:absolute;width:92%;height:92%;border-radius:50%;box-sizing:border-box;border:calc(var(--cell) * .08) dashed #1b1325;animation:spin 3s linear infinite;background:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.yard{position:absolute;left:calc(var(--x) * var(--cell) - var(--cell) * .12);top:calc(var(--y) * var(--cell) - var(--cell) * .12);width:calc(var(--cell) * 2.24);height:calc(var(--cell) * 2.24);border-radius:calc(var(--cell) * .5);opacity:.28}
+.yard{position:absolute;left:calc(var(--x) * var(--cell) - var(--cell) * .12);top:calc(var(--y) * var(--cell) - var(--cell) * .12);width:calc(var(--cell) * 2.24);height:calc(var(--cell) * 2.24);border-radius:calc(var(--cell) * .5);opacity:.42}
 .yard[class*=" c"]{background:var(--sc)}
-.yard.on{opacity:.6;box-shadow:0 0 0 calc(var(--cell) * .06) var(--ring)}
+.yard.on{opacity:.8;box-shadow:0 0 0 calc(var(--cell) * .06) var(--ring)}
 /* name tags next to the yards, the die lies with whoever is on */
 .badge{position:absolute;z-index:1;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));width:calc(var(--cell) * 3.84);height:calc(var(--cell) * 1.62);
   display:flex;align-items:center;gap:calc(var(--cell) * .14);padding:0 calc(var(--cell) * .18) 0 calc(var(--cell) * .26);border-radius:calc(var(--cell) * .36);
@@ -103,9 +103,10 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 /* name tags of a big board: two columns under it */
 .pstrip{--cell:26px;flex:none;width:min(100%,460px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(var(--cell) * .3) calc(var(--cell) * .5)}
 .pstrip[hidden]{display:none}
-.arena.side{display:grid;grid-template-columns:auto 260px;grid-template-rows:auto auto;justify-content:center;align-content:center;column-gap:30px}
-.arena.side .lastmove{grid-column:1 / -1;justify-self:center}
-.arena.side .pstrip{grid-template-columns:1fr;width:260px;align-self:center}
+.arena.side{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:auto auto;align-content:center;column-gap:30px}
+.arena.side .board{grid-column:2;grid-row:1}
+.arena.side .lastmove{grid-column:2;grid-row:2;justify-self:center}
+.arena.side .pstrip{grid-column:3;grid-row:1;grid-template-columns:1fr;width:min(260px,100%);align-self:center;justify-self:start}
 .pstrip .badge{position:relative;left:auto;top:auto;width:auto;height:calc(var(--cell) * 1.62);min-width:0}
 .board .die{position:absolute;z-index:4;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));--ds:calc(var(--cell) * 1.48)}
 /* pawns: a round body with a head, in the player's color */

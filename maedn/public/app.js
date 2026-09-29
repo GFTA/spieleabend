@@ -345,11 +345,11 @@
     if (!V || !arena.offsetParent) return;
     const st = getComputedStyle(arena);
     const W0 = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
-    const geo = geoOf(V), strip = $("#pstrip"), side = desktop.matches && !strip.hidden;
+    const geo = geoOf(V), strip = $("#pstrip"), side = desktop.matches && !strip.hidden && arena.clientWidth >= 1150;
     arena.classList.toggle("side", side); // wide screens: the name tags stand beside the board
     const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - (strip.hidden || side ? 0 : strip.offsetHeight + 10) - 10 - 4;
     const cs = parseFloat(LOOK.get().size) || 1, bw = geo.w + 0.5, bh = geo.h + 0.5;
-    const W = W0 - (side ? 290 : 0);
+    const W = W0 - (side ? 580 : 0);
     const fit = Math.min(W / bw, H / bh, desktop.matches ? 104 : 64);
     const maxW = cs > 1 ? (arena.clientWidth - 4) / bw : W / bw; // a big board may use the side margins
     const cell = Math.max(geo.arms > 4 ? 14 : 18, Math.floor(Math.min(maxW, fit * cs)));
