@@ -90,6 +90,15 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 @keyframes flip{from{transform:rotateX(90deg)}to{transform:none}}
 .wrong{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:22px;font-weight:800;font-size:15px;color:var(--red);letter-spacing:.04em}
 .wrong .cnt{color:var(--muted);font-size:13px;font-weight:700}
+.wrong .run{color:var(--green);font-size:13px;font-weight:800;animation:pop .3s ease-out both}
+.kbd button.tip{animation:tip .7s ease-in-out infinite alternate;box-shadow:0 0 0 3px #f2c230,0 0 14px 2px rgba(242,194,48,.7)}
+@keyframes tip{to{transform:scale(1.12)}}
+.moves{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin:2px 0 10px}
+.moves:empty{display:none}
+.moves span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 5px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--green);font-weight:800;font-size:14px;animation:pop .3s ease-out both;animation-delay:calc(var(--i) * 70ms)}
+.moves span.no{box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red)}
+.moves span i{font-style:normal;font-size:14px}
+.moves span small{font-size:11px;color:var(--muted)}
 .word.shake,.gallows.shake{animation:shake .35s}
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
 /* choosing the word */
@@ -310,6 +319,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
         <button class="btn btn-primary" type="submit">Lösen</button>
       </form>
       <div class="acts">
+        <button class="btn" id="tipBtn" type="button" hidden>Tipp</button>
         <button class="btn" id="solveBtn" type="button" hidden>Wort lösen</button>
         <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
       </div>
@@ -324,6 +334,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
     <h2 id="reTitle"></h2>
     <div class="word" id="reWord"></div>
     <p class="hint" id="reText"></p>
+    <div class="moves" id="reMoves" aria-label="Verlauf der Runde"></div>
     <ol class="scores" id="reScores"></ol>
     <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
     <p class="hint revotes" id="reVotes" hidden></p>

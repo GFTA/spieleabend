@@ -89,7 +89,7 @@
   function handleEvents(events, v) {
     if (!v) return;
     for (const ev of events || []) {
-      if (ev.t === "hit") { fresh = { l: ev.l }; sfx("hit", ev.n); }
+      if (ev.t === "hit") { fresh = { l: ev.l }; sfx("hit", ev.n); if (ev.bonus) toast(`Serie! +${ev.bonus} Extrapunkt${ev.bonus > 1 ? "e" : ""}`); }
       if (ev.t === "miss") { sfx("miss"); setTimeout(shake, 30); }
       if (ev.t === "wrongword") { sfx("miss"); setTimeout(shake, 30); toast(`„${ev.word}“ ist es nicht.`); }
       if (ev.t === "timeout") { toast(mode === "online" && ev.pi === v.me ? "Zu langsam!" : `${v.players[ev.pi].name} war zu langsam.`); sfx("miss"); }
@@ -261,7 +261,7 @@
     // everyone sees the same slots (whoever picked the word gets it spelled out below); at the end the whole word
     w.innerHTML = wordHTML(V, end ? V.last.word : null, fresh && fresh.l);
     fresh = null;
-    $("#wrong").innerHTML = choosing ? "" : (V.wrong.length ? V.wrong.map((l) => `<span>${l}</span>`).join("") : "") + `<span class="cnt">${V.errors} von ${V.maxErrors} Fehlern</span>`;
+    $("#wrong").innerHTML = choosing ? "" : (V.wrong.length ? V.wrong.map((l) => `<span>${l}</span>`).join("") : "") + (V.rules.streak && V.run > 0 && V.phase === "play" ? `<span class="run">Serie ×${V.run}</span>` : "") + `<span class="cnt">${V.errors} von ${V.maxErrors} Fehlern</span>`;
 
     // choosing the word
     const ch = canChoose();
@@ -314,10 +314,12 @@
     kbd.classList.toggle("off", !play);
     kbd.innerHTML = G.ALPHABET.map((l) => {
       const st = V.guessed.includes(l) ? "ok" : V.wrong.includes(l) ? "no" : "";
-      return `<button type="button" data-l="${l}" class="${st}"${st || !play ? " disabled" : ""} aria-label="${l}">${l}</button>`;
+      const tp = !st && play && tip && tip.key === `${V.round}:${V.turn}` && tip.l === l ? " tip" : "";
+      return `<button type="button" data-l="${l}" class="${st}${tp}"${st || !play ? " disabled" : ""} aria-label="${l}">${l}</button>`;
     }).join("");
     $("#solve").hidden = !(play && solving);
     $("#solveBtn").hidden = !play || solving;
+    $("#tipBtn").hidden = !play || solving;
     $("#resultBtn").hidden = !(end && peek);
     $("#reactBtn").hidden = mode !== "online";
     $("#keys").innerHTML = play ? "Buchstaben einfach tippen · <kbd>Enter</kbd> Wort lösen · <kbd>Esc</kbd> zurück" : "";
@@ -341,6 +343,16 @@
   }
 
   $("#kbd").addEventListener("click", (e) => { const b = e.target.closest("[data-l]"); if (b && !b.disabled) guess(b.dataset.l); });
+  let tip = null; // { key, l }: the letter the tip button pointed at this turn
+  $("#tipBtn").addEventListener("click", () => {
+    if (!V || V.phase !== "play" || !canPlay()) return;
+    const s = G.suggest(V);
+    if (!s) return;
+    tip = { key: `${V.round}:${V.turn}`, l: s.l };
+    toast(s.of > 1 ? `Tipp: ${s.l} steckt in ${s.n} von ${s.of} passenden Wörtern.` : `Tipp: versuch es mit ${s.l}.`);
+    sfx("pop");
+    renderGame();
+  });
   $("#solveBtn").addEventListener("click", () => { solving = true; renderGame(); $("#solveWord").focus(); });
   $("#solve").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -447,6 +459,10 @@
     $("#reText").textContent = (last.cat ? `Kategorie: ${last.cat}. ` : "") +
       (s >= 0 ? `+${G.SOLVE_BONUS} Bonus fürs Lösen.` : last.hanged && V.chooser >= 0 ? `${V.players[V.chooser].name} bekommt ${G.HANGED_BONUS} Punkte, weil keiner es erraten hat.` : "") +
       (last.over ? "" : ` Gespielt werden ${V.goal} Runden.`);
+    $("#reMoves").innerHTML = (V.moves || []).map((m, i) => {
+      const a = V.players[m.pi].avatar, ok = m.word ? m.ok : m.n > 0;
+      return `<span class="${ok ? "" : "no"}" style="--i:${i}" title="${esc(V.players[m.pi].name)}"><i>${a}</i>${m.word ? `${esc(m.word)}` : m.l}${m.n > 1 ? `<small>×${m.n}</small>` : ""}</span>`;
+    }).join("");
     scoreList($("#reScores"), last.winners, last.gains);
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
   }

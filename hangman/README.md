@@ -23,7 +23,11 @@ der Nächste ist dran. „Wort lösen“ gibt einen Punkt pro noch verdecktem Bu
 ausgesucht hat, bekommt 5 Punkte. Nach 3, 5 oder 8 Runden gewinnt, wer die meisten Punkte hat.
 
 - **Hausregeln**: Anfang und Ende (erster und letzter Buchstabe aufgedeckt), Schwer (nur
-  6 Fehler), Zugzeit (20 Sekunden pro Tipp, 60 Sekunden zum Aussuchen).
+  6 Fehler), Serie (jeder weitere Treffer in Folge bringt einen Extrapunkt mehr), Zugzeit (20 Sekunden pro Tipp, 60 Sekunden zum Aussuchen).
+- **Tipp**: Der Tipp-Button lässt den besten Buchstaben auf der Tastatur aufleuchten. Er
+  rechnet aus, in wie vielen der noch passenden Wörter der Wortliste (samt Kategorie) er steckt.
+- **Verlauf**: Am Rundenende zeigt eine Reihe, wer welchen Buchstaben (oder welches Wort)
+  in welcher Reihenfolge getippt hat, grün für Treffer und rot für Fehler.
 - **Computer-Gegner** in drei Stufen. Sie sehen nur, was alle sehen, raten erst die häufigsten
   Buchstaben und erkennen das Wort erst, wenn ein guter Teil davon steht (Profi früher).
 - **Wie bei den anderen Spielen**: Warteraum mit Bereit und Revanche, Chat, Reaktionen,

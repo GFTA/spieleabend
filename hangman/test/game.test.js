@@ -15,6 +15,37 @@ function picked(word, rules) {
   }
 }
 
+test("house rule streak: every further hit in a row adds a bonus point, a miss ends the series", () => {
+  const S = picked("ABBAZ", { streak: true });
+  const b = S.cur;
+  assert.strictEqual(G.act(S, b, { t: "letter", l: "A" }).events[0].bonus, 0);
+  const r = G.act(S, b, { t: "letter", l: "B" });
+  assert.strictEqual(r.events[0].bonus, 1);
+  assert.strictEqual(S.players[b].score, 2 + 2 + 1, "A twice, B twice, bonus 1 for the second hit");
+  assert.strictEqual(G.view(S, b).run, 2);
+  const N = picked("ABBAZ");
+  G.act(N, N.cur, { t: "letter", l: "A" });
+  assert.strictEqual(G.act(N, N.cur, { t: "letter", l: "B" }).events[0].bonus, 0, "off without the rule");
+  const M = picked("ABBAZ", { streak: true });
+  G.act(M, M.cur, { t: "letter", l: "Q" });
+  assert.strictEqual(M.run, 0);
+});
+
+test("the round keeps a move list and suggest() picks a sensible letter from what is visible", () => {
+  const S = picked("STRAßE");
+  const b = S.cur;
+  G.act(S, b, { t: "letter", l: "S" }); G.act(S, b, { t: "letter", l: "Q" });
+  const v = G.view(S, S.cur);
+  assert.deepStrictEqual(v.moves.map((m) => [m.l, m.n]), [["S", 1], ["Q", 0]]);
+  const s = G.suggest(v);
+  assert.ok(s && !v.guessed.includes(s.l) && !v.wrong.includes(s.l));
+  // the category narrows it: only animals of four letters with an H in the middle -> E is out, the list has no such word
+  const fresh = { mask: [null, null, null, null, null], guessed: [], wrong: [], cat: "Tiere" };
+  const t = G.suggest(fresh);
+  assert.ok(G.ALPHABET.includes(t.l) && t.of > 0);
+  assert.strictEqual(G.suggest({ mask: [null], guessed: G.ALPHABET, wrong: [], cat: "" }), null);
+});
+
 test("word list: only German letters, no duplicates, sensible lengths", () => {
   const seen = new Set();
   for (const { w, cat } of G.LIST) {
@@ -47,7 +78,7 @@ test("a picked word: hits score and keep the turn, misses grow the gallows, solv
 
   let r = G.act(S, 1, { t: "letter", l: "s" });
   assert.ok(r.ok);
-  assert.deepStrictEqual(r.events, [{ t: "hit", pi: 1, l: "S", n: 1 }]);
+  assert.deepStrictEqual(r.events, [{ t: "hit", pi: 1, l: "S", n: 1, bonus: 0 }]);
   assert.strictEqual(S.cur, 1, "a hit keeps the turn");
   assert.strictEqual(S.players[1].score, 1);
   assert.match(G.act(S, 1, { t: "letter", l: "S" }).error, /schon geraten/);

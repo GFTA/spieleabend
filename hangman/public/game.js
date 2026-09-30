@@ -44,6 +44,7 @@
   const RULES = [
     { k: "hint", name: "Anfang und Ende", desc: "Der erste und der letzte Buchstabe sind von Anfang an aufgedeckt." },
     { k: "hard", name: "Schwer", desc: "Nur 6 Fehlversuche statt 10, der Galgen steht schon." },
+    { k: "streak", name: "Serie", desc: "Jeder weitere Treffer in Folge bringt einen Extrapunkt mehr: beim zweiten +1, beim dritten +2 und so weiter." },
     { k: "clock", name: "Zugzeit", desc: "20 Sekunden pro Tipp, sonst ist der Nächste dran. Wer das Wort aussucht, hat 60 Sekunden." }
   ];
   function normRules(r) {
@@ -94,6 +95,7 @@
     S.word = ""; S.cat = ""; S.hint = "";
     S.guessed = []; S.wrong = [];
     S.errors = 0; S.maxErrors = S.rules.hard ? 6 : 10;
+    S.run = 0; S.moves = [];
     S.last = null; S.lastGuess = null; S.log = [];
     S.startScores = S.players.map((p) => p.score);
     S.players.forEach((p) => { p.out = false; });
@@ -142,6 +144,7 @@
     return g.find((i) => i > pi) != null ? g.find((i) => i > pi) : g[0];
   }
   function passTurn(S, pi, events) {
+    S.run = 0;
     const n = nextGuesser(S, pi);
     if (n < 0) return endRound(S, -1, events);
     beginTurn(S, n);
@@ -236,14 +239,18 @@
       S.lastGuess = { pi, l, n, turn: S.turn };
       if (n) {
         S.guessed.push(l);
-        P.score += n;
-        events.push({ t: "hit", pi, l, n });
-        if (solved(S)) { log(S, `${P.name}: ${l}, der letzte Buchstabe!`); endRound(S, pi, events); return ok(); }
-        log(S, `${P.name}: ${l} kommt ${n === 1 ? "einmal" : `${n}-mal`} vor, nochmal!`);
+        const bonus = S.rules.streak ? S.run : 0;
+        S.run++;
+        P.score += n + bonus;
+        S.moves.push({ pi, l, n });
+        events.push({ t: "hit", pi, l, n, bonus });
+        if (solved(S)) { log(S, `${P.name}: ${l}, der letzte Buchstabe!${bonus ? ` (+${bonus} Serie)` : ""}`); endRound(S, pi, events); return ok(); }
+        log(S, `${P.name}: ${l} kommt ${n === 1 ? "einmal" : `${n}-mal`} vor, nochmal!${bonus ? ` (+${bonus} Serie)` : ""}`);
         beginTurn(S, pi);
         return ok();
       }
       S.wrong.push(l);
+      S.moves.push({ pi, l, n: 0 });
       S.errors++;
       events.push({ t: "miss", pi, l });
       log(S, `${P.name}: ${l} kommt nicht vor.`);
@@ -260,11 +267,13 @@
         for (const c of S.word) if (!S.guessed.includes(c)) S.guessed.push(c);
         P.score += hidden;
         S.lastGuess = { pi, word: w, ok: true, turn: S.turn };
+        S.moves.push({ pi, word: w, ok: true });
         events.push({ t: "solve", pi });
         endRound(S, pi, events);
         return ok();
       }
       S.errors++;
+      S.moves.push({ pi, word: w, ok: false });
       S.lastGuess = { pi, word: w, ok: false, turn: S.turn };
       events.push({ t: "wrongword", pi, word: w });
       log(S, `${P.name} tippt auf „${w}“, falsch!`);
@@ -311,6 +320,22 @@
     2: { think: 0.6, solve: 0.75, noise: 3, careless: 0.1 },
     3: { think: 0.35, solve: 0.55, noise: 1, careless: 0 }
   };
+  // The letter a helper would try next, from what everybody sees: the one that appears in most of the
+  // fitting words of the list (the category narrows them down), else the most common German letter.
+  function suggest(v) {
+    const open = ALPHABET.filter((l) => !v.guessed.includes(l) && !v.wrong.includes(l));
+    if (!open.length) return null;
+    const inCat = v.cat && WORDS[v.cat] ? new Set(WORDS[v.cat].split(" ")) : null;
+    let cand = [...new Set(candidates(v))];
+    if (inCat && cand.some((w) => inCat.has(w))) cand = cand.filter((w) => inCat.has(w));
+    const byFreq = FREQ.filter((l) => open.includes(l)).concat(open.filter((l) => !FREQ.includes(l)));
+    let best = byFreq[0], bestN = cand.length ? 0 : -1;
+    for (const l of byFreq) {
+      const n = cand.filter((w) => w.includes(l)).length;
+      if (n > bestN) { best = l; bestN = n; }
+    }
+    return { l: best, n: Math.max(bestN, 0), of: cand.length };
+  }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
     const v = view(S, pi), lv = lvOf(S, pi), cfg = BOT[lv] || BOT[2];
@@ -341,7 +366,7 @@
       me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, pick: S.pick, level: S.level == null ? 2 : S.level, rules: S.rules,
       chooser: S.chooser, cat: S.cat, hint: S.hint, word: reveal ? S.word : null,
       mask: [...S.word].map((c) => (S.guessed.includes(c) ? c : null)),
-      guessed: S.guessed.slice(), wrong: S.wrong.slice(), errors: S.errors, maxErrors: S.maxErrors, lastGuess: S.lastGuess,
+      guessed: S.guessed.slice(), wrong: S.wrong.slice(), run: S.run || 0, moves: (S.moves || []).slice(), errors: S.errors, maxErrors: S.maxErrors, lastGuess: S.lastGuess,
       clockMs: S.rules.clock ? (S.phase === "choose" ? CHOOSE_MS : CLOCK_MS) : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => ({ name: p.name, bot: p.bot, avatar: avatarOf(p, i), score: p.score, words: p.words || 0, out: !!p.out })),
       log: S.log.slice(), last: S.last
@@ -350,7 +375,7 @@
 
   return {
     MAX_PLAYERS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, PICKS, RULES, ALPHABET, WORDS, LIST, SOLVE_BONUS, HANGED_BONUS,
-    normRules, normGoal, normPick, normLevel, normWord, wordError, randomWord, candidates,
+    normRules, normGoal, normPick, normLevel, normWord, wordError, randomWord, candidates, suggest,
     newGame, startRound, act, tick, nextDeadline, resetClock, botMove, view
   };
 });
