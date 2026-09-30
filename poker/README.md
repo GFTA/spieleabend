@@ -1,7 +1,7 @@
 # Poker (Texas Hold’em)
 
 Texas Hold’em im Browser für Android, iOS und Desktop, im Stil der anderen Spieleabend-Spiele.
-Online mit eigenen Handys (Raum-Code und QR-Code) oder mit einem Handy für alle
+Online mit eigenen Handys (Party-Einladung und QR-Code) oder mit einem Handy für alle
 (mit Übergabe-Bildschirm, damit niemand fremde Karten sieht). Gespielt wird No Limit als Turnier:
 Alle starten mit gleich vielen Chips, wer keine mehr hat, scheidet aus, und wer am Ende alle hat, gewinnt.
 
