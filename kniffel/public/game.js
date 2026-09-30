@@ -23,6 +23,7 @@
   // House rules; the UI renders one switch per entry.
   const RULES = [
     { k: "joker", name: "Kniffel-Bonus und Joker", desc: "Jeder weitere Kniffel gibt 100 Punkte, wenn das Kniffel-Feld 50 hat. Er zählt außerdem als Joker: Full House und Straßen gibt es dann in voller Höhe." },
+    { k: "fourRolls", name: "Vier Würfe", desc: "Jeder darf pro Zug viermal würfeln statt dreimal. Mehr Kniffel, höhere Punkte." },
     { k: "turnTimer", name: "Zugzeit 30 Sekunden", desc: "Wer zu lange überlegt, dessen Zug endet automatisch mit dem besten freien Feld.", onlineOnly: true }
   ];
   function normRules(r) {
@@ -73,6 +74,41 @@
     }
   }
 
+  // Upper-section bonus: par is three of each number; pace = points above or below that.
+  // out = the 63 can no longer be reached even with five of everything that is left.
+  function bonusState(p) {
+    let up = 0, par = 0, room = 0;
+    for (const c of CATS) {
+      if (!c.up) continue;
+      const v = p.sheet[c.k];
+      if (v != null) { up += v; par += 3 * c.n; } else room += 5 * c.n;
+    }
+    const done = up >= BONUS_AT;
+    return { up, need: Math.max(0, BONUS_AT - up), pace: up - par, done, out: !done && up + room < BONUS_AT, open: CATS.filter((c) => c.up && p.sheet[c.k] == null).length };
+  }
+
+  // Chance that the next roll of the loose dice completes a box (held dice stay). Exact, by
+  // counting all outcomes; only the boxes that depend on luck (not sums) are listed.
+  const ODDS_BOXES = ["kniffel", "large", "small", "house", "four"];
+  function odds(dice, keep, sheet) {
+    const free = [];
+    keep.forEach((k, i) => { if (!k) free.push(i); });
+    if (!free.length) return [];
+    const open = ODDS_BOXES.filter((k) => sheet[k] == null);
+    if (!open.length) return [];
+    const hit = Object.fromEntries(open.map((k) => [k, 0]));
+    const d = dice.slice(), total = Math.pow(6, free.length);
+    const rec = (n) => {
+      if (n === free.length) {
+        for (const k of open) if (points(k, d, false) > 0) hit[k]++;
+        return;
+      }
+      for (let v = 1; v <= 6; v++) { d[free[n]] = v; rec(n + 1); }
+    };
+    rec(0);
+    return open.map((k) => ({ c: k, p: hit[k] / total })).filter((o) => o.p > 0).sort((a, b) => b.p - a.p);
+  }
+
   const emptySheet = () => Object.fromEntries(CATS.map((c) => [c.k, null]));
   function totals(p) {
     let up = 0, low = 0;
@@ -109,7 +145,7 @@
       players: names.map((name) => ({ name, sheet: emptySheet(), extra: 0 })),
       rules: normRules(rules), rounds: ROUNDS, round: 1, turn: 0, seq: 0, t: 0,
       order: names.map((_, i) => i), cur: 0, phase: "play",
-      dice: [1, 1, 1, 1, 1], hold: [false, false, false, false, false], rolls: 0, maxRolls: MAX_ROLLS,
+      dice: [1, 1, 1, 1, 1], hold: [false, false, false, false, false], rolls: 0, maxRolls: MAX_ROLLS + (normRules(rules).fourRolls ? 1 : 0),
       log: [], last: null
     };
     log(S, `${names[0]} beginnt.`);
@@ -339,5 +375,5 @@
     };
   }
 
-  return { DICE, MAX_ROLLS, TURN_MS, ROUNDS, BONUS_AT, BONUS, EXTRA_KNIFFEL, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, CATS, CAT, normRules, points, totals, options, newGame, act, tick, nextDeadline, suggest, view };
+  return { DICE, MAX_ROLLS, TURN_MS, ROUNDS, BONUS_AT, BONUS, EXTRA_KNIFFEL, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, CATS, CAT, normRules, points, totals, options, newGame, act, tick, nextDeadline, suggest, view, bonusState, odds };
 });

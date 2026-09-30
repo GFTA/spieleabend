@@ -37,6 +37,43 @@ test("totals: upper bonus at 63", () => {
 // put known dice on the table for the player on turn
 function setDice(S, dice) { S.dice = dice.slice(); S.rolls = 1; }
 
+test("fourRolls: a fourth roll, and the bonus pace", () => {
+  const S = G.newGame(["a", "b"], { fourRolls: true });
+  assert.strictEqual(S.maxRolls, 4);
+  assert.strictEqual(G.view(S, 0).maxRolls, 4);
+  assert.strictEqual(G.newGame(["a", "b"], {}).maxRolls, 3);
+  assert.strictEqual(G.normRules({}).fourRolls, false);
+  const p = S.cur;
+  for (let i = 0; i < 4; i++) assert.strictEqual(G.act(S, p, { t: "roll" }).ok, true, "roll " + (i + 1));
+  assert.strictEqual(G.act(S, p, { t: "roll" }).ok, false, "no fifth roll");
+});
+
+test("bonusState: pace against three of each, and a lost bonus", () => {
+  const sheet = Object.fromEntries(G.CATS.map((c) => [c.k, null]));
+  assert.deepStrictEqual(G.bonusState({ sheet }), { up: 0, need: 63, pace: 0, done: false, out: false, open: 6 });
+  sheet.ones = 4; sheet.twos = 4;
+  assert.strictEqual(G.bonusState({ sheet }).pace, 4 - 3 + 4 - 6);
+  Object.assign(sheet, { ones: 0, twos: 0, threes: 0 });
+  assert.strictEqual(G.bonusState({ sheet }).out, false, "5x4+5x5+5x6=75 can still do it");
+  Object.assign(sheet, { fours: 0, fives: 0 });
+  assert.strictEqual(G.bonusState({ sheet }).out, true, "only 30 left");
+  Object.assign(sheet, { ones: 3, twos: 6, threes: 9, fours: 12, fives: 15, sixes: 18 });
+  assert.strictEqual(G.bonusState({ sheet }).done, true);
+});
+
+test("odds: exact chance of the next roll completing a box", () => {
+  const sheet = Object.fromEntries(G.CATS.map((c) => [c.k, null]));
+  const o = (dice, keep, sh = sheet) => Object.fromEntries(G.odds(dice, keep, sh).map((x) => [x.c, x.p]));
+  assert.deepStrictEqual(G.odds([1, 2, 3, 4, 5], [true, true, true, true, true], sheet), [], "nothing loose, nothing to roll");
+  const four = o([6, 6, 6, 6, 1], [true, true, true, true, false]);
+  assert.strictEqual(four.kniffel, 1 / 6);
+  assert.strictEqual(four.four, 1, "already four of a kind");
+  const run = o([1, 2, 3, 4, 6], [true, true, true, true, false]);
+  assert.strictEqual(run.large, 1 / 6, "only a 5 completes 1-2-3-4-5");
+  assert.ok(run.small === 1);
+  assert.strictEqual(G.odds([6, 6, 6, 6, 1], [true, true, true, true, false], Object.assign({}, sheet, { kniffel: 0 })).some((x) => x.c === "kniffel"), false, "filled boxes are not listed");
+});
+
 test("a turn: roll, hold, roll, enter a box; the next player is up", () => {
   const S = G.newGame(["a", "b"], {});
   const p = S.cur;

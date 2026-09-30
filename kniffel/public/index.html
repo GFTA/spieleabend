@@ -83,6 +83,15 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .pips i{width:30px;height:8px;border-radius:4px;background:var(--line)}
 .pips i.used{background:var(--accent)}
 .pips i.gone{opacity:.25}
+.odds{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:24px}
+.odds span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);animation:oddsin .25s ease both}
+.odds span b{color:var(--text);margin-left:4px}
+.odds span.hot{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.odds span.hot b{color:var(--accent)}
+@keyframes oddsin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pace{display:inline-block;margin-left:4px;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:var(--bg2)}
+.pace.up{color:#2e9e5b}.pace.dn{color:#d2693a}.pace.out{color:var(--muted);text-decoration:line-through}
+.sheet-tbl tr.sub td.got{color:var(--accent)}
 .felt{position:relative;width:min(100%,560px);padding:16px 12px 22px;border-radius:28px;background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--felt) 70%,#fff 6%),var(--felt));box-shadow:inset 0 0 0 1.5px var(--line),inset 0 10px 40px rgba(0,0,0,.35)}
 .dice{display:flex;justify-content:center;gap:clamp(6px,2.2vw,20px)}
 .slot{display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -279,6 +288,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
         <div class="dice" id="dice"></div>
       </div>
       <div class="pips" id="pips" aria-label="Würfe"></div>
+      <div class="odds" id="odds" aria-live="polite"></div>
     </div>
     <div class="sheetwrap" id="sheetWrap"><table class="sheet-tbl" id="sheet" aria-label="Kniffel-Block"></table></div>
     <div class="dock" id="dock">

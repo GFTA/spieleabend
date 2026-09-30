@@ -16,10 +16,13 @@ Feld** in seinen Block ein: Feld antippen (Vorschau der Punkte), nochmal antippe
 | --- | --- |
 | Einser bis Sechser: nur Würfel dieser Augenzahl zählen | Dreierpasch, Viererpasch: alle Augen · Full House 25 · Kleine Straße (4 in Folge) 30 · Große Straße (5 in Folge) 40 · Kniffel 50 · Chance: alle Augen |
 
-Ab **63 Punkten** oben gibt es **35 Bonus**. Nach dem 13. Zug gewinnt, wer die meisten Punkte hat
+Ab **63 Punkten** oben gibt es **35 Bonus**. Im Block zeigt ein Chip neben der oberen Summe, wie weit man
+vor oder hinter „dreimal jede Zahl“ liegt, und „Bonus weg“, sobald die 63 nicht mehr zu schaffen sind.
+Wer dran ist, sieht unter den Würfeln live die Chancen, mit dem nächsten Wurf der losen Würfel Kniffel,
+Straßen, Full House oder Viererpasch zu treffen (exakt gezählt). Nach dem 13. Zug gewinnt, wer die meisten Punkte hat
 (Gleichstand: alle mit den meisten). Danach Revanche oder zurück in den Warteraum.
 
-**Hausregeln**: Kniffel-Bonus und Joker (jeder weitere Kniffel gibt 100, wenn im Kniffel-Feld 50
+**Hausregeln**: Vier Würfe (viermal statt dreimal pro Zug) · Kniffel-Bonus und Joker (jeder weitere Kniffel gibt 100, wenn im Kniffel-Feld 50
 stehen; er muss zuerst ins obere Feld seiner Zahl, dann in ein freies unteres Feld, Full House und
 Straßen zählen dann voll) · Zugzeit 30 Sekunden (nur online, danach wird das beste freie Feld eingetragen).
 Dazu Computer-Gegner in drei Stärken, Avatare, Tisch-Designs, Würfelgröße, Emoji-Reaktionen, Chat

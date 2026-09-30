@@ -231,8 +231,13 @@
     }).join("")}</tr></thead>`;
     const up = G.CATS.filter((c) => c.up), low = G.CATS.filter((c) => !c.up);
     $("#sheet").innerHTML = head + "<tbody>" + up.map(row).join("") +
-      sub(`Summe oben <small>ab ${G.BONUS_AT}: +${G.BONUS}</small>`, (p) => `${p.tot.up}/${G.BONUS_AT}`) +
-      sub("Bonus", (p) => p.tot.bonus || "–") +
+      sub(`Summe oben <small>ab ${G.BONUS_AT}: +${G.BONUS}</small>`, (p) => {
+        const b = G.bonusState(p);
+        const chip = b.done ? "" : b.out ? `<span class="pace out" title="Bonus nicht mehr zu schaffen">Bonus weg</span>`
+          : b.open < 6 && b.open > 0 ? `<span class="pace ${b.pace >= 0 ? "up" : "dn"}" title="Gegenüber dreimal jede Zahl">${b.pace > 0 ? "+" : b.pace < 0 ? "−" : "±"}${Math.abs(b.pace)}</span>` : "";
+        return `${p.tot.up}/${G.BONUS_AT}${chip}`;
+      }) +
+      sub("Bonus", (p) => p.tot.bonus ? `<b>+${p.tot.bonus}</b>` : G.bonusState(p).out ? "✗" : "–") +
       low.map(row).join("") +
       (V.rules.joker ? sub(`Kniffel-Bonus <small>je ${G.EXTRA_KNIFFEL}</small>`, (p) => p.tot.extra || "–") : "") +
       sub("Gesamt", (p) => p.tot.total, "total") + "</tbody>";
@@ -254,7 +259,7 @@
     $("#turnWho").innerHTML = V.phase === "roundEnd" && !hold ? "Spiel vorbei"
       : hold ? `<span class="av">${p.avatar || (p.bot ? "🤖" : "")}</span><span>${esc(you ? "Du" : p.name)}: ${G.CAT[hold.c].name} <b>${hold.points}</b>${hold.bonus ? " + 100" : ""}</span>`
       : `<span class="av">${p.avatar || (p.bot ? "🤖" : "")}</span><span>${esc(you ? "Du" : p.name)}${you ? " bist dran" : " ist dran"}</span>`;
-    $("#pips").innerHTML = Array.from({ length: G.MAX_ROLLS }, (_, k) => `<i class="${k < src.rolls ? "used" : ""}"></i>`).join("");
+    $("#pips").innerHTML = Array.from({ length: V.maxRolls || G.MAX_ROLLS }, (_, k) => `<i class="${k < src.rolls ? "used" : ""}"></i>`).join("");
     const can = myTurn() && V.rolls > 0 && V.rolls < V.maxRolls;
     const anim = rollAnim; rollAnim = null;
     [...box.children].forEach((slot, i) => {
@@ -267,7 +272,20 @@
       else if (!d.classList.contains("rolling") && d.dataset.v !== String(v)) { d.dataset.v = v; d.innerHTML = pips(v); }
       d.setAttribute("aria-label", blank ? "Würfel" : `${v}${src.keep[i] ? ", behalten" : ""}`);
     });
-    if (anim) { rolling = true; clearTimeout(renderTray.t); renderTray.t = setTimeout(() => { rolling = false; sfx("land"); renderDock(); renderSheet(); }, 760 + 60 * anim.which.length); }
+    renderOdds(!!anim);
+    if (anim) { rolling = true; clearTimeout(renderTray.t); renderTray.t = setTimeout(() => { rolling = false; sfx("land"); renderDock(); renderSheet(); renderOdds(); }, 760 + 60 * anim.which.length); }
+  }
+  // live chances for the next roll of the loose dice (only for the one on turn, not when watching)
+  function renderOdds(tumbling) {
+    const box = $("#odds");
+    const src = { dice: V.dice, keep: V.hold };
+    const show = !hold && myTurn() && V.rolls > 0 && V.rolls < V.maxRolls && !rolling && !tumbling;
+    let html = "";
+    if (show) {
+      html = G.odds(src.dice, src.keep, V.players[V.cur].sheet).slice(0, 3)
+        .map((o) => `<span class="${o.p >= 0.5 ? "hot" : ""}">${G.CAT[o.c].name}<b>${o.p >= 0.995 ? "sicher" : Math.max(1, Math.round(o.p * 100)) + " %"}</b></span>`).join("");
+    }
+    if (box.dataset.k !== html) { box.dataset.k = html; box.innerHTML = html; }
   }
   function tumble(d, finalV, k) {
     const dur = 650 + k * 60;
