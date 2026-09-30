@@ -4,6 +4,40 @@ Kurzfassung für Menschen und KI-Agenten. Die Details stehen in [`ARCHITECTURE.m
 Vorlage in `scripts/game-template/`. Dieses Repo ist öffentlich: keine Heimnetz-Angaben, IPs oder Secrets
 (`.env` bleibt lokal und ist ignoriert).
 
+## Start hier (Projekt in 60 Sekunden)
+
+**Was das ist:** Eine Sammlung von Browser-Spielen für den privaten Spieleabend (Handy und Desktop, Deutsch).
+Jedes Spiel läuft online (jeder sein Handy, Raum per QR-Code/Link, Host startet) und als Einzelspieler gegen
+Computer-Gegner. Ein Spiel ist ein Ordner im Repo-Root (`uno/`, `kniffel/`, `sudoku/` …), die Startseite liegt in `start/`,
+Gemeinsames in `shared/`, Werkzeuge in `scripts/`. Neue Spiele heißen klein geschrieben ohne Umlaute (`machikoro`).
+
+**Was du zuerst tust, egal was die Aufgabe ist:**
+
+1. Dieses Dokument komplett lesen, danach bei Bedarf [`ARCHITECTURE.md`](ARCHITECTURE.md) (Details zu Design-System, Server, Deployment).
+2. `git status` und `git branch --show-current`. Neue Arbeit auf einem eigenen Branch (`add-<id>` für ein neues Spiel, `fix-<thema>`
+   sonst), nie direkt auf `main`, außer es wird ausdrücklich gesagt.
+3. Bei einem neuen Spiel: `scripts/new-game <id> "<Titel>"`. Bei einem bestehenden Spiel: zuerst dessen `README.md`, `public/game.js`
+   und `test/` lesen, dann ändern.
+4. Nach jeder Änderung: `cd <id> && npm test` und `scripts/check-games <id>`. Vor dem Melden die Checkliste am Ende durchgehen.
+
+**Befehle (Node 22, kein `npm install` im Repo-Root):**
+
+| Zweck | Befehl |
+| --- | --- |
+| Neues Spiel anlegen | `scripts/new-game <id> "<Titel>" --max N --desc "…"` |
+| Tests eines Spiels | `cd <id> && npm ci && npm test` |
+| Konventionen prüfen | `scripts/check-games <id>` (neue Spiele: `--strict`, dann zählen Warnungen als Fehler) |
+| Spiel lokal starten | `cd <id> && node server.js` (Port 8080 im Container, sonst `PORT=…`) |
+
+**Zusammenarbeit:**
+
+- Aufgaben kommen oft diktiert und mit Tippfehlern. Deute sie großzügig und frage nur nach, wenn eine Entscheidung wirklich offen ist.
+- Commits: kurze Nachricht im Imperativ, ein Commit pro Spielordner, `shared/` nur in einem eigenen Commit. Push auf den eigenen Branch.
+- **Nie ohne ausdrückliche Anweisung:** auf `main` mergen oder pushen, deployen, `shared/` oder fremde Spielordner ändern, Dockerfiles ändern.
+- Melde am Ende kurz: was geändert wurde, welche Tests und Checks grün sind, was im Browser gesehen wurde, was offen bleibt.
+  Behaupte nie „getestet“, wenn du es nicht getestet hast, und sage ehrlich, was du nicht prüfen konntest.
+- Bei einem Review-Ergebnis oder Fehlerbericht: jeden Punkt einzeln abarbeiten und am Ende pro Punkt sagen, wie er behoben wurde.
+
 ## Die wichtigsten Regeln (Rest unten zum Nachschlagen)
 
 1. Starte **immer** mit `scripts/new-game <id> "<Titel>"`. Nie einen Ordner von Hand anlegen oder ein Spiel kopieren.
