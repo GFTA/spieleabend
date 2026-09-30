@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wrapper: uses node if installed, otherwise a throwaway node container (the host may have no node).
+d=$(cd "$(dirname "$0")" && pwd)
+if command -v node >/dev/null 2>&1; then exec node "$d/check-games.js" "$@"; fi
+exec docker run --rm --user "$(id -u):$(id -g)" -v "$d/..:/w:ro" -w /w node:22-alpine node scripts/check-games.js "$@"

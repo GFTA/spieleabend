@@ -119,12 +119,16 @@ if (last >= 0) {
   fs.writeFileSync(readmePath, readme.join("\n"));
 }
 
+try { require("child_process").execFileSync(process.execPath, [path.join(__dirname, "check-games.js"), id], { stdio: "inherit" }); }
+catch { console.error("Das frisch erzeugte Spiel besteht den Konformitätscheck nicht, das ist ein Fehler im Generator."); process.exitCode = 1; }
+
 console.log(`
 Fertig: ${id}/ (läuft schon als kleines Würfelspiel „Pig“).${envNote}
 
 Als Nächstes:
   1. Regeln in ${id}/public/game.js (Engine) und ${id}/public/app.js + index.html (Oberfläche) ersetzen.
-     Tests: ${id}/test/ anpassen, dann  cd ${id} && npm ci && npm test
+     Dabei AGENTS.md befolgen. Tests: ${id}/test/ anpassen, dann  cd ${id} && npm ci && npm test
+     Zum Schluss:  scripts/check-games ${id}   (prüft die gemeinsamen Konventionen, läuft auch in der CI)
   2. Cloudflare: Tunnel-Ingress und DNS für ${sub}.cool-kidz.net auf http://${id}:8080 anlegen.
   3. Starten:  cd ${id} && docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
   4. Startseite aktualisieren:  docker restart spiele-start

@@ -8,7 +8,7 @@ Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 
 Alle Spiele teilen sich ein einheitliches Design- und Server-System (Tisch-Designs,
 Avatare, Raum-Verwaltung, Deployment) — beschrieben in [`ARCHITECTURE.md`](ARCHITECTURE.md).
-Das ist der Bauplan für jedes neue Spiel in diesem Repo. Ein neues Spiel legt
+Das ist der Bauplan für jedes neue Spiel in diesem Repo. Arbeitsanweisung für Mitwirkende und KI-Agenten: [`AGENTS.md`](AGENTS.md). Ein neues Spiel legt
 `scripts/new-game <id> "<Titel>"` aus einer lauffähigen Vorlage an.
 
 | Spiel | Ordner | Details |

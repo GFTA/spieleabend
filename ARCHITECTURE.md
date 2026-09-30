@@ -7,6 +7,10 @@ demselben Handgriff deployen. Stand heute (uno, schiffe, wuerfelpoker,
 viergewinnt, maedn, hangman, phase10, kniffel, poker, sudoku) sind alle zehn Punkt für Punkt danach gebaut — das hier ist die
 Doku dieser bereits gelebten Konvention, nicht ein Wunschzettel.
 
+Wer ein neues Spiel baut (Mensch oder KI-Agent), liest zuerst [`AGENTS.md`](AGENTS.md):
+Arbeitsablauf, Regeln und typische Fehler auf einer Seite. Ob ein Spiel die
+Konventionen einhält, prüft `scripts/check-games` automatisch (läuft auch in der CI).
+
 Wird eine neue gemeinsame Konvention eingeführt (z. B. der `?table=`-Handoff
 von der Startseite, oder die 5-Minuten-Leerlauf-Regel für Räume), gehört sie
 **in allen Spielen gleichzeitig** nachgezogen und **hier ergänzt** — sonst
@@ -16,14 +20,21 @@ driftet das System wieder auseinander.
 
 Jedes Spiel läuft auf zwei Arten, ohne Kontowechsel dazwischen:
 
-- **„Jeder sein Handy“**: einer erstellt online einen Raum (4-Buchstaben-Code
-  + QR), die anderen treten bei. Braucht den Node-Server.
-- **„Ein Handy für alle“**: lokales Pass-and-play mit Sichtschutz zwischen
-  den Zügen, läuft komplett im Browser, sogar offline (Service Worker).
+- **„Jeder sein Handy“ (Mehrspieler)**: einer erstellt online einen Raum
+  (4-Buchstaben-Code + QR, oder über die Party der Startseite), die anderen
+  treten bei. Braucht den Node-Server.
+- **Einzelspieler**: allein gegen Computer-Gegner, läuft komplett im Browser,
+  sogar offline (Service Worker). Ein Spiel, das auch allein Spaß macht (Sudoku),
+  erlaubt null Gegner (`HomeUI({ min: 0 })`).
+
+Ein „Ein Handy für alle“-Modus (Hot-Seat mit Übergabe-Bildschirmen) existiert
+nicht mehr und wird nicht neu gebaut.
 
 Beide Modi teilen sich dieselbe Spiellogik (`public/game.js`, reines JS ohne
 DOM-Zugriff, läuft identisch im Browser wie im Server) und denselben
-Renderer (`public/app.js`).
+Renderer (`public/app.js`). Aus der Engine kommt **alles**, was die Regeln
+betrifft, auch das Bot-Timing (`Game.botPlan`, s. „Bots & Zug-Timer“);
+`app.js` und `server.js` enthalten keine Spielregeln.
 
 ## Design-System
 
@@ -240,6 +251,30 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
   (`state.arms`, `state.track`; alte Spielstände ohne `track` zählen als 40). Die Geometrie
   steckt DOM-frei in `maedn/public/board.js` (`MaednBoard.geometry(arms)`), die Engine kennt nur
   Feldnummern. Am Desktop stehen die Namensschilder neben dem Brett, auf dem Handy darunter.
+
+### Startbildschirm, Rundenende und Bots im Client (`shared/home-ui.js`, `shared/room-ui.js`)
+
+- `HomeUI({ key, max, botNames, min = 1, onChange })` baut die Einzelspieler-Auswahl „Anzahl der
+  Gegner“ in `#oppBox`, liest `?sp=1` der Startseite und liefert `{ single(), opp(), roster(name), render() }`.
+  `roster` gibt `{ names, bots }` für `Game.newGame` zurück (Index 0 ist der Mensch). `min: 0` erlaubt Solo
+  ohne Computer. Eigene Gegner-Knöpfe gehören nicht in `app.js`.
+- Das Rundenende-Blatt baut sich **immer** über `UI.roundEndFooter({ over, next: "Nächste Runde" })`. Es setzt
+  „Nächste Runde“ bzw. „Revanche“ (online mit Abstimmung, Stand „3/4 bereit“) und „Zurück in den Warteraum“
+  bzw. „Zurück zum Start“ und blendet Buttons je nach Modus und Rolle aus. Im HTML liegen dafür `#reBtn`,
+  `#reVotes`, `#reBack` (siehe Vorlage). Wer eigene Buttons baut oder `UI.rematchStatus()` direkt aufruft,
+  bricht im Einzelspielermodus mit einem JS-Fehler ab (dort ist `R()` `null`), und Konfetti und Statistik
+  bleiben aus.
+- Sieg oder Niederlage werden **einmal pro Runde** gemeldet: `Spieleabend.profile.result(...)` (Statistik)
+  plus `confetti()` bei einem Sieg.
+- Jede Bewegung (Karte, Figur, Zahl, Bot-Zug) ist sichtbar animiert, auch die der anderen Spieler. Kein
+  Teleportieren von einem Zustand zum nächsten.
+- Eingaben wirken sofort: Aktionen, die der Server nur bestätigt (z. B. eine Zahl eintragen), zeigt der
+  Client **optimistisch** an, der nächste Server-Zustand korrigiert sie. Schnelles Tippen darf nicht an einer
+  „inflight“-Sperre hängenbleiben; Sperren sind nur für Aktionen da, die nicht doppelt ausgelöst werden
+  dürfen (Ergebnis abgeben, Würfeln).
+- Uhren laufen vom **Server-Wert** aus (`elapsed` aus dem View, `clockBase = Date.now() - elapsed`), nicht von
+  der lokalen Zeit beim Eintreffen der Nachricht. Ein fortgesetztes lokales Spiel verschiebt seinen
+  Startzeitpunkt um die Zeit, in der es geschlossen war.
 
 ## Server-Architektur (`shared/room-server.js` + `server.js` pro Spiel)
 
@@ -513,6 +548,19 @@ Startbildschirm lautet entsprechend „… kannst du danach im Warteraum noch
   Ablauf eine `{t:"timeout"}`-Aktion — nur der Server darf die auslösen
   (`if (a.t === "timeout") return;` im Client-Handler)
 
+Das Bot-Timing gehört in die **Engine**, nicht doppelt in Server und Browser. Läuft ein Spiel nicht reihum
+(alle spielen gleichzeitig, wie Sudoku), exportiert `game.js` ein `botPlan(state) -> { pi, delay, key } | null`:
+`pi` ist der Bot, der als Nächster zieht, `delay` die Pause in ms und `key` ein String, der sich nur ändert,
+wenn sich der Plan ändert (`bot:<pi>:<Fortschritt>:<Runde>`). Der Server ruft es im Adapter auf
+(`botPlan(room, ctx) { return Game.botPlan(room.state); }`, Tests kürzen die Pause mit `BOT_MS`), der Browser
+im Einzelspielermodus (`G.botPlan(L)`). Der Server startet den Timer nur neu, wenn sich der `key` ändert.
+Computer-Gegner spielen in **Menschen-Tempo** und werden nicht schneller, wenn mehr Bots mitspielen
+(Sudoku: feste Gesamtzeit pro Stufe, geteilt durch leere Felder und Bots).
+
+**Rechenintensive Engines** (Generatoren, Löser) laufen auf dem einzigen Thread des Servers. Ein Rätsel darf nie
+Sekunden brauchen, und die Engine braucht einen Test, der eine Reihe Generierungen zeitlich begrenzt. Wo etwas
+eindeutig sein soll (Sudoku-Lösung), prüft ein Test die Eindeutigkeit wirklich und nicht nur die Form.
+
 ### HTTP-Oberfläche
 
 - `GET /info` → `{"<spielid>": true, "version": "<git-kurz-hash o.ä.>", "ips": [...], "port": 8080, "rooms": <anzahl>}`
@@ -652,7 +700,8 @@ Engine, Server-Adapter, Oberfläche, Tests, Dockerfile, Compose, systemd, Icons)
 anderen Spiels, wählt den nächsten freien Port und trägt `start/games.json`, `start/public/<id>.svg` und
 die README-Tabelle ein (Punkte 1, 2, 4 und 5 unten sind damit erledigt). Danach nur noch die Regeln in
 `game.js`/`app.js`/`index.html` ersetzen. Die Vorlage hat eigene Tests (`test/`), die im Generat mitlaufen.
-Übrig bleiben Punkt 6 (Tunnel-Ingress, DNS, Start) und Committen.
+Übrig bleiben Punkt 6 (Tunnel-Ingress, DNS, Start) und Committen. Vor jedem Commit:
+`scripts/check-games <id>` (Konventionen) und `cd <id> && npm test`. Ein Spiel, das den Checker nicht besteht, wird nicht gemergt.
 
 Die einzelnen Schritte, falls man ohne Generator arbeitet:
 
