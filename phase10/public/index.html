@@ -183,6 +183,13 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .scores li small.ok{color:var(--green);font-weight:800}
 .scores b{font-weight:800;flex:none}
 .scores .pen{color:var(--red);font-weight:800;margin-right:8px}
+.scores .bon{color:var(--green);font-weight:800;margin-right:8px}
+.zhead .prog{display:inline-flex;gap:3px;align-items:center}
+.zhead .prog i{width:9px;height:14px;border-radius:3px;background:var(--line);transition:background .3s}
+.zhead .prog i.on{background:var(--green);animation:bump .35s}
+.tip{animation:tipglow .7s ease-in-out infinite alternate!important;box-shadow:0 0 0 3px #f2c230,0 0 18px 2px rgba(242,194,48,.75)!important;z-index:5}
+.pile.tip button{animation:tipglow .7s ease-in-out infinite alternate;box-shadow:0 0 0 3px #f2c230,0 0 22px 2px rgba(242,194,48,.8)}
+@keyframes tipglow{to{filter:brightness(1.12);transform:translateY(-3px)}}
 .hist{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
 .hist th,.hist td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line)}
 .hist th:first-child,.hist td:first-child{text-align:left}

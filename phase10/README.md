@@ -29,7 +29,11 @@ Die Phasen: 2 Drillinge · Drilling + 4er-Folge · Vierling + 4er-Folge · 7er-F
   füllt die Felder automatisch, „Auslegen“ legt sie hin.
 - **Animationen**: Gezogene, abgeworfene, ausgelegte und angelegte Karten fliegen sichtbar
   dorthin, wo sie hingehen, auch bei den Zügen der anderen; zu Rundenbeginn wird ausgeteilt.
-- **Hausregeln**: Aussetzen frei wählen (ab 3 Spielern), Zugzeit (45 s).
+- **Hausregeln**: Aussetzen frei wählen (ab 3 Spielern), Raus-Bonus (wer die Runde beendet,
+  bekommt 10 Strafpunkte abgezogen), Zugzeit (45 s).
+- **Tipp und Fortschritt**: Der Tipp-Button lässt die passende Karte oder den Stapel
+  aufleuchten (Ziehen, Auslegen, Anlegen oder Abwerfen, wie der Profi-Computer es spielen würde).
+  Über den Phasen-Feldern zeigt eine Leiste, wie viele Karten für die Phase schon in deiner Hand sind.
 - **Computer-Gegner** in drei Stufen; sie sehen nur ihre eigene Hand.
 - **Wie bei den anderen Spielen**: Warteraum mit Bereit und Revanche, Chat, Reaktionen,
   Avatare, Tisch-Designs, Bilanz, Spielverlauf mit Punkten pro Runde, Töne, Konfetti.

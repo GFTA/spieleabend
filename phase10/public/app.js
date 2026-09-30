@@ -433,7 +433,11 @@
   }
 
   const meldLabel = (m) => m.k === "set" ? `${m.cards.length}× ${m.value}` : m.k === "run" ? `${m.start}–${m.start + m.len - 1}` : G.CNAME[m.color];
-  const meldHTML = (m, mi, fits) => `<button type="button" class="meld${fits ? " fits" : ""}" data-meld="${mi}" aria-label="${G.groupName(m)}">${m.cards.map((c) => cardHTML(c)).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
+  const meldHTML = (m, mi, fits, tp) => `<button type="button" class="meld${fits ? " fits" : ""}${tp ? " tip" : ""}" data-meld="${mi}" aria-label="${G.groupName(m)}">${m.cards.map((c) => cardHTML(c)).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
+  // the tip is only valid for the moment it was asked for: the same turn, step and hand
+  let tipAsked = null;
+  const tipKey = () => `${V.round}:${V.turn}:${V.step}:${V.hand.length}:${me() && me().laid}`;
+  const tipNow = () => (V && V.tip && tipAsked === tipKey() ? V.tip : null);
   const selCard = () => (sel != null ? V.hand.find((c) => c.id === sel) : null);
   // what the others have laid (your own groups lie in your spread)
   function renderMelds(canHit) {
@@ -443,9 +447,15 @@
       const ms = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === i);
       if (!ms.length) return "";
       return `<div class="mrow"><div class="who">${p.avatar} ${esc(p.name)} <small>Phase ${p.phase} · ${G.phaseName(p.phase)}</small></div><div class="mgroups">` +
-        ms.map(([m, mi]) => meldHTML(m, mi, canHit && sc && G.fitOnto(m, sc))).join("") + "</div></div>";
+        ms.map(([m, mi]) => meldHTML(m, mi, canHit && sc && G.fitOnto(m, sc), tipNow() && tipNow().t === "hit" && tipNow().meld === mi)).join("") + "</div></div>";
     }).join("");
     $("#melds").innerHTML = rows;
+  }
+  // how close the hand is to the phase: one pip per card the phase needs
+  function progHTML() {
+    if (V.need == null) return "";
+    const total = G.PHASES[me().phase].reduce((n, g) => n + g.n, 0), have = Math.max(0, total - V.need);
+    return `<span class="prog" title="${V.need ? `Es fehlen noch ${V.need} Karten` : "Die Phase ist komplett"}">${[...Array(total)].map((_, i) => `<i class="${i < have ? "on" : ""}"></i>`).join("")}</span>`;
   }
   // your spread: the phase's slots (drop cards in), or once laid, your groups on the table
   function renderZone(turn) {
@@ -457,11 +467,11 @@
       const sc = selCard();
       const mine = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === V.me);
       z.innerHTML = `<div class="zhead"><span class="tag done">Phase ${P.phase} ✓</span><span>${G.phaseName(P.phase)}</span><small>${V.phase === "play" ? "liegt. Jetzt anlegen, bei dir und bei den anderen." : ""}</small></div>` +
-        `<div class="mgroups">${mine.map(([m, mi]) => meldHTML(m, mi, can && sc && G.fitOnto(m, sc))).join("")}</div>`;
+        `<div class="mgroups">${mine.map(([m, mi]) => meldHTML(m, mi, can && sc && G.fitOnto(m, sc), tipNow() && tipNow().t === "hit" && tipNow().meld === mi)).join("")}</div>`;
       return;
     }
     const gs = phaseGroups(), ready = spreadReady();
-    z.innerHTML = `<div class="zhead"><span class="tag">Phase ${P.phase}</span><span>${G.phaseName(P.phase)}</span><small>${can ? (ready ? "passt, jetzt auslegen!" : "Karten hierher ziehen, sie rasten ein") : "Du kannst schon planen: Karten hierher ziehen"}</small></div>` +
+    z.innerHTML = `<div class="zhead"><span class="tag">Phase ${P.phase}</span><span>${G.phaseName(P.phase)}</span>${progHTML()}<small>${can ? (ready ? "passt, jetzt auslegen!" : "Karten hierher ziehen, sie rasten ein") : "Du kannst schon planen: Karten hierher ziehen"}</small></div>` +
       `<div class="zgroups">${gs.map((g, i) => {
         const cards = groupCards(i + 1), st = groupState(i + 1);
         return `<div class="slotgroup ${st}" data-g="${i + 1}"><div class="glabel"><span>${G.groupName(g)}</span><span>${st === "ok" ? "✓ passt" : st === "bad" ? "passt nicht" : `${cards.length}/${g.n}`}</span></div>` +
@@ -495,7 +505,10 @@
 
     // piles
     const drawing = turn && V.step === "draw";
+    const tp = tipNow();
     $("#deckPile").classList.toggle("can", drawing);
+    $("#deckPile").classList.toggle("tip", !!tp && tp.t === "draw" && tp.from === "deck");
+    $("#discardPile").classList.toggle("tip", !!tp && tp.t === "draw" && tp.from === "discard");
     $("#deckCap").textContent = `${V.deckCount} Karten`;
     const pile = V.pile || (V.top ? [V.top] : []);
     $("#discardBtn").innerHTML = pile.length ? pile.map((c, i) => cardHTML(c).replace('class="card', `style="transform:rotate(${tilt(c, i, pile.length)}deg) translate(${i === pile.length - 1 ? 0 : ((c.id * 7) % 9) - 4}px,${i === pile.length - 1 ? 0 : ((c.id * 11) % 7) - 3}px)" class="card`)).join("") : '<span class="empty"></span>';
@@ -542,12 +555,13 @@
     if (end) acts.innerHTML = peek ? '<button class="btn btn-primary" type="button" data-a="result">Ergebnis zeigen</button>' : "";
     else if (!P) acts.innerHTML = "";
     else acts.innerHTML = (turn && V.step === "act" ? `<button class="btn btn-primary" type="button" data-a="discard"${sel == null ? " disabled" : ""}>Abwerfen</button>` : "") +
+      (turn ? '<button class="btn btn-ghost small" type="button" data-a="tip">Tipp</button>' : "") +
       `<button class="btn btn-ghost small" type="button" data-a="sort">${sortMode === "value" ? "Nach Farbe sortieren" : "Nach Zahl sortieren"}</button>`;
 
     // hand: everything that is not in the spread
     const hand = $("#hand");
     hand.innerHTML = sorted(V.hand.filter((c) => !staged.has(c.id)))
-      .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : ""].join(" "), "button")).join("");
+      .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : "", tp && (tp.t === "discard" || tp.t === "hit") && tp.id === c.id ? "tip" : ""].join(" "), "button")).join("");
     freshId = null;
     layoutHand();
     $("#reactBtn").hidden = mode !== "online";
@@ -600,8 +614,21 @@
     const a = b.dataset.a;
     if (a === "discard") discard(sel);
     else if (a === "result") { peek = false; render(); }
+    else if (a === "tip") showTip();
     else if (a === "sort") { sortMode = sortMode === "value" ? "color" : "value"; store.set(K.sort, sortMode); renderGame(); }
   });
+  function showTip() {
+    if (!V || !myTurn() || !V.tip) return;
+    const t = V.tip;
+    tipAsked = tipKey();
+    if (t.t === "draw") toast(t.from === "discard" ? `Tipp: nimm ${G.cardName(V.top)} von der Ablage.` : "Tipp: zieh vom Stapel.");
+    else if (t.t === "lay") { toast("Tipp: deine Phase lässt sich auslegen, tippe auf „Vorschlag“ und dann „Auslegen“."); }
+    else if (t.t === "hit") toast(`Tipp: leg ${G.cardName(V.hand.find((c) => c.id === t.id))} an.`);
+    else toast(`Tipp: wirf ${G.cardName(V.hand.find((c) => c.id === t.id))} ab.`);
+    sfx("pop");
+    renderGame();
+    if (t.t === "lay") { const b = document.querySelector('#myZone [data-z="suggest"]'); if (b) b.classList.add("tip"); }
+  }
   $("#deckBtn").addEventListener("click", () => { if (!afterDrag()) draw("deck"); });
   $("#discardBtn").addEventListener("click", () => {
     if (!V || afterDrag()) return;
@@ -795,7 +822,7 @@
       const p = V.players[i], you = i === V.me && mode === "online" ? " (du)" : "", r = res && res[i];
       const note = r ? (r.done ? `<small class="ok">Phase ${r.phase} ✓</small>` : `<small>Phase ${r.phase} ✗</small>`) : `<small>Phase ${p.phase}</small>`;
       return `<li class="${winners.includes(i) ? "win" : ""}"><span>${avi(p.avatar)}${esc(p.name)}${you}${note}</span>` +
-        `<b>${r && r.pen ? `<span class="pen">+${r.pen}</span>` : ""}${p.score} Pkt.</b></li>`;
+        `<b>${r && r.bonus ? `<span class="bon">−${r.bonus}</span>` : ""}${r && r.pen ? `<span class="pen">+${r.pen}</span>` : ""}${p.score} Pkt.</b></li>`;
     }).join("");
   }
   function histHTML() {

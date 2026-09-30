@@ -123,6 +123,38 @@ test("going out ends the round: penalties, phases move on, the game ends after t
   assert.ok(S.players.every((p) => p.phase === 1 && p.score === 0), "rematch starts over");
 });
 
+test("house rule outBonus: going out takes 10 penalty points off, never below zero", () => {
+  const go = (rules, score) => {
+    const S = G.newGame([{ name: "A" }, { name: "B" }], 10, rules, 2);
+    S.cur = 0; S.step = "draw";
+    S.players[0].score = score; S.players[0].laid = true;
+    S.players[1].hand = [C("b", 11)];
+    G.act(S, 0, { t: "draw" });
+    S.players[0].hand = [C("r", 4)];
+    const r = G.act(S, 0, { t: "discard", id: S.players[0].hand[0].id });
+    assert.ok(r.ok);
+    return S;
+  };
+  const a = go({ outBonus: true }, 30);
+  assert.strictEqual(a.players[0].score, 20);
+  assert.strictEqual(a.last.res[0].bonus, 10);
+  assert.strictEqual(go({ outBonus: true }, 4).players[0].score, 0);
+  assert.strictEqual(go({}, 30).players[0].score, 30);
+});
+
+test("view: a tip for the player on turn (the pro's move) and how many cards the phase still needs", () => {
+  const S = rigged(1, [C("r", 4), C("b", 4), C("g", 4), C("r", 9), C("b", 9), C("y", 9), C("g", 2), C("y", 11), C("r", 12), C("b", 7)]);
+  const v = G.view(S, 0);
+  assert.ok(v.tip && v.tip.t === "draw");
+  assert.strictEqual(typeof v.need, "number");
+  assert.strictEqual(G.view(S, 1).tip, null, "not your turn, no tip");
+  assert.strictEqual(v.need, 0, "two sets of three are there");
+  S.players[0].hand[5] = C("y", 5);
+  assert.strictEqual(G.view(S, 0).need, 1);
+  G.act(S, 0, { t: "draw", from: "deck" });
+  assert.ok(["lay", "hit", "discard"].includes(G.view(S, 0).tip.t));
+});
+
 test("skip: the next player sits out; with free choice you pick who", () => {
   const S = G.newGame([{ name: "A" }, { name: "B" }, { name: "C" }], 10, { skipChoose: true }, 2);
   S.cur = 0; S.step = "act";

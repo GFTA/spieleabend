@@ -15,7 +15,7 @@
   const GOALS = [10, 5];                       // play all 10 phases, or a short game up to phase 5
   const COLORS = ["r", "y", "g", "b"];
   const CNAME = { r: "Rot", y: "Gelb", g: "Grün", b: "Blau" };
-  const CLOCK_MS = 45000, GRACE = 600;
+  const CLOCK_MS = 45000, GRACE = 600, OUT_BONUS = 10;
 
   // the ten phases: groups of sets (same number), runs (numbers in a row) and colours
   const PHASES = [
@@ -43,6 +43,7 @@
   // House rules. Shared with the UI, which renders one switch per entry.
   const RULES = [
     { k: "skipChoose", name: "Aussetzen frei wählen", desc: "Ab drei Spielern suchst du aus, wer aussetzen muss, statt immer den Nächsten zu treffen." },
+    { k: "outBonus", name: "Raus-Bonus", desc: "Wer die Runde beendet, bekommt 10 Strafpunkte abgezogen (nie unter 0)." },
     { k: "clock", name: "Zugzeit", desc: "45 Sekunden pro Zug, sonst zieht und wirft das Spiel für dich." }
   ];
   function normRules(r) {
@@ -250,6 +251,11 @@
       if (done) p.phase++;
       return { pen, done, phase: p.phaseAtStart };
     });
+    if (S.rules.outBonus) {
+      const O = S.players[outPi], bonus = Math.min(O.score, OUT_BONUS);
+      O.score -= bonus;
+      res[outPi].bonus = bonus;
+    }
     const finished = S.players.map((_, i) => i).filter((i) => S.players[i].phase > S.goal);
     const over = finished.length > 0;
     let winners = [];
@@ -435,7 +441,11 @@
   }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const P = S.players[pi], level = lvOf(S, pi);
+    return planMove(S, pi, lvOf(S, pi));
+  }
+  // the next action for pi at a given strength; level 3 is what the tip button shows
+  function planMove(S, pi, level) {
+    const P = S.players[pi];
     if (S.step === "draw") {
       const top = S.discard[S.discard.length - 1];
       let want = false;
@@ -466,6 +476,8 @@
     return {
       me, phase: S.phase, step: S.step, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level == null ? 2 : S.level, rules: S.rules, dealer: S.dealer,
       hand: me >= 0 ? S.players[me].hand.slice() : [],
+      tip: me >= 0 && S.phase === "play" && S.cur === me && !S.players[me].bot ? planMove(S, me, 3) : null,
+      need: me >= 0 && S.phase === "play" && !S.players[me].laid ? missing(S.players[me].hand, S.players[me].phase) : null,
       top: S.discard[S.discard.length - 1] || null, pile: S.discard.slice(-4), discardCount: S.discard.length, deckCount: S.deck.length,
       melds: S.melds.map((m) => ({ k: m.k, n: m.n, owner: m.owner, cards: m.cards.slice(), value: m.value, color: m.color, start: m.start, len: m.len })),
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
@@ -477,7 +489,7 @@
   return {
     MAX_PLAYERS, HAND, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, COLORS, CNAME, PHASES, RULES,
     normRules, normGoal, normLevel, phaseName, groupName, cardName, points, isWild, isSkip, buildDeck,
-    makeGroup, fitOnto, groupOptions, findPhase, missing,
+    makeGroup, fitOnto, groupOptions, findPhase, missing, OUT_BONUS,
     newGame, startRound, act, tick, nextDeadline, resetClock, botMove, view
   };
 });
