@@ -36,6 +36,7 @@
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let goalLocal = 500;
   let localLevel = G.BOT_LEVELS[store.get("passuno.level")] ? store.get("passuno.level") : "normal";
+  const avi = (a) => (a ? `<i class="av-i" aria-hidden="true">${a}</i>` : "");
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: "passuno.avatar", avatars: G.AVATARS });
   let lastTurn = null;
 
@@ -768,7 +769,7 @@
   function scoreList(el, winner) {
     const ranked = V.players.map((p, i) => ({ ...p, i })).sort((a, b) => b.score - a.score);
     el.innerHTML = ranked.map((p) =>
-      `<li class="${p.i === winner ? "win" : ""}"><span>${esc(p.name)}${p.i === V.me && mode === "online" ? " (du)" : ""}</span><b>${p.score} Pkt.</b></li>`).join("");
+      `<li class="${p.i === winner ? "win" : ""}"><span>${avi(p.avatar || (p.bot ? "🤖" : ""))}${esc(p.name)}${p.i === V.me && mode === "online" ? " (du)" : ""}</span><b>${p.score} Pkt.</b></li>`).join("");
   }
 
   function histHTML() {
