@@ -75,11 +75,15 @@ test("two players: private hands, draw and discard over the wire, a computer tak
   assert.strictEqual(after.view.players[first.view.cur].count, 10, "drew one, threw one");
   assert.notStrictEqual(after.view.cur, first.view.cur, "the turn moved on");
 
-  // Ben leaves mid-game: the computer plays his seat on
+  // Ben leaves mid-game: leave vote → Anna votes bot → standIn takes over
   ben.send({ t: "leave" });
   await ben.next((m) => m.t === "left");
+  await anna.next((m) => m.t === "room" && m.leaveVote && m.leaveVote.seat === 1);
+  anna.send({ t: "leaveVote", choice: "bot" });
+  await anna.next((m) => m.t === "room" && m.members[1].bot && !m.leaveVote);
   const room = rooms.get(code);
   assert.ok(room.members[1].bot && room.state.players[1].bot);
+  assert.strictEqual(room.members[1].standIn, true);
 });
 
 test("with a computer player the game moves on by itself", async () => {

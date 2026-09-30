@@ -110,3 +110,11 @@ body:has(#game:not([hidden])) .setfab{display:none}
   body.chatopen{right:320px}
 }
 :root[data-table="light"] :is(.partycode,.sharecode),:root[data-table="blossom"] :is(.partycode,.sharecode),:root[data-table="mint"] :is(.partycode,.sharecode){color:var(--text)}
+
+/* ---------- mid-game leave vote ---------- */
+.leavevotesheet{display:flex;flex-direction:column;gap:12px;text-align:center}
+.leavevotetally{font-size:13px;line-height:1.5;color:var(--muted)}
+.leavevotetally b{color:var(--text);font-weight:800}
+.leavevotetally .bot{color:var(--accent)}
+.leavevotetally .wait{color:var(--green)}
+.leavevoteacts{display:flex;flex-direction:column;gap:8px}

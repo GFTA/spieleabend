@@ -101,6 +101,15 @@
     <button class="btn btn-primary btn-block" id="settingsClose" type="button">Fertig</button></div></div>`);
   document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
     <button class="btn btn-primary btn-block" id="chatClose" type="button"><span class="onphone">Weiterspielen</span><span class="ondesk">Chat einklappen</span></button></div></div>`);
+  document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="leaveVote" hidden><div class="sheet leavevotesheet" role="dialog" aria-modal="true" aria-labelledby="leaveVoteTitle">
+    <h2 id="leaveVoteTitle"></h2>
+    <p class="hint" id="leaveVoteHint">Bot übernehmen oder auf die Rückkehr warten?</p>
+    <div class="leavevotetally" id="leaveVoteTally"></div>
+    <div class="leavevoteacts">
+      <button class="btn btn-primary btn-block" id="leaveVoteBot" type="button">Bot übernehmen</button>
+      <button class="btn btn-block" id="leaveVoteWait" type="button">Warten</button>
+    </div>
+  </div></div>`);
 
   // ---------- behavior ----------
   // app: {
@@ -237,6 +246,7 @@
       if (!online) $("#chat").hidden = true;
       renderBadge();
       turnCue();
+      renderLeaveVote();
     }
 
     // the tab title says when it is my turn while the tab is in the background (phones: the task switcher)
@@ -413,6 +423,30 @@
       else { back.hidden = over ? !r.members[r.you] : r.host !== v.me; back.textContent = "Zurück in den Warteraum"; } // after a game everyone decides for themselves
     }
 
+    // mid-game leave vote: remaining seated humans choose bot or wait
+    function renderLeaveVote() {
+      const r = R(), lv = r && r.leaveVote, el = $("#leaveVote");
+      const me = r && r.you >= 0 ? r.members[r.you] : null;
+      const canVote = !!(lv && app.mode() === "online" && me && !me.bot && !me.lobby && r.you !== lv.seat);
+      if (!canVote) { el.hidden = true; return; }
+      $("#leaveVoteTitle").textContent = `${lv.name} hat verlassen`;
+      const votes = lv.votes || {};
+      const lines = r.members.map((m, i) => {
+        if (i === lv.seat || m.bot || m.lobby || i >= (V() && V().players ? V().players.length : r.members.length)) return "";
+        if (!m.online && votes[i] == null) return "";
+        const c = votes[i];
+        const tag = c === "bot" ? "Bot" : c === "wait" ? "Warten" : "…";
+        return `<span class="${c || "pending"}"><b>${esc(m.name)}</b> ${tag}</span>`;
+      }).filter(Boolean);
+      $("#leaveVoteTally").innerHTML = lines.length ? lines.join(" · ") : "Noch keine Stimmen.";
+      const mine = votes[r.you];
+      $("#leaveVoteBot").classList.toggle("btn-primary", mine !== "wait");
+      $("#leaveVoteWait").classList.toggle("btn-primary", mine === "wait");
+      el.hidden = false;
+    }
+    $("#leaveVoteBot").addEventListener("click", () => send({ t: "leaveVote", choice: "bot" }));
+    $("#leaveVoteWait").addEventListener("click", () => send({ t: "leaveVote", choice: "wait" }));
+
     // waiting room buttons
     $("#readyBtn").addEventListener("click", () => {
       if ($("#readyBtn").dataset.act === "watch") { app.watching(true); app.render(); return; }
@@ -528,7 +562,8 @@
           if (host && v && app.menu.skip(v)) hb.append(armed(`${v.players[v.cur].name} überspringen`, () => send({ t: "act", a: { t: "skip" } })));
           app.menu.player(box);
           if (host && v && app.menu.standIn) r.members.forEach((m, i) => {
-            if (!m.bot && !m.online) hb.append(armed(`🤖 Computer spielt für ${m.name}`, () => send({ t: "standIn", seat: i })));
+            if (!m.bot && !m.online && !(r.leaveVote && r.leaveVote.seat === i))
+              hb.append(armed(`🤖 Computer spielt für ${m.name}`, () => send({ t: "standIn", seat: i })));
           });
           if (host) hb.append(armed("Spiel für alle beenden", () => send({ t: "end" })));
         }

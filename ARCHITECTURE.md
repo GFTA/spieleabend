@@ -260,7 +260,6 @@ module.exports = require("../shared/room-server.js")({
   roomFields: (room) => ({ goal, rules, level }),   // … in jeder Raum-Nachricht
   settings(room, msg) { /* {t:"settings"} im Warteraum */ },
   newGame: (room, players) => Game.newGame(/* … */),
-  leaveGame(room, pid, ctx) { /* optional: Aufgeben / Computer übernimmt */ }
 });
 ```
 
@@ -270,6 +269,26 @@ Optionale Haken: `botPlan`/`botMove` (eigenes Bot-Timing, Standard ist
 (Host-Rolle wandert weiter, wenn der Host offline geht — Uno, Würfelpoker).
 Neue gemeinsame Server-Funktionen gehören **nur** in `shared/room-server.js`.
 Die Code-Beispiele unten zeigen die Bausteine, wie sie dort stehen.
+
+### Verlassen mitten im Spiel (Leave-Vote + Stand-In)
+
+Wenn ein Mensch einen laufenden Platz verlässt (`{t:"leave"}` oder der letzte
+Socket dropt), startet der gemeinsame Server eine **Leave-Abstimmung** statt
+sofort aufzugeben oder einen Bot einzusetzen:
+
+- `room.leaveVote = { seat, name, secret, started, votes }` — Mitglied und
+  `secret` bleiben, damit Wiederverbinden weitergeht. Die Raum-Nachricht trägt
+  `leaveVote` ohne `secret`.
+- Andere online Menschen am Tisch stimmen mit `{t:"leaveVote", choice:"bot"|"wait"}`.
+  Mehrheit „bot“ (oder alle haben abgestimmt) → `installStandIn` setzt
+  `bot`+`standIn` am Mitglied und am Spieler (Secret bleibt). Mehrheit/Unentschieden
+  „wait“ → Platz bleibt offline; der Host kann später weiter `{t:"standIn"}`
+  nutzen. Soft-Timeout ca. 45 s wertet die abgegebenen Stimmen.
+- Reconnect während der Abstimmung (`attach`/`resume`) löscht `leaveVote`.
+  Reconnect nach Stand-In nimmt dem Computer den Platz wieder weg (wie bisher).
+- UI: Banner in `shared/room-ui.js` („X hat verlassen — Bot oder warten?“).
+- Pro-Spiel-`leaveGame` (früher Sofort-Bot oder Sofort-Aufgeben) gibt es nicht mehr.
+
 
 Gemeinsame Bausteine:
 

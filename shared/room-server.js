@@ -12,7 +12,6 @@
 //     newGame(room, players)  -> a fresh game state for these members
 //     // optional:
 //     watchers: 20            -> a full room lets people watch instead of turning them away
-//     leaveGame(room, pid, ctx)  someone leaves a running game (give up, computer takes over)
 //     botPlan(room, ctx)      -> { key, delay, pi } for the next computer move, or null
 //     botMove(room, pi, ctx)  -> make that move, true if it happened (default: Game.botMove)
 //     turnClock(room)         -> key of the running 30 s turn clock (Game.TURN_MS), or null
@@ -50,6 +49,7 @@ module.exports = function roomServer(g) {
   const CHAT_MAX = 200, CHAT_KEEP = 100; // characters per chat line, lines kept per room
   const ROOM_TTL = 12 * 3600 * 1000;
   const IDLE_TTL = 5 * 60 * 1000; // close a room nobody has touched in a while, even mid-game
+  const LEAVE_VOTE_MS = 45 * 1000; // soft timeout for mid-game leave votes
   const BOT_MS = +process.env.BOT_MS || 1100; // how long a computer player "thinks" (default bot plan)
   const BOT_AVATAR = Game.BOT_AVATAR || "🤖";
   const avatarOf = (a) => (Game.AVATARS.includes(a) ? a : Game.AVATARS[crypto.randomInt(Game.AVATARS.length)]);
@@ -71,7 +71,7 @@ module.exports = function roomServer(g) {
     try {
       const list = JSON.parse(fs.readFileSync(SAVE_FILE, "utf8"));
       for (const r of list) if (Date.now() - r.touched < ROOM_TTL) rooms.set(r.code, r);
-      for (const r of rooms.values()) schedule(r); // bots and clocks carry on after a restart
+      for (const r of rooms.values()) { schedule(r); if (r.leaveVote) armLeaveVoteTimer(r); } // bots, clocks and leave votes carry on after a restart
       console.log(`${rooms.size} Räume aus ${SAVE_FILE} geladen`);
     } catch (e) { /* first start */ }
   }
@@ -124,11 +124,73 @@ module.exports = function roomServer(g) {
   const botTimers = new Map();  // code -> { key, t }
   const deadTimers = new Map(); // code -> timeout
   const turnTimers = new Map(); // code -> { key, t, ends }
+  const leaveVoteTimers = new Map(); // code -> timeout for soft leave-vote resolve
   const moves = new Map();      // code -> counter of applied actions, tells one bot move from the next
   const bump = (room) => moves.set(room.code, (moves.get(room.code) || 0) + 1);
 
   function clearTimer(map, code) { const x = map.get(code); if (x) clearTimeout(x.t || x); map.delete(code); }
-  function clearTimers(code) { clearTimer(botTimers, code); clearTimer(deadTimers, code); clearTimer(turnTimers, code); moves.delete(code); }
+  function clearTimers(code) { clearTimer(botTimers, code); clearTimer(deadTimers, code); clearTimer(turnTimers, code); clearLeaveVoteTimer(code); moves.delete(code); }
+
+  // Mid-game leave: remaining players vote bot vs wait (same for every game).
+  // leaveVote keeps the member + secret so reconnect still works; bot path uses standIn.
+  function clearLeaveVoteTimer(code) { const t = leaveVoteTimers.get(code); if (t) clearTimeout(t); leaveVoteTimers.delete(code); }
+  function publicLeaveVote(lv) {
+    if (!lv) return null;
+    return { seat: lv.seat, name: lv.name, started: lv.started, votes: Object.assign({}, lv.votes) };
+  }
+  function clearLeaveVote(room) { clearLeaveVoteTimer(room.code); delete room.leaveVote; }
+  function installStandIn(room, seat) {
+    const m = room.members[seat];
+    if (!m || !room.state || !room.state.players[seat]) return;
+    m.bot = true; m.standIn = true; // keep secret/name/avatar so reconnect hands the seat back
+    room.state.players[seat].bot = true;
+    if (Game.resetClock && room.state.phase === "play") Game.resetClock(room.state);
+    room.touched = Date.now();
+  }
+  function eligibleLeaveVoters(room) {
+    const on = online(room.code), seat = room.leaveVote && room.leaveVote.seat;
+    return room.members.map((_, i) => i).filter((i) => i !== seat && inGame(room, i) && !room.members[i].bot && on.has(i));
+  }
+  function armLeaveVoteTimer(room) {
+    clearLeaveVoteTimer(room.code);
+    if (!room.leaveVote) return;
+    const left = Math.max(0, LEAVE_VOTE_MS - (Date.now() - room.leaveVote.started));
+    leaveVoteTimers.set(room.code, setTimeout(guard("Leave-Abstimmung", () => {
+      leaveVoteTimers.delete(room.code);
+      if (rooms.get(room.code) !== room || !room.leaveVote) return;
+      resolveLeaveVote(room);
+    }), left).unref());
+  }
+  function startLeaveVote(room, pid) {
+    if (room.leaveVote || !room.state || !inGame(room, pid)) return;
+    const m = room.members[pid];
+    if (!m || m.bot) return;
+    room.leaveVote = { seat: pid, name: m.name, secret: m.secret, started: Date.now(), votes: {} };
+    armLeaveVoteTimer(room);
+    room.touched = Date.now();
+  }
+  function resolveLeaveVote(room) {
+    const lv = room.leaveVote;
+    if (!lv) return;
+    const eligible = eligibleLeaveVoters(room);
+    let bots = 0, waits = 0;
+    // all voted → count every eligible vote; soft timeout → majority among cast; none cast / no eligible → wait
+    const pool = !eligible.length ? []
+      : eligible.every((i) => lv.votes[i]) ? eligible
+      : eligible.filter((i) => lv.votes[i]);
+    for (const i of pool) { if (lv.votes[i] === "bot") bots++; else waits++; }
+    const seat = lv.seat;
+    clearLeaveVote(room);
+    if (bots > waits) installStandIn(room, seat); // tie prefers wait
+    room.touched = Date.now();
+    broadcast(room); saveRooms();
+  }
+  function maybeResolveLeaveVote(room) {
+    if (!room.leaveVote) return false;
+    const eligible = eligibleLeaveVoters(room);
+    if (!eligible.length || eligible.every((i) => room.leaveVote.votes[i])) { resolveLeaveVote(room); return true; }
+    return false;
+  }
 
   // the default computer player: the one whose turn it is moves after BOT_MS
   function defaultBotPlan(room) {
@@ -208,7 +270,7 @@ module.exports = function roomServer(g) {
     for (const ws of sockets.get(room.code) || []) {
       if (ws.pid == null) continue;
       send(ws, Object.assign({ t: "room", code: room.code, you: ws.pid, host: room.host, party: room.party || null }, fields, {
-        members, rematch: room.rematch || [], watchers: seen,
+        members, rematch: room.rematch || [], watchers: seen, leaveVote: publicLeaveVote(room.leaveVote),
         turnLeft: clock ? Math.max(0, clock.ends - Date.now()) : 0,
         view: room.state ? Game.view(room.state, ws.pid >= 0 && ws.pid < room.state.players.length ? ws.pid : -1) : null, events: events || []
       }));
@@ -224,6 +286,7 @@ module.exports = function roomServer(g) {
     sockets.get(room.code).add(ws);
     room.touched = Date.now();
     const m = room.members[pid];
+    if (room.leaveVote && room.leaveVote.seat === pid) clearLeaveVote(room); // back during the vote: cancel it
     if (m.bot && m.standIn) { // back from a break: the computer hands the seat back
       m.bot = false; delete m.standIn;
       if (room.state && room.state.players[pid]) room.state.players[pid].bot = false;
@@ -233,11 +296,21 @@ module.exports = function roomServer(g) {
   }
   function detach(ws) {
     if (!ws.code) return;
-    const set = sockets.get(ws.code);
-    if (set) { set.delete(ws); if (!set.size) sockets.delete(ws.code); }
-    const room = rooms.get(ws.code);
+    const code = ws.code, pid = ws.pid;
+    const set = sockets.get(code);
+    if (set) { set.delete(ws); if (!set.size) sockets.delete(code); }
+    const room = rooms.get(code);
     ws.code = null; ws.pid = null;
-    if (room && !checkRematch(room) && !autoStart(room)) broadcast(room);
+    if (!room) return;
+    // phone kill / drop mid-game: same leave vote as an explicit leave (if none is running yet)
+    if (pid != null && pid >= 0 && room.state && inGame(room, pid)) {
+      const m = room.members[pid];
+      if (m && !m.bot && !room.leaveVote) {
+        const still = [...(sockets.get(code) || [])].some((s) => s.pid === pid);
+        if (!still) startLeaveVote(room, pid);
+      } else if (room.leaveVote && !maybeResolveLeaveVote(room)) { /* voter dropped: maybe everyone else already voted */ }
+    }
+    if (!checkRematch(room) && !autoStart(room)) broadcast(room);
   }
 
   // take a seat out of the waiting room and shift everyone behind it
@@ -365,13 +438,23 @@ module.exports = function roomServer(g) {
         if (!room) return;
         const pid = ws.pid;
         if (pid === -1) { send(ws, { t: "left" }); detach(ws); return; }
-        if (!room.state || pid >= room.state.players.length) removeMember(room, pid);
-        else if (g.leaveGame) g.leaveGame(room, pid, ctx);
+        // mid-game seat: keep the member + secret and start a leave vote (bot vs wait)
+        if (room.state && inGame(room, pid)) startLeaveVote(room, pid);
+        else removeMember(room, pid);
         send(ws, { t: "left" });
         detach(ws);
         if (!room.members.some((m) => !m.bot)) { rooms.delete(room.code); clearTimers(room.code); }
-        else broadcast(room);
+        else if (!room.leaveVote || !maybeResolveLeaveVote(room)) broadcast(room);
         saveRooms();
+        return;
+      }
+      case "leaveVote": {
+        if (!room || !room.leaveVote || ws.pid == null || ws.pid < 0) return;
+        const choice = msg.choice === "bot" || msg.choice === "wait" ? msg.choice : null;
+        if (!choice || !eligibleLeaveVoters(room).includes(ws.pid)) return;
+        room.leaveVote.votes[ws.pid] = choice; // idempotent update
+        room.touched = Date.now();
+        if (!maybeResolveLeaveVote(room)) { broadcast(room); saveRooms(); }
         return;
       }
       case "bot": case "addBot": { // host adds a computer player in the waiting room
@@ -390,13 +473,12 @@ module.exports = function roomServer(g) {
         broadcast(room); saveRooms();
         return;
       }
-      case "standIn": { // host lets the computer play for someone who dropped out
+      case "standIn": { // host lets the computer play for someone who dropped out (manual override when no vote / after "wait")
         const i = +msg.seat;
         if (!room || !isHost || !room.state || !room.members[i] || room.members[i].bot || !room.state.players[i]) return;
+        if (room.leaveVote && room.leaveVote.seat === i) return err("Die anderen stimmen gerade ab.");
         if (online(room.code).has(i)) return err(`${room.members[i].name} ist noch online.`);
-        room.members[i].bot = true; room.members[i].standIn = true;
-        room.state.players[i].bot = true;
-        if (Game.resetClock && room.state.phase === "play") Game.resetClock(room.state);
+        installStandIn(room, i);
         broadcast(room); saveRooms();
         return;
       }
@@ -519,6 +601,7 @@ module.exports = function roomServer(g) {
   // everyone back to the waiting room
   function toLobby(room) {
     room.state = null; room.rematch = null;
+    clearLeaveVote(room);
     room.members.forEach((m) => { m.lobby = false; m.ready = false; });
     schedule(room);
   }

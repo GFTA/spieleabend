@@ -96,12 +96,19 @@ test("rooms, avatars, spectators, a full game with computers over WebSockets", a
   }
   await new Promise((r) => setTimeout(r, 60));
   a.latest(); b.latest(); // a move that went wrong shows up here as an error
-  // Ben leaves mid-game: a computer takes his seat and the game goes on
+  // Ben leaves mid-game: leave vote → Anna votes bot → standIn takes his seat (secret kept)
+  const benSecret = rooms.get(joined.code).members[1].secret;
   b.send({ t: "leave" });
   await b.next((m) => m.t === "left");
-  const taken = await a.next((m) => m.t === "room" && m.members[1].bot);
+  const voting = await a.next((m) => m.t === "room" && m.leaveVote && m.leaveVote.seat === 1);
+  assert.strictEqual(voting.leaveVote.name, "Ben");
+  assert.strictEqual(voting.members[1].bot, false);
+  a.send({ t: "leaveVote", choice: "bot" });
+  const taken = await a.next((m) => m.t === "room" && m.members[1].bot && !m.leaveVote);
   assert.strictEqual(taken.members[1].name, "Ben");
   assert.strictEqual(taken.view.players[1].bot, true);
+  assert.strictEqual(rooms.get(joined.code).members[1].secret, benSecret, "secret preserved for reconnect");
+  assert.strictEqual(rooms.get(joined.code).members[1].standIn, true);
   // Anna gives up: the computers finish without her
   a.send({ t: "act", a: { t: "giveup" } });
   v = (await a.next((m) => m.t === "room" && m.view && m.view.players[0].out)).view;
