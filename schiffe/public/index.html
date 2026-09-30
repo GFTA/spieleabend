@@ -37,8 +37,8 @@
 
 /* ---------- home ---------- */
 .screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
-.hero-board{--bs:132px;transform:rotate(-8deg);box-shadow:0 14px 30px rgba(0,0,0,.45);border-radius:16px}
-h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.hero .hero-board{--bs:118px;transform:rotate(-8deg);box-shadow:0 14px 30px rgba(0,0,0,.45);border-radius:16px}
+
 
 /* ---------- lobby ---------- */
 /* the lobby buttons stay reachable at the bottom on an opaque bar, never over the rules */
@@ -203,7 +203,6 @@ button.cell{cursor:crosshair}
   .harbor button:hover{color:var(--text)}
 }
 @media (min-width:900px) and (min-height:700px){
-  #home > *{width:100%;max-width:560px;align-self:center}
   #game{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
   .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
   .roundinfo{display:block}
@@ -268,7 +267,7 @@ button.cell{cursor:crosshair}
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
       <div class="label">Mehrspieler</div>
-      <p class="hint">Mehrspieler läuft über eine Party: Alle treten derselben Party bei, der Host wählt das Spiel, und ihr landet automatisch im selben Raum.</p>
+      <p class="hint">Mehrspieler läuft über eine Party: Der Host wählt das Spiel, alle landen im selben Raum.</p>
       <a class="btn btn-primary btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Party</a>
     </div>
     <div class="panel" id="onlineOff" hidden>
