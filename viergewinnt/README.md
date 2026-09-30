@@ -25,7 +25,7 @@ voll, ist es unentschieden. In jeder Runde beginnt der andere.
   Scheiben lösen sich animiert auf.
 - **Computer-Gegner** in drei Stufen: Leicht, Normal und Profi. Er rechnet mit Minimax
   und Alpha-Beta-Suche mehrere Züge voraus.
-- **Wie bei den anderen Spielen**: Raum-Code mit QR, Zuschauer mit „Mitspielen“,
+- **Wie bei den anderen Spielen**: Party-Einladung mit QR, Zuschauer mit „Mitspielen“,
   Emoji-Reaktionen und Schnellnachrichten, Avatare, Tisch-Designs (Nacht, Filz, Ozean,
   Hell) und Brettgröße, Bilanz auf dem Startbildschirm, Spielverlauf im Menü, Töne,
   Vibration und Konfetti.
