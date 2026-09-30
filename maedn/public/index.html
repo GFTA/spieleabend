@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="room-ui.css">
 <style>
-:root{--board:#c2ad80;--board2:#a08a5c;--spot:#fffaf0;--spotline:#4a3b22;--path:#5f4d2c;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230;--c4:#8a4fd0;--c5:#1fb5c9;--c6:#f28a1f;--c7:#ec6fb2}
+:root{--h1:32px;--h1d:40px;--board:#c2ad80;--board2:#a08a5c;--spot:#fffaf0;--spotline:#4a3b22;--path:#5f4d2c;--ring:#fff;--sea:#1f2350;--c0:#e0393e;--c1:#2d6fd6;--c2:#2fa35b;--c3:#f2c230;--c4:#8a4fd0;--c5:#1fb5c9;--c6:#f28a1f;--c7:#ec6fb2}
 .c0{--sc:var(--c0);--st:#fff}.c1{--sc:var(--c1);--st:#fff}.c2{--sc:var(--c2);--st:#fff}.c3{--sc:var(--c3);--st:#231a05}
 .c4{--sc:var(--c4);--st:#fff}.c5{--sc:var(--c5);--st:#0b2a30}.c6{--sc:var(--c6);--st:#2a1603}.c7{--sc:var(--c7);--st:#3a0f27}
 /* table designs; "Nacht" is the default without an attribute */
@@ -36,8 +36,8 @@
 
 /* ---------- home ---------- */
 .screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
-.hero .board{--cell:19px;transform:rotate(-6deg);box-shadow:0 14px 30px rgba(0,0,0,.45)}
-h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.hero .board{--cell:15px;transform:rotate(-6deg);box-shadow:0 14px 30px rgba(0,0,0,.45)}
+
 
 .prow .seat[class*=" c"]{background:var(--sc);color:var(--st)}
 
@@ -171,7 +171,6 @@ button.die:disabled{cursor:default}
   
 }
 @media (min-width:900px) and (min-height:700px){
-  #home > *{width:100%;max-width:560px;align-self:center}
   #game{padding:0 24px 16px}
   .topbar{padding:14px 0 4px;gap:12px;width:100%;max-width:980px;align-self:center}
   .roundinfo{font-size:14px}
@@ -236,7 +235,7 @@ button.die:disabled{cursor:default}
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
       <div class="label">Mehrspieler</div>
-      <p class="hint">Mehrspieler läuft über eine Party: Alle treten derselben Party bei, der Host wählt das Spiel, und ihr landet automatisch im selben Raum.</p>
+      <p class="hint">Mehrspieler läuft über eine Party: Der Host wählt das Spiel, alle landen im selben Raum.</p>
       <a class="btn btn-primary btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Party</a>
     </div>
     <div class="panel" id="onlineOff" hidden>
