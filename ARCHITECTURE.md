@@ -49,8 +49,12 @@ und Abstände kommen aus `kit.css`; ein Spiel setzt nur Hero-Größe (`.hero .bo
 und bei langen Titeln `:root{--h1:…px;--h1d:…px}` (mobil/Desktop). Der Hero wird nicht per
 JS-Inline-Style skaliert (überschreibt sonst das CSS). Hinweistexte kurz halten.
 
-**Warteraum:** Raum-Code und QR stehen nebeneinander im `.invite`-Grid (`room-ui.css`), damit die
-Spielerliste ohne Scrollen sichtbar bleibt; die Einstellungen-Schaltfläche (`.setfab`) belegt
+**Warteraum:** Es gibt keine eigenen Raum-Codes in der UI, alles läuft über die Party. Die Party-Leiste
+(`.invite`-Grid in `room-ui.css`: Party-Code plus „Einladen“) ist kompakt, damit die Spielerliste ohne
+Scrollen sichtbar bleibt. „Einladen“ öffnet das Sheet `#shareSheet` (QR, Code, Teilen-Knopf; Link
+`?party=CODE` über `Spieleabend.startUrl`). Der QR kommt aus `/vendor/qrcode.js` (Game-Server: npm
+`qrcode-generator`; Startseite: mitgelieferte Kopie in `start/public/vendor/`). Ohne Party (alte `?r=`-Links)
+landet man nur auf der Spiel-Startseite; die Einstellungen-Schaltfläche (`.setfab`) belegt
 oben rechts die erste Grid-Zeile (Label-Zeile).
 
 **Startseite (`start/public/index.html`):** eigenständig (kein `shared/`), kompakte Spielkarten
@@ -345,7 +349,7 @@ für alle schließen“ als Icon-Knöpfe (`.iconact`, Name in `aria-label` und
 `title`). Die Spielerzahl im Start-Knopf (`.cnt`) fällt unter 360px Breite
 weg, damit nichts abgeschnitten wird.
 
-Der Warteraum ist in allen Spielen gleich aufgebaut: Raum-Code, dann
+Der Warteraum ist in allen Spielen gleich aufgebaut: Party-Leiste, dann
 Spieler, dann Einstellungen, Hausregeln und Spielregeln. Auf breiten
 Bildschirmen stehen Code und Spieler links und der Rest rechts
 (`.cols` > `.col`; in Vier gewinnt heißen die Brett-Spalten auch `.col`,
