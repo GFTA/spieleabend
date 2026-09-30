@@ -575,7 +575,6 @@
     const cols = 7, rows = 6, grid = new Array(cols * rows).fill(-1);
     [[3, 0, 0], [3, 1, 1], [4, 0, 1], [2, 0, 0], [4, 1, 0], [4, 2, 1], [5, 0, 1], [5, 1, 0], [5, 2, 1], [5, 3, 0], [1, 0, 0], [2, 1, 1]].forEach(([c, r, p]) => { grid[c + r * cols] = p; });
     $("#heroBoard").innerHTML = boardHTML({ cols, rows, grid }, {});
-    $("#heroBoard").style.setProperty("--cell", "30px");
   })();
   $("#modeTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { tab = b.dataset.tab; tabTouched = true; renderHome(); } });
   $("#sizeLocal").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (b) { sizeLocal = +b.dataset.v; store.set(K.size, sizeLocal); renderHome(); } });
