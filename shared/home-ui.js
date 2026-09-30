@@ -1,24 +1,26 @@
 // Shared start screen bits of every game (loaded after room-ui.js, before app.js):
 //  - single-player switch: ?sp=1 (sent by the start page) opens the game in the "Einzelspieler" tab
-//  - the single-player line-up: me plus 1..max-1 computer opponents
-// HomeUI({ key, max, botNames }) -> { single(), opp(), roster(name), render() }
+//  - the single-player line-up: me plus min..max-1 computer opponents (min defaults to 1, a game that is
+//    fun alone passes 0)
+// HomeUI({ key, max, botNames, min }) -> { single(), opp(), roster(name), render() }
 (function () {
   "use strict";
   const K = window.Spieleabend;
-  window.HomeUI = function ({ key, max, botNames, onChange }) {
+  window.HomeUI = function ({ key, max, botNames, min = 1, onChange }) {
     const single = new URLSearchParams(location.search).get("sp") === "1";
     K.dropParams("sp");
-    const top = Math.max(1, max - 1);
-    let opp = Math.min(top, Math.max(1, +K.store.get(key) || 1));
+    const top = Math.max(min, max - 1);
+    let opp = Math.min(top, Math.max(min, +K.store.get(key) || min));
     const box = () => K.$("#oppBox");
     function render() {
       const el = box(); if (!el) return;
       const names = botNames.slice(0, opp).join(", ");
-      if (top < 2) { el.innerHTML = `<p class="hint">Du spielst gegen den Computer: ${K.esc(names)}.</p>`; return; }
+      const who = opp ? `Gegen den Computer: ${K.esc(names)}.` : "Du spielst allein.";
+      if (top < 2 && min) { el.innerHTML = `<p class="hint">Du spielst gegen den Computer: ${K.esc(names)}.</p>`; return; }
       el.innerHTML = `<div class="label">Anzahl der Gegner</div>` +
-        `<div class="seg" style="grid-template-columns:repeat(auto-fit,minmax(44px,1fr))">${Array.from({ length: top }, (_, i) =>
-          `<button type="button" data-opp="${i + 1}" aria-pressed="${i + 1 === opp}">${i + 1}</button>`).join("")}</div>` +
-        `<p class="hint">Gegen den Computer: ${K.esc(names)}.</p>`;
+        `<div class="seg" style="grid-template-columns:repeat(auto-fit,minmax(44px,1fr))">${Array.from({ length: top - min + 1 }, (_, i) =>
+          `<button type="button" data-opp="${min + i}" aria-pressed="${min + i === opp}">${min + i}</button>`).join("")}</div>` +
+        `<p class="hint">${who}</p>`;
     }
     document.addEventListener("click", (e) => {
       const b = e.target.closest("#oppBox [data-opp]"); if (!b) return;
