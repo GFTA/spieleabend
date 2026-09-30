@@ -59,7 +59,7 @@
 
 @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
 /* the board: a blue frame with round holes; every column is one button */
-.board{--cell:44px;--gap:calc(var(--cell) * .14);flex:none;display:flex;gap:var(--gap);padding:calc(var(--gap) * 1.4);border-radius:calc(var(--cell) * .3);
+.board{--cell:44px;--gap:calc(var(--cell) * .14);position:relative;flex:none;display:flex;gap:var(--gap);padding:calc(var(--gap) * 1.4);border-radius:calc(var(--cell) * .3);
   background:var(--frame);box-shadow:inset 0 -6px 0 var(--frame2),0 14px 30px rgba(0,0,0,.35);touch-action:manipulation}
 .col{display:flex;flex-direction:column-reverse;gap:var(--gap);border:0;padding:0;margin:0;background:none;border-radius:calc(var(--cell) * .5);position:relative}
 .board.play .col:not(:disabled){cursor:pointer}
@@ -69,6 +69,10 @@
 .disc.p0{background:radial-gradient(circle at 50% 45%,#ff5a5f 0 38%,var(--red) 39%)}
 .disc.p1{background:radial-gradient(circle at 50% 45%,#ffd95a 0 38%,var(--yellow) 39%)}
 .disc.ghost{pointer-events:none;opacity:.55;box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+#board{margin-top:calc(var(--cell) * .85)}
+#arena{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.disc.aim{inset:auto;top:calc(var(--cell) * -.78);width:var(--cell);height:var(--cell);pointer-events:none;z-index:2;transition:left .09s ease-out;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+.col.aimed{background:rgba(255,255,255,.12)}
 .disc.last::after{content:"";position:absolute;inset:38%;border-radius:50%;background:rgba(255,255,255,.75)}
 .disc.p1.last::after{background:rgba(35,26,5,.55)}
 .disc.fall{animation:fall calc(180ms + var(--fall) * 45ms) cubic-bezier(.5,0,1,1) both,bounce .22s calc(180ms + var(--fall) * 45ms) ease-out}
@@ -105,7 +109,7 @@
 
 /* ---------- desktop ---------- */
 @media (hover:hover) and (pointer:fine){
-  .board.play .col:not(:disabled):hover{background:rgba(255,255,255,.12)}
+
   
 }
 @media (min-width:900px) and (min-height:700px){

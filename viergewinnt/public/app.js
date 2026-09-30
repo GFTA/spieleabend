@@ -252,7 +252,7 @@
     const st = getComputedStyle(arena);
     const W = arena.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
     const H = arena.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) - $("#lastMove").offsetHeight - 10 - 8;
-    const wf = V.cols + 0.14 * (V.cols - 1) + 0.392, hf = V.rows + 0.14 * (V.rows - 1) + 0.392;
+    const wf = V.cols + 0.14 * (V.cols - 1) + 0.392, hf = V.rows + 0.14 * (V.rows - 1) + 0.392 + 0.85; // room for the disc hovering above the board
     const cs = parseFloat(LOOK.get().size) || 1;
     const fit = Math.min(W / wf, H / hf, desktop.matches ? 86 : 64);
     const maxW = cs > 1 ? (arena.clientWidth - 8) / wf : W / wf; // big boards may use the side margins
@@ -291,6 +291,7 @@
     board.classList.toggle("play", play);
     board.classList.toggle("popmode", play && popMode);
     layoutBoard();
+    applyAim();
 
     // log
     const lmEl = $("#lastMove"), lines = V.log.slice(-2), lmKey = lines.join("\n");
@@ -312,7 +313,7 @@
       av = P.avatar;
       if (play) {
         who = mode === "local" && humans(V).length === 2 ? `${P.name}, du bist dran` : "Du bist dran";
-        hint = popMode ? "Tippe auf eine Spalte mit deiner Scheibe ganz unten." : `Tippe auf eine Spalte, um eine ${G.COLORS[V.cur].toLowerCase()}e Scheibe einzuwerfen.`;
+        hint = popMode ? "Tippe auf eine Spalte mit deiner Scheibe ganz unten." : "Tippe auf eine Spalte, oder halte, schiebe und lass zum Einwerfen los.";
       } else {
         who = `${P.name} ist dran`;
         hint = P.bot ? "Der Computer überlegt …" : mode === "online" && V.me < 0 ? "Du schaust zu." : "Warte auf den nächsten Zug.";
@@ -351,15 +352,69 @@
     }
   }
 
-  $("#board").addEventListener("click", (e) => { const b = e.target.closest("[data-col]"); if (b && !b.disabled) playCol(+b.dataset.col); });
-  // desktop: a see-through disc shows where it would land
-  function hoverGhost(c) {
-    const want = c != null && canPlay() && !popMode && height(c) < V.rows ? $(`#board [data-col="${c}"]`).children[height(c)] : null;
-    for (const g of $("#board").querySelectorAll(".disc.ghost")) if (g.parentNode !== want) g.remove();
+  // keyboard (Enter on a focused column); touch and mouse go through the pointer handlers below
+  $("#board").addEventListener("click", (e) => { if (e.detail) return; const b = e.target.closest("[data-col]"); if (b && !b.disabled) playCol(+b.dataset.col); });
+
+  // aim: a see-through disc in the landing cell plus a disc hovering above the column
+  let aimCol = null, drag = null;
+  function applyAim() {
+    const b = $("#board");
+    const ok = aimCol != null && V && canPlay() && !popMode && height(aimCol) < V.rows;
+    const col = ok ? b.querySelector(`[data-col="${aimCol}"]`) : null;
+    const want = col ? col.children[height(aimCol)] : null;
+    for (const g of b.querySelectorAll(".disc.ghost")) if (g.parentNode !== want) g.remove();
     if (want && !want.querySelector(".disc")) want.insertAdjacentHTML("beforeend", `<span class="disc ghost p${V.cur}"></span>`);
+    for (const c of b.querySelectorAll(".col.aimed")) if (c !== col) c.classList.remove("aimed");
+    let t = b.querySelector(".disc.aim");
+    if (!col) { if (t) t.remove(); return; }
+    col.classList.add("aimed");
+    if (!t) { t = document.createElement("span"); b.appendChild(t); }
+    t.className = `disc aim p${V.cur}`;
+    t.style.left = col.offsetLeft + (col.offsetWidth - t.offsetWidth) / 2 + "px";
   }
-  $("#board").addEventListener("mouseover", (e) => { const b = e.target.closest("[data-col]"); hoverGhost(b ? +b.dataset.col : null); });
-  $("#board").addEventListener("mouseleave", () => hoverGhost(null));
+  function colAt(x) {
+    let best = null, bd = 1e9;
+    for (const c of $("#board").querySelectorAll(".col")) {
+      const r = c.getBoundingClientRect(), d = Math.abs(x - (r.left + r.right) / 2);
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best ? +best.dataset.col : null;
+  }
+  // the whole strip above and across the board counts as a column
+  function inZone(e) {
+    const r = $("#board").getBoundingClientRect(), a = $("#arena").getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= a.top && e.clientY <= r.bottom;
+  }
+  const arenaEl = $("#arena");
+  arenaEl.addEventListener("pointerdown", (e) => {
+    if ((e.pointerType === "mouse" && e.button !== 0) || !V || V.phase !== "play" || !inZone(e)) return;
+    drag = { id: e.pointerId, col: colAt(e.clientX), away: false };
+    try { arenaEl.setPointerCapture(e.pointerId); } catch {}
+    aimCol = drag.col; applyAim();
+    e.preventDefault();
+  });
+  arenaEl.addEventListener("pointermove", (e) => {
+    if (drag) {
+      if (e.pointerId !== drag.id) return;
+      const r = $("#board").getBoundingClientRect();
+      drag.col = colAt(e.clientX);
+      drag.away = e.clientY > r.bottom + (r.width / V.cols) * 0.7; // pulled down off the board: release cancels
+      aimCol = drag.away ? null : drag.col;
+      applyAim();
+    } else if (e.pointerType === "mouse") {
+      aimCol = V && inZone(e) ? colAt(e.clientX) : null;
+      applyAim();
+    }
+  });
+  arenaEl.addEventListener("pointerup", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { col, away } = drag;
+    drag = null; aimCol = null; applyAim();
+    if (!away && col != null) playCol(col);
+  });
+  arenaEl.addEventListener("pointercancel", () => { drag = null; aimCol = null; applyAim(); });
+  arenaEl.addEventListener("pointerleave", (e) => { if (!drag && e.pointerType === "mouse") { aimCol = null; applyAim(); } });
+  arenaEl.addEventListener("contextmenu", (e) => e.preventDefault());
   $("#hintBtn").addEventListener("click", () => {
     if (!canPlay()) return;
     const a = G.suggest(V, V.cur);
