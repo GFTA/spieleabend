@@ -13,9 +13,11 @@
   try { sessionStorage.removeItem("maedn.reloaded"); } catch (e) {}
   const $ = (s) => document.querySelector(s);
   const K = { local: "maedn.v1", online: "maedn.online", me: "maedn.me", rules: "maedn.rules", goal: "maedn.goal", sound: "maedn.sound", level: "maedn.level", stats: "maedn.stats",
-    avatar: "maedn.avatar", look: "maedn.look" };
+    avatar: "maedn.avatar", look: "maedn.look", help: "maedn.help" };
   const store = Spieleabend.store;
   const BOT_MS = 750, STEP_MS = 120;
+  let moveHelp = store.get(K.help) === true;
+  let tip = null; // { key, k }: the piece the tip button pointed at this turn
 
   // ---------- look: table design and board size (applied before anything is drawn) ----------
   // ---------- look: table design and size (shared, kit.js), applied before anything is drawn ----------
@@ -243,10 +245,18 @@
     let h = `<div class="in"><svg class="path" viewBox="0 0 ${geo.w} ${geo.h}" aria-hidden="true"><polygon points="${geo.track.map(([x, y]) => `${x + 0.5},${y + 0.5}`).join(" ")}"/></svg>`;
     const targets = new Map(); // "x,y" -> k
     const owner = o.moves && o.moves.length ? v.players[o.owner] : null;
-    if (owner) for (const m of o.moves) targets.set(cellOf(geo, owner.seat, m.to, m.k).join(","), m.k);
+    const tags = new Map();
+    if (owner) for (const m of o.moves) {
+      const key = cellOf(geo, owner.seat, m.to, m.k).join(",");
+      targets.set(key, m.k);
+      if (o.help) {
+        const r = m.risk || 0;
+        tags.set(key, m.hit ? ["hit", "✕", "schlägt"] : m.to >= v.track && m.from < v.track ? ["goal", "★", "kommt ins Ziel"] : r === 0 ? ["safe", "", "sicher"] : r <= 1 ? ["warn", "!", "bedroht"] : ["risk", "!!", "stark bedroht"]);
+      }
+    }
     const field = (xy, cls) => {
-      const t = targets.get(xy.join(","));
-      return `<span class="spot ${cls}${t != null ? " target" : ""}" style="${at(xy)}"${t != null ? ` data-k="${t}"` : ""}></span>`;
+      const key = xy.join(","), t = targets.get(key), g = tags.get(key);
+      return `<span class="spot ${cls}${t != null ? " target" : ""}" style="${at(xy)}"${t != null ? ` data-k="${t}"` : ""}>${g ? `<b class="rk ${g[0]}" title="${g[2]}">${g[1]}</b>` : ""}</span>`;
     };
     for (let s = 0; s < arms; s++) {
       const off = used.has(s) ? "" : " off";
@@ -264,7 +274,7 @@
     v.players.forEach((p, i) => p.pieces.forEach((r, k) => {
       if (r < -1) return;
       const mine = owner && i === o.owner && can.has(k);
-      const cls = ["piece", "p" + p.seat, mine ? "can" : "", mine && o.sel === can.get(k) ? "sel" : "", o.last && o.last.o === i && o.last.k === k ? "last" : ""].join(" ");
+      const cls = ["piece", "p" + p.seat, mine ? "can" : "", mine && o.sel === can.get(k) ? "sel" : "", mine && o.tip === k ? "tip" : "", o.last && o.last.o === i && o.last.k === k ? "last" : ""].join(" ");
       h += `<span class="${cls}" style="${at(cellOf(geo, p.seat, r, k))}" data-o="${i}" data-k="${k}"${mine ? ` role="button" aria-label="Figur ${can.get(k) + 1}"` : ""}>` +
         `<i></i>${mine ? `<span class="n">${can.get(k) + 1}</span>` : ""}</span>`;
     }));
@@ -383,7 +393,8 @@
     // board
     const board = $("#board"), lm = V.lastMove;
     board.innerHTML = boardHTML(V, {
-      moves: play && V.need === "move" ? V.moves : null, owner: V.owner, sel,
+      moves: play && V.need === "move" ? V.moves : null, owner: V.owner, sel, help: moveHelp,
+      tip: play && V.need === "move" && tip && tip.key === `${V.round}:${V.turn}` ? tip.k : null,
       last: lm && V.phase === "play" ? lm : null, extra: V.arms > 4 ? "" : V.players.map((_, i) => badgeHTML(i)).join(""),
       yardOn: V.phase === "play" && V.cur >= 0 ? V.players[V.cur].seat : null
     });
@@ -432,6 +443,7 @@
     renderDie();
     if (rollAnim) { rollAnim = false; spinDie(); }
     $("#resultBtn").hidden = !(V.phase === "roundEnd" && peek);
+    $("#tipBtn").hidden = !(play && V.need === "move" && V.moves.length > 1 && V.tip != null);
     $("#reactBtn").hidden = mode !== "online";
     $("#keys").innerHTML = play ? (V.need === "roll" ? "<kbd>Leertaste</kbd> würfeln" : `<kbd>1</kbd>–<kbd>${V.moves.length}</kbd> ziehen · <kbd>←</kbd><kbd>→</kbd> + <kbd>Enter</kbd>`) : "";
     renderClock();
@@ -457,6 +469,16 @@
     const t = e.target.closest("[data-k]");
     if (t && canPlay() && V.need === "move") move(+t.dataset.k);
   });
+  $("#tipBtn").addEventListener("click", () => {
+    if (!V || V.phase !== "play" || !canPlay() || V.need !== "move" || V.tip == null) return;
+    const m = V.moves.find((x) => x.k === V.tip);
+    if (!m) return;
+    tip = { key: `${V.round}:${V.turn}`, k: m.k };
+    const why = m.hit ? "wirft eine Figur raus" : m.from === -1 ? "kommt aus dem Haus" : m.to >= V.track && m.from < V.track ? "kommt ins Ziel" : m.flee && !m.risk ? "bringt sich in Sicherheit" : !m.risk ? "steht danach sicher" : "ist der beste Zug";
+    toast(`Tipp: Figur ${V.moves.indexOf(m) + 1} ${why}.`);
+    renderGame();
+  });
+  $("#moveHelp").addEventListener("change", (e) => { moveHelp = e.target.checked; store.set(K.help, moveHelp); if (V) renderGame(); });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
   // keys: space rolls, 1-4 or arrows + Enter move, Esc closes
@@ -633,6 +655,7 @@
     menu: {
       open() {
         LOOK.render();
+        $("#moveHelp").checked = moveHelp;
         if (V) scoreList($("#menuScores"), V.players.map((_, i) => i), []);
         const on = activeNames(V ? V.rules : {});
         const goal = V ? `${V.goal === 1 ? "Wer zuerst fertig ist, gewinnt." : "Alle Plätze werden ausgespielt."}` : "";

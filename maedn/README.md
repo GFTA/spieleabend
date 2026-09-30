@@ -22,9 +22,13 @@ den Farben Rot, Blau, Grün, Gelb, Lila, Türkis, Orange und Rosa.
   springen.
 - **Hausregeln** (einzeln zuschaltbar): Dreimal würfeln (Standard an), Schlagpflicht,
   Startfeld ist sicher, Freie Wahl bei der 6, Raus mit 1 oder 6, Schnellstart (eine Figur
-  steht schon draußen), Im Ziel überspringen, Nach dem Schlagen nochmal, Drei Sechsen
+  steht schon draußen), Im Ziel überspringen, Nach dem Schlagen nochmal, Ziel = nochmal (auch eine Figur im Ziel bringt einen weiteren Wurf), Drei Sechsen
   (die dritte verfällt), Teams (zu viert, Gegenüber spielen zusammen, wer fertig ist,
   würfelt für den Partner) und Zugzeit (20 Sekunden).
+- **Tipp und Zughilfe**: Der Tipp-Button lässt die beste Figur aufleuchten und sagt, warum
+  (er rechnet wie der Profi-Computer). Die Zughilfe (Menü, Spiel-Einstellungen, nur für dich)
+  markiert am Zielring jedes möglichen Zugs, ob die Figur dort sicher steht, bedroht ist,
+  schlägt oder ins Ziel kommt.
 - **Computer-Gegner** in drei Stufen. Er wägt jeden Zug ab: rauswerfen, rauskommen,
   ins Ziel ziehen, und ab „Normal“ auch, wie gefährdet eine Figur danach steht.
 - **Online**: Wer mitten im Spiel den Raum verlässt, wird vom Computer ersetzt, das Spiel

@@ -77,6 +77,11 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .spot.start::after{content:"";position:absolute;width:34%;height:34%;border-radius:50%;background:rgba(255,255,255,.7)}
 .spot.off::before{opacity:.35}
 .spot.target{cursor:pointer;z-index:1}
+.spot .rk{position:absolute;right:-6%;top:-6%;width:38%;height:38%;border-radius:50%;z-index:2;pointer-events:none;box-shadow:0 0 0 calc(var(--cell) * .04) #1b1325;font:800 calc(var(--cell) * .26)/calc(var(--cell) * .38) var(--ui);text-align:center;color:#1b1325;animation:pop .25s ease-out}
+.spot .rk.safe{background:#3fbf6b} .spot .rk.warn{background:#f2c230} .spot .rk.risk{background:#e0393e;color:#fff} .spot .rk.hit{background:#fff} .spot .rk.goal{background:#f2c230}
+@keyframes pop{from{transform:scale(0)}}
+.piece.tip::before{animation:tipglow .7s ease-in-out infinite alternate}
+@keyframes tipglow{to{box-shadow:0 0 0 calc(var(--cell) * .07) #1b1325,0 0 0 calc(var(--cell) * .16) #f2c230,0 0 calc(var(--cell) * .6) calc(var(--cell) * .2) rgba(242,194,48,.9)}}
 .spot.target::after{content:"";position:absolute;width:92%;height:92%;border-radius:50%;box-sizing:border-box;border:calc(var(--cell) * .08) dashed #1b1325;animation:spin 3s linear infinite;background:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .yard{position:absolute;left:calc(var(--x) * var(--cell) - var(--cell) * .12);top:calc(var(--y) * var(--cell) - var(--cell) * .12);width:calc(var(--cell) * 2.24);height:calc(var(--cell) * 2.24);border-radius:calc(var(--cell) * .5);opacity:.42}
@@ -352,6 +357,7 @@ button.die:disabled{cursor:default}
       <div class="tries" id="tries" hidden></div>
       <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
       <div class="acts">
+        <button class="btn" id="tipBtn" type="button" hidden>Tipp</button>
         <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
       </div>
       <div class="keys" id="keys"></div>
@@ -373,6 +379,7 @@ button.die:disabled{cursor:default}
 </div>
 
 <div class="overlay" id="menu" hidden>
+  <template data-slot="settings"><label class="toggle" for="moveHelp"><input type="checkbox" id="moveHelp"><span>Zughilfe<small>Zeigt am Zielring, ob die Figur dort sicher steht, bedroht ist, schlägt oder ins Ziel kommt.</small></span></label></template>
   <template data-slot="rules">
         <ul>
           <li>Tippe auf den Würfel. Mit einer <b>6</b> kommt eine Figur aus dem Haus auf dein Startfeld. Rauskommen ist Pflicht, und das Startfeld muss danach frei gemacht werden.</li>

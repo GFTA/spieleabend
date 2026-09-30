@@ -17,7 +17,7 @@ const move = (S, k) => G.act(S, S.cur, { t: "move", k });
 const setup = (S, pieces) => pieces.forEach((p, i) => { if (p) S.players[i].pieces = p.slice(); });
 
 test("settings are normalised, house rules have defaults", () => {
-  assert.deepStrictEqual(G.normRules(null), { three: true, hit: false, safeStart: false, freeSix: false, easyOut: false, rush: false, jumpGoal: false, hitAgain: false, sixPenalty: false, teams: false, clock: false });
+  assert.deepStrictEqual(G.normRules(null), { three: true, hit: false, safeStart: false, freeSix: false, easyOut: false, rush: false, jumpGoal: false, hitAgain: false, goalAgain: false, sixPenalty: false, teams: false, clock: false });
   assert.strictEqual(G.normRules({ three: false, hit: true, bogus: true }).three, false);
   assert.strictEqual(G.normRules({ hit: "yes" }).hit, false);
   assert.strictEqual(G.normGoal(2), 2);
@@ -219,6 +219,30 @@ test("house rules: extra roll after a hit, the third six is lost", () => {
   const r = roll(P, 6);
   assert.ok(r.events.some((e) => e.t === "penalty"));
   assert.strictEqual(P.cur, 1);
+});
+
+test("house rule goalAgain: bringing a piece home earns another roll", () => {
+  const S = game(2, { goalAgain: true });
+  setup(S, [[39, -1, -1, -1], [27, -1, -1, -1]]);
+  roll(S, 1); move(S, 0);
+  assert.strictEqual(S.cur, 0, "home, roll again");
+  const N = game(2);
+  setup(N, [[39, -1, -1, -1], [27, -1, -1, -1]]);
+  roll(N, 1); move(N, 0);
+  assert.strictEqual(N.cur, 1, "without the rule the turn passes");
+});
+
+test("view: moves carry their risk and a tip names the best one", () => {
+  const S = game(2);
+  setup(S, [[5, 20, -1, -1], [12, -1, -1, -1]]);
+  S.need = "move"; S.dice = 3;
+  const v = G.view(S, 0);
+  assert.ok(v.moves.length >= 2);
+  for (const m of v.moves) assert.strictEqual(typeof m.risk, "number");
+  assert.ok(v.moves.some((m) => m.k === v.tip), "the tip is a legal move");
+  assert.strictEqual(G.suggest(S, 0), v.tip);
+  const R = game(2);
+  assert.strictEqual(G.view(R, 0).tip, null, "no tip before the roll");
 });
 
 test("teams: partners never hit each other, a finished player moves the partner's pieces", () => {

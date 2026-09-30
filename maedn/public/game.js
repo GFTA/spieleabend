@@ -30,6 +30,7 @@
     { k: "rush", name: "Schnellstart", desc: "Jeder beginnt mit einer Figur auf dem Startfeld." },
     { k: "jumpGoal", name: "Im Ziel überspringen", desc: "Im Zielfeld dürfen Figuren über eigene Figuren hinweg springen." },
     { k: "hitAgain", name: "Nach dem Schlagen nochmal", desc: "Wer eine Figur schlägt, darf noch einmal würfeln." },
+    { k: "goalAgain", name: "Ziel = nochmal", desc: "Wer eine Figur ins Ziel bringt, darf noch einmal würfeln." },
     { k: "sixPenalty", name: "Drei Sechsen", desc: "Die dritte 6 hintereinander verfällt, der Zug ist vorbei." },
     { k: "teams", name: "Teams", desc: "Nur zu viert: Wer sich gegenübersitzt, spielt zusammen. Wer fertig ist, würfelt für den Partner weiter." },
     { k: "clock", name: "Zugzeit", desc: "20 Sekunden zum Würfeln und Ziehen, sonst übernimmt das Spiel." }
@@ -311,7 +312,7 @@
         events.push({ t: "finish", pi: o, place: O.place });
         if (checkEnd(S, events)) return ok();
       }
-      const again = S.dice === 6 || (S.rules.hitAgain && !!m.hit);
+      const again = S.dice === 6 || (S.rules.hitAgain && !!m.hit) || (S.rules.goalAgain && m.to >= HOME && m.from < HOME);
       if (again && canAct(S, pi)) {
         S.need = "roll";
         S.tries = 0;
@@ -382,6 +383,18 @@
     for (const m of ms) { const v = score(S, pi, m, level) + Math.random() * 0.01; if (v > bv) { bv = v; best = m; } }
     return { t: "move", k: best.k };
   }
+  // the best move for the player on turn, by the pro computer's weighing (deterministic), or null
+  function suggest(S, pi) {
+    const ms = legalMoves(S, pi, S.dice);
+    if (ms.length < 2) return ms.length ? ms[0].k : null;
+    let best = ms[0], bv = -Infinity;
+    for (const m of ms) { const v = score(S, pi, m, 3); if (v > bv) { bv = v; best = m; } }
+    return best.k;
+  }
+  // how many opposing pieces could hit the piece after the move, and whether it stands in danger now
+  function annotate(S, o, ms) {
+    return ms.map((m) => ({ k: m.k, from: m.from, to: m.to, hit: m.hit, risk: danger(S, o, m.to, m.hit), flee: m.from >= 0 && m.from < trk(S) && danger(S, o, m.from) > 0 }));
+  }
   function botMove(S, pi) {
     if (S.phase !== "play" || S.cur !== pi) return null;
     return S.need === "roll" ? { t: "roll" } : pickMove(S, pi, lvOf(S, pi));
@@ -393,7 +406,8 @@
     return {
       me, arms: S.arms || 4, track: trk(S), phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level == null ? 2 : S.level, rules: S.rules,
       need: S.need, dice: S.dice, tries: S.tries || 0, streak: S.streak || 0, nextStarter: S.starter % S.players.length,
-      owner: play ? owner(S, S.cur) : -1, moves: play && S.need === "move" ? legalMoves(S, S.cur, S.dice) : [],
+      owner: play ? owner(S, S.cur) : -1, moves: play && S.need === "move" ? annotate(S, owner(S, S.cur), legalMoves(S, S.cur, S.dice)) : [],
+      tip: play && S.need === "move" ? suggest(S, S.cur) : null,
       three: play && S.need === "roll" && S.rules.three && stuck(S, owner(S, S.cur)),
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => ({
@@ -406,6 +420,6 @@
 
   return {
     MAX_PLAYERS, COLORS, SEATS, armsFor, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, RULES, DEFAULT_RULES,
-    normRules, normGoal, normLevel, newGame, startRound, act, legalMoves, tick, nextDeadline, resetClock, botMove, view
+    normRules, normGoal, normLevel, newGame, startRound, act, legalMoves, suggest, tick, nextDeadline, resetClock, botMove, view
   };
 });
