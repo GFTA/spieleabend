@@ -38,6 +38,42 @@
   const pname = (i) => (i === V.me ? "Du" : V.players[i].name);
   const { toast, confetti, showBubble } = Spieleabend;
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const botMsOverride = (() => {
+    try { const n = +new URLSearchParams(location.search).get("botms"); return Number.isFinite(n) && n >= 0 ? n : 0; }
+    catch (e) { return 0; }
+  })();
+  let scoreHighlight = null; // { tiles:[{x,y}], until }
+
+  function tileScreenRect(x, y) {
+    const wrap = $("#boardWrap"); if (!wrap) return null;
+    const r = wrap.getBoundingClientRect();
+    return {
+      left: r.left + pan.x + (x + 0.5) * TS * pan.scale,
+      top: r.top + pan.y + (y + 0.5) * TS * pan.scale
+    };
+  }
+  function flyMeepleHome(fromXY, pi, delay) {
+    if (reduced() || !V || !V.players[pi]) return;
+    const from = tileScreenRect(fromXY.x, fromXY.y);
+    const plate = document.querySelector(`#plates [data-seat="${pi}"]`);
+    if (!from || !plate) return;
+    const to = plate.getBoundingClientRect();
+    const el = document.createElement("span");
+    el.className = "meeple-flyer";
+    el.style.background = V.players[pi].color || "#fff";
+    el.style.left = (from.left - 8) + "px";
+    el.style.top = (from.top - 8) + "px";
+    document.body.appendChild(el);
+    const dx = to.left + to.width / 2 - from.left;
+    const dy = to.top + to.height / 2 - from.top;
+    const run = () => {
+      el.style.transition = "transform .55s ease-in, opacity .55s ease-in";
+      el.style.transform = `translate(${dx}px,${dy}px) scale(.55)`;
+      el.style.opacity = "0";
+      setTimeout(() => el.remove(), 600);
+    };
+    setTimeout(run, delay || 30);
+  }
 
   const { sfx, buzz, wake } = Spieleabend.sound({
     key: K.sound,
@@ -123,7 +159,15 @@
       }
       if (ev.t === "discard") { sfx("discard"); toast("Plättchen abgelegt — neu gezogen."); }
       if (ev.t === "meeple") { if (ev.feature != null) { flashMeeple = { x: ev.x, y: ev.y }; sfx("meeple"); } }
-      if (ev.t === "score") { scorePulse = { pi: ev.pi }; sfx("score"); toast(`+${ev.points} für ${pname(ev.pi)}`); }
+      if (ev.t === "score") {
+        scorePulse = { pi: ev.pi };
+        sfx("score");
+        toast(`+${ev.points} für ${pname(ev.pi)}`);
+        if (ev.tiles && ev.tiles.length) {
+          scoreHighlight = { tiles: ev.tiles.map((t) => ({ x: t.x, y: t.y })), until: Date.now() + 700 };
+          ev.tiles.forEach((t, i) => flyMeepleHome(t, ev.pi, 40 + i * 50));
+        }
+      }
       if (ev.t === "endScore") sfx("endScore");
       if (ev.t === "giveup") toast(ev.pi === v.me ? "Du hast aufgegeben." : `${v.players[ev.pi].name} gibt auf.`);
       if (ev.t === "end") setTimeout(() => sfx("win"), 400);
@@ -160,7 +204,7 @@
       const res = a ? G.act(L, plan.pi, a) : null;
       if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); store.set(K.local, L); render(); }
       scheduleBot();
-    }, plan.delay);
+    }, botMsOverride || plan.delay);
   }
 
   function showScreen(id) {
@@ -201,9 +245,12 @@
     } else if (canPlay() && V.phase === "place" && V.current && mode === "online" && preview) {
       body += `<rect class="hl sel" x="${preview.x * TS}" y="${preview.y * TS}" width="${TS}" height="${TS}" rx="4"/>`;
     }
+    const hlTiles = scoreHighlight && Date.now() < scoreHighlight.until ? scoreHighlight.tiles : null;
+    if (scoreHighlight && !hlTiles) scoreHighlight = null;
     for (const t of V.board) {
       const flash = flashTile && flashTile.x === t.x && flashTile.y === t.y ? animCls : "";
-      body += `<g class="${flash.trim()}" transform="translate(${t.x * TS},${t.y * TS})">${tileSVG(t.id, t.r, TS, t.m)}</g>`;
+      const scored = hlTiles && hlTiles.some((h) => h.x === t.x && h.y === t.y) ? (reduced() ? "" : " score-flash") : "";
+      body += `<g class="${(flash + scored).trim()}" transform="translate(${t.x * TS},${t.y * TS})">${tileSVG(t.id, t.r, TS, t.m)}</g>`;
     }
     // preview ghost
     if (preview && V.current && V.phase === "place") {
@@ -227,8 +274,8 @@
 
   function renderGame() {
     if (V.phase !== "roundEnd") peek = false;
-    scorePulse = null;
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
+    scorePulse = null;
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · Stapel <b>${V.stackLeft}</b>`;
     $("#stockInfo").innerHTML = `♟ <b>${V.me >= 0 ? V.players[V.me].meeples : "–"}</b>`;
 

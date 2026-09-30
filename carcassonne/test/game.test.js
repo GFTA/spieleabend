@@ -59,7 +59,9 @@ test("completed road scores 1 per tile and returns meeple", () => {
   S.cur = 0; S.current = "W"; S.phase = "place";
   assert.ok(Game.act(S, 0, { t: "place", x: Game.START - 1, y: Game.START, r: 0 }).ok);
   const res = Game.act(S, 0, { t: "meeple", feature: null });
-  assert.ok(res.events.some((e) => e.t === "score" && e.kind === "R" && e.points === 3));
+  const roadScore = res.events.find((e) => e.t === "score" && e.kind === "R" && e.points === 3);
+  assert.ok(roadScore);
+  assert.ok(Array.isArray(roadScore.tiles) && roadScore.tiles.length === 3, "score event needs tiles");
   assert.strictEqual(S.players[0].score, 3);
   assert.strictEqual(S.players[0].meeples, 7);
 });
@@ -396,4 +398,195 @@ test("meadows: bots finish a full game with meadows on", () => {
   assert.strictEqual(S.phase, "roundEnd");
   assert.strictEqual(Object.keys(S.board).length, 72);
   S.players.forEach((p) => assert.ok(p.score >= 0));
+});
+
+test("tile geometry: every edge in one feature; adjacent F share meadow; F-R-F topology", () => {
+  const ids = Object.keys(Game.TYPES);
+  assert.strictEqual(ids.length, 24);
+  const CORNERS = new Set([/* 2-3 */ "2,3", "5,6", "8,9", "11,0"]);
+  for (const id of ids) {
+    const t = Game.TYPES[id];
+    const sideChars = t.sides.join("");
+    assert.strictEqual(sideChars.length, 12, id);
+    const owner = Array(12).fill(null);
+    t.feats.forEach((f, fi) => {
+      if (!f.e) return;
+      for (const ei of f.e) {
+        assert.ok(ei >= 0 && ei < 12, id + " bad edge " + ei);
+        assert.strictEqual(owner[ei], null, id + " edge " + ei + " in two features");
+        assert.strictEqual(sideChars[ei], f.k === "F" || f.k === "R" || f.k === "C" ? f.k : sideChars[ei],
+          id + " feature kind " + f.k + " vs terrain " + sideChars[ei] + " at " + ei);
+        // Feature-Kante muss zum Terrain passen
+        assert.strictEqual(f.k, sideChars[ei], id + " feat " + fi + " k=" + f.k + " edge " + ei + "=" + sideChars[ei]);
+        owner[ei] = fi;
+      }
+    });
+    for (let ei = 0; ei < 12; ei++) {
+      const ch = sideChars[ei];
+      if (ch === "F" || ch === "R" || ch === "C") {
+        assert.ok(owner[ei] != null, id + " edge " + ei + " (" + ch + ") has no feature");
+      }
+    }
+    // Wiesen-Komponenten über Kanten-Nachbarschaft (+ Sackgasse um Straßenende)
+    const fEdges = [];
+    for (let ei = 0; ei < 12; ei++) if (sideChars[ei] === "F") fEdges.push(ei);
+    const parent = Object.create(null);
+    const find = (a) => (parent[a] === a ? a : (parent[a] = find(parent[a])));
+    const uni = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[b] = a; };
+    fEdges.forEach((e) => { parent[e] = e; });
+    for (let i = 0; i < 12; i++) {
+      const j = (i + 1) % 12;
+      if (sideChars[i] === "F" && sideChars[j] === "F") uni(i, j);
+    }
+    // Echte Sackgasse (genau eine Ein-Kanten-Straße auf dem Plättchen): Felder ums Ende verbinden.
+    // Bei Kreuzung/T-Stück (mehrere Stub-Straßen) nicht verbinden.
+    const stubs = t.feats.filter((f) => f.k === "R" && f.e && f.e.length === 1);
+    if (stubs.length === 1) {
+      const r = stubs[0].e[0];
+      const a = (r + 11) % 12, b = (r + 1) % 12;
+      if (sideChars[a] === "F" && sideChars[b] === "F") uni(a, b);
+    }
+    const featOf = (ei) => {
+      for (let fi = 0; fi < t.feats.length; fi++) {
+        const f = t.feats[fi];
+        if (f.k === "F" && f.e && f.e.includes(ei)) return fi;
+      }
+      return null;
+    };
+    for (let i = 0; i < 12; i++) {
+      const j = (i + 1) % 12;
+      if (sideChars[i] !== "F" || sideChars[j] !== "F") continue;
+      assert.strictEqual(featOf(i), featOf(j), id + " adjacent F " + i + "," + j + " must share meadow");
+      if (CORNERS.has(i + "," + j) || CORNERS.has(j + "," + i)) {
+        assert.strictEqual(featOf(i), featOf(j), id + " corner F pair");
+      }
+    }
+    // Gleiche Seite F-R-F: Topologie aus Union muss zu feats passen
+    for (let side = 0; side < 4; side++) {
+      const a = side * 3, r = a + 1, b = a + 2;
+      if (sideChars[a] !== "F" || sideChars[r] !== "R" || sideChars[b] !== "F") continue;
+      const sameFeat = featOf(a) === featOf(b);
+      const sameComp = find(a) === find(b);
+      assert.strictEqual(sameFeat, sameComp, id + " side " + side + " F-R-F feat/comp mismatch");
+    }
+    // Topologie verbindet ⇒ gleiches Wiesen-Feature (Umkehrung gilt nicht: Stadtstreifen wie bei D)
+    for (let i = 0; i < 12; i++) {
+      if (sideChars[i] !== "F") continue;
+      for (let j = i + 1; j < 12; j++) {
+        if (sideChars[j] !== "F") continue;
+        if (find(i) === find(j)) assert.strictEqual(featOf(i), featOf(j), id + " topology links " + i + "," + j + " but feats differ");
+      }
+    }
+  }
+  // K/V: kleine Kurvenwiese = [8,9]
+  const kSmall = Game.TYPES.K.feats.find((f) => f.k === "F" && f.e.length === 2);
+  assert.deepStrictEqual(kSmall.e.slice().sort((a, b) => a - b), [8, 9]);
+  assert.deepStrictEqual(kSmall.cities, []);
+  const kBig = Game.TYPES.K.feats.find((f) => f.k === "F" && f.e.length > 2);
+  assert.deepStrictEqual(kBig.e.slice().sort((a, b) => a - b), [3, 4, 5, 6, 11]);
+  assert.deepStrictEqual(kBig.cities, [0]);
+  const vSmall = Game.TYPES.V.feats.find((f) => f.k === "F" && f.e.length === 2);
+  assert.deepStrictEqual(vSmall.e.slice().sort((a, b) => a - b), [8, 9]);
+  const vBig = Game.TYPES.V.feats.find((f) => f.k === "F" && f.e.length > 2);
+  assert.deepStrictEqual(vBig.e.slice().sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6, 11]);
+});
+
+test("meadows: farmer on small curve meadow (V/K) does not score with the large meadow", () => {
+  // V: große und kleine Wiese sind getrennte Komponenten
+  const Sv = Game.newGame([{ name: "A" }, { name: "B" }], 1, 2, { meadows: true });
+  Sv.stack = Array(10).fill("U");
+  Sv.current = "V"; Sv.phase = "place"; Sv.cur = 0;
+  assert.ok(Game.act(Sv, 0, { t: "place", x: Game.START, y: Game.START + 1, r: 0 }).ok);
+  const bigR = (() => {
+    const p = Sv.board[Game.START + "," + (Game.START + 1)];
+    // feats: R0, F big1, F small2
+    const a = p.featRoots[1], b = p.featRoots[2];
+    assert.ok(a && b && a !== b, "V big/small meadows must be distinct roots");
+    return true;
+  })();
+  assert.ok(bigR);
+  Game.act(Sv, 0, { t: "meeple", feature: 2 }); // small
+
+  // K: große Wiese berührt Stadt, kleine nicht — Bauer auf klein bekommt keine Stadtpunkte
+  const S = Game.newGame([{ name: "A" }, { name: "B" }], 1, 2, { meadows: true });
+  S.stack = Array(20).fill("U");
+  // K östlich vom Start (Straße passt)
+  S.current = "K"; S.phase = "place"; S.cur = 0;
+  assert.ok(Game.act(S, 0, { t: "place", x: Game.START + 1, y: Game.START, r: 0 }).ok);
+  // K feats: C0, R1, F big2, F small3
+  const legal = Game.legalMeeples(S);
+  assert.ok(legal.includes(3), "small K meadow placeable, legal=" + legal);
+  assert.ok(Game.act(S, 0, { t: "meeple", feature: 3 }).ok);
+  // Stadt von K schließen: E nördlich von K, r=2 (Stadt nach S)
+  S.cur = 0; S.current = "E"; S.phase = "place";
+  assert.ok(Game.act(S, 0, { t: "place", x: Game.START + 1, y: Game.START - 1, r: 2 }).ok);
+  if (S.phase === "meeple") Game.act(S, 0, { t: "meeple", feature: null });
+  // Stadt fertig (Ritter niemand). Bauer auf kleiner Wiese — Städte:[] → 0 Punkte
+  S.stack = []; S.current = null; S.phase = "place"; S.cur = 0;
+  const before = S.players[0].score;
+  const res = Game.act(S, 0, { t: "skip" });
+  assert.strictEqual(S.phase, "roundEnd");
+  const meadow = res.events.filter((e) => e.t === "score" && e.kind === "F" && e.pi === 0);
+  assert.strictEqual(meadow.length, 0, "small curve meadow must not score city, got " + JSON.stringify(meadow));
+  assert.strictEqual(S.players[0].score, before);
+  // Kontrolle: Bauer auf großer K-Wiese würde die Stadt werten
+  const S2 = Game.newGame([{ name: "A" }, { name: "B" }], 1, 2, { meadows: true });
+  S2.stack = Array(20).fill("U");
+  S2.current = "K"; S2.phase = "place"; S2.cur = 0;
+  assert.ok(Game.act(S2, 0, { t: "place", x: Game.START + 1, y: Game.START, r: 0 }).ok);
+  assert.ok(Game.act(S2, 0, { t: "meeple", feature: 2 }).ok); // large
+  S2.cur = 0; S2.current = "E"; S2.phase = "place";
+  assert.ok(Game.act(S2, 0, { t: "place", x: Game.START + 1, y: Game.START - 1, r: 2 }).ok);
+  if (S2.phase === "meeple") Game.act(S2, 0, { t: "meeple", feature: null });
+  S2.stack = []; S2.current = null; S2.phase = "place"; S2.cur = 0;
+  const res2 = Game.act(S2, 0, { t: "skip" });
+  const meadow2 = res2.events.filter((e) => e.t === "score" && e.kind === "F" && e.pi === 0);
+  assert.ok(meadow2.length >= 1 && meadow2[0].points >= 3, "large K meadow should score completed city");
+});
+
+test("giveup rejected in roundEnd without changing wins/phase/last", () => {
+  const S = bots(2, 1);
+  let guard = 0;
+  while (S.phase !== "roundEnd" && guard++ < 5000) Game.act(S, S.cur, Game.botMove(S, S.cur));
+  assert.strictEqual(S.phase, "roundEnd");
+  const snap = JSON.stringify({ wins: S.players.map((p) => p.wins), phase: S.phase, last: S.last, scores: S.players.map((p) => p.score) });
+  const res = Game.act(S, 0, { t: "giveup" });
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(
+    JSON.stringify({ wins: S.players.map((p) => p.wins), phase: S.phase, last: S.last, scores: S.players.map((p) => p.score) }),
+    snap
+  );
+});
+
+test("giveup rejected for solo player before mutating state", () => {
+  const S = Game.newGame([{ name: "Allein" }], 1, 2, { meadows: false });
+  assert.strictEqual(S.phase, "place");
+  const snap = JSON.stringify({ phase: S.phase, wins: S.players.map((p) => p.wins), last: S.last, logLen: S.log.length });
+  const res = Game.act(S, 0, { t: "giveup" });
+  assert.strictEqual(res.ok, false);
+  assert.ok(/Allein|aufgeben/i.test(res.error));
+  assert.strictEqual(
+    JSON.stringify({ phase: S.phase, wins: S.players.map((p) => p.wins), last: S.last, logLen: S.log.length }),
+    snap
+  );
+});
+
+test("bot level 3 averages more points than level 1 over many games", () => {
+  const avg = (level, n) => {
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const S = bots(2, level, { meadows: true });
+      let g = 0;
+      while (S.phase !== "roundEnd" && g++ < 5000) {
+        const a = Game.botMove(S, S.cur);
+        assert.ok(a);
+        assert.ok(Game.act(S, S.cur, a).ok);
+      }
+      sum += S.players.reduce((s, p) => s + p.score, 0) / S.players.length;
+    }
+    return sum / n;
+  };
+  const a1 = avg(1, 100);
+  const a3 = avg(3, 100);
+  assert.ok(a3 > a1, "level3 avg " + a3.toFixed(2) + " should beat level1 avg " + a1.toFixed(2));
 });

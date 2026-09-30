@@ -83,8 +83,8 @@
     K: { n: 3, sides: ["CCC", "FFF", "FRF", "FRF"], feats: [
       { k: "C", e: [0, 1, 2], s: 0 },
       { k: "R", e: [7, 10] },
-      { k: "F", e: [3, 4, 5, 6, 8], cities: [0] },
-      { k: "F", e: [9, 11], cities: [0] }
+      { k: "F", e: [3, 4, 5, 6, 11], cities: [0] },
+      { k: "F", e: [8, 9], cities: [] }
     ]},
     L: { n: 3, sides: ["CCC", "FRF", "FRF", "FRF"], feats: [
       { k: "C", e: [0, 1, 2], s: 0 },
@@ -138,8 +138,8 @@
     ]},
     V: { n: 9, sides: ["FFF", "FFF", "FRF", "FRF"], feats: [
       { k: "R", e: [7, 10] },
-      { k: "F", e: [0, 1, 2, 3, 4, 5, 6, 8], cities: [] },
-      { k: "F", e: [9, 11], cities: [] }
+      { k: "F", e: [0, 1, 2, 3, 4, 5, 6, 11], cities: [] },
+      { k: "F", e: [8, 9], cities: [] }
     ]},
     W: { n: 4, sides: ["FFF", "FRF", "FRF", "FRF"], feats: [
       { k: "R", e: [4] },
@@ -421,7 +421,8 @@
     if (best > 0 && points > 0) {
       for (const pi of holders) {
         S.players[pi].score += points;
-        events.push({ t: "score", pi, points, kind, done: !!done, end: !!endGame });
+        const tiles = Object.keys(c.tiles).map((tk) => { const [tx, ty] = tk.split(",").map(Number); return { x: tx, y: ty }; });
+        events.push({ t: "score", pi, points, kind, done: !!done, end: !!endGame, tiles });
         log(S, `${S.players[pi].name} +${points} (${kind === "R" ? "Straße" : kind === "C" ? "Stadt" : "Kloster"}${done && !endGame ? "" : endGame ? ", Ende" : ""}).`);
       }
     }
@@ -504,6 +505,10 @@
             if (n > 0) S.players[pi].meeples += n;
             c.meeples[pi] = 0;
           }
+          for (const tk of Object.keys(c.tiles)) {
+            const pl = S.board[tk];
+            if (pl && pl.m && componentOf(S, pl.x, pl.y, pl.m.f) === ufParent(S, root)) pl.m = null;
+          }
           return;
         }
         const points = nCities * 3;
@@ -517,7 +522,8 @@
         if (best > 0) {
           for (const pi of holders) {
             S.players[pi].score += points;
-            events.push({ t: "score", pi, points, kind: "F", done: true, end: true });
+            const tiles = Object.keys(c.tiles).map((tk) => { const [tx, ty] = tk.split(",").map(Number); return { x: tx, y: ty }; });
+            events.push({ t: "score", pi, points, kind: "F", done: true, end: true, tiles });
             log(S, `${S.players[pi].name} +${points} (Wiese, ${nCities} Städte).`);
           }
         }
@@ -674,16 +680,15 @@
       return ok();
     }
     if (a.t === "giveup") {
-      log(S, `${P.name} gibt auf.`);
-      events.push({ t: "giveup", pi });
-      // bester anderer gewinnt
+      if (S.phase !== "place" && S.phase !== "meeple") return fail("Jetzt kann man nicht aufgeben.");
       const rest = S.players.map((_, i) => i).filter((i) => i !== pi).sort((x, y) => S.players[y].score - S.players[x].score);
       if (!rest.length) return fail("Allein kann man nicht aufgeben.");
-      // Sofort Rundenende ohne volle Wertung? Wir werten trotzdem.
+      log(S, `${P.name} gibt auf.`);
+      events.push({ t: "giveup", pi });
+      // Sofort Rundenende — Aufgabe = bester anderer gewinnt (nach Schlusswertung).
       endGameScoring(S, events);
       events.push({ t: "endScore" });
       const winners = [rest[0]];
-      // nach Punkte neu bestimmen falls Wertung andere überholt — nein, Aufgabe = bester anderer
       S.players[winners[0]].wins++;
       const over = S.players[winners[0]].wins >= S.goal;
       S.phase = "roundEnd";
@@ -755,22 +760,120 @@
   }
 
   // ---- Bot ----
-  function botScoreMove(S, move, feat) {
-    // Heuristik ohne volle Simulation (schnell):
-    // + fertige Merkmale die wir halten würden, - Gegner-Fertigstellungen grob, + Kloster-Nachbarn
-    let s = rand(3);
+  function peekNeighborRoot(S, x, y, ei) {
+    const nb = neighborEdge(x, y, ei);
+    if (!S.board[keyXY(nb.x, nb.y)]) return null;
+    const nid = edgeId(nb.x, nb.y, nb.ei);
+    if (S.uf[nid] == null) return null;
+    return ufParent(S, nid);
+  }
+
+  function meadowFarmerValue(S, type, f, x, y, r) {
+    // >0 nur wenn fertige/fast fertige Städte an der Wiese
+    let v = 0;
+    for (const ci of (f.cities || [])) {
+      const cf = type.feats[ci];
+      if (!cf || cf.k !== "C" || !cf.e) continue;
+      let open = cf.e.length;
+      for (const lei of cf.e) {
+        if (peekNeighborRoot(S, x, y, rotEdge(lei, r)) != null) open--;
+      }
+      if (open <= 0) v += 3;
+      else if (open <= 2) v += 1;
+    }
+    for (const lei of (f.e || [])) {
+      const root = peekNeighborRoot(S, x, y, rotEdge(lei, r));
+      if (root == null) continue;
+      const c = S.comp[root];
+      if (!c || c.kind !== "F") continue;
+      for (const ck of Object.keys(c.cities || {})) {
+        if (isCityComplete(S, ck)) { v += 2; continue; }
+        const parts = ck.split(",");
+        const cr = componentOf(S, +parts[0], +parts[1], +parts[2]);
+        if (cr && S.comp[cr] && S.comp[cr].open <= 2) v += 1;
+      }
+    }
+    return v;
+  }
+
+  function botScoreMove(S, move, feat, pi, level) {
+    // Stufe 2: gierige Heuristik. Stufe 3: eigene Fertigstellung / Gegner blocken, Bauern selektiv.
+    let s = level >= 3 ? rand(1) * 0.5 : rand(3);
     const type = TYPES[S.current];
-    // Stadt/Wappen bevorzugen
+    const { x, y, r } = move;
     if (type.feats.some((f) => f.k === "C" && f.s)) s += 2;
     if (type.feats.some((f) => f.k === "K")) s += 1;
-    // zentrale Lagen
-    s -= (Math.abs(move.x - START) + Math.abs(move.y - START)) * 0.01;
+    s -= (Math.abs(x - START) + Math.abs(y - START)) * 0.01;
+
+    type.feats.forEach((f, fi) => {
+      if (f.k !== "R" && f.k !== "C") return;
+      const edges = f.e || [];
+      let connects = 0, touchOwn = 0, touchOpp = 0, touchFree = 0, minOpen = 99;
+      const seen = Object.create(null);
+      for (const lei of edges) {
+        const root = peekNeighborRoot(S, x, y, rotEdge(lei, r));
+        if (root == null) continue;
+        connects++;
+        if (seen[root]) continue;
+        seen[root] = true;
+        const c = S.comp[root];
+        if (!c || c.kind !== f.k) continue;
+        if (c.open < minOpen) minOpen = c.open;
+        let own = 0, opp = 0;
+        for (const pj of Object.keys(c.meeples)) {
+          if ((c.meeples[pj] || 0) <= 0) continue;
+          if (+pj === pi) own += c.meeples[pj];
+          else opp += c.meeples[pj];
+        }
+        if (own > 0) touchOwn++;
+        else if (opp > 0) touchOpp++;
+        else touchFree++;
+      }
+      // grob: alle Kanten treffen Nachbarn → Merkmal wird oft fertig
+      const likelyClose = edges.length > 0 && connects >= edges.length;
+      if (level >= 3) {
+        if (touchOwn > 0) s += likelyClose ? 14 : 5;
+        if (touchOpp > 0 && likelyClose) {
+          if (feat === fi) s += 6; // mitbesetzen / Mehrheit
+          else s -= 12; // Gegner nicht fertigmachen
+        }
+        if (touchFree > 0 && (likelyClose || minOpen <= 2)) s += feat === fi ? 7 : 2;
+      } else {
+        if (touchOwn > 0) s += 3;
+        if (touchFree > 0 && likelyClose) s += 2;
+      }
+    });
+
+    // Kloster: eigene Füllung + Nachbar-Klöster
+    if (type.feats.some((f) => f.k === "K")) s += cloisterDone(S, x, y) * (level >= 3 ? 1.5 : 0.6);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const np = S.board[keyXY(x + dx, y + dy)];
+      if (!np) continue;
+      const nt = TYPES[np.id];
+      if (!nt.feats.some((f) => f.k === "K")) continue;
+      const root = componentOf(S, np.x, np.y, nt.feats.findIndex((f) => f.k === "K"));
+      if (root == null) continue;
+      const c = S.comp[root];
+      if (!c) continue;
+      const mine = (c.meeples[pi] || 0) > 0;
+      if (mine) s += level >= 3 ? 4 : 1.5;
+      else if (level >= 3 && Object.keys(c.meeples).some((pj) => c.meeples[pj] > 0 && +pj !== pi)) s += 0.5;
+    }
+
     if (feat != null) {
       const f = type.feats[feat];
-      if (f.k === "C") s += 3;
-      else if (f.k === "K") s += 4;
-      else if (f.k === "R") s += 1;
-      else if (f.k === "F") s += 0.5;
+      if (f.k === "C") s += level >= 3 ? 4 : 3;
+      else if (f.k === "K") s += 5;
+      else if (f.k === "R") s += level >= 3 ? 2 : 1;
+      else if (f.k === "F") {
+        if (level >= 3) {
+          const mv = meadowFarmerValue(S, type, f, x, y, r);
+          s += mv > 0 ? mv + 1 : -6;
+        } else s += 0.5;
+      }
+    } else if (level >= 3) {
+      s += 0.2; // gelegentlich sparen ok
     }
     return s;
   }
@@ -784,18 +887,15 @@
       if (level === 1) return Object.assign({ t: "place" }, places[rand(places.length)]);
       let best = null, bestS = -1e9;
       for (const m of places) {
-        // für jedes legale Meeple (und null) bewerten
         const feats = [null];
-        // grob: Features des Typs die R/C/K/(F) sind
         TYPES[S.current].feats.forEach((f, fi) => {
           if (f.k === "R" || f.k === "C" || f.k === "K" || (f.k === "F" && S.meadows)) feats.push(fi);
         });
         for (const feat of feats) {
-          const sc = botScoreMove(S, m, feat) + (level === 3 ? 0 : rand(2));
+          const sc = botScoreMove(S, m, feat, pi, level) + (level >= 3 ? 0 : rand(2));
           if (sc > bestS) { bestS = sc; best = Object.assign({ t: "place" }, m, { _feat: feat }); }
         }
       }
-      // speichere gewünschtes Meeple für nächsten Schritt
       S._botFeat = best && best._feat !== undefined ? best._feat : null;
       if (best) { delete best._feat; return best; }
       return Object.assign({ t: "place" }, places[0]);
@@ -810,14 +910,31 @@
       }
       let prefer = S._botFeat;
       S._botFeat = null;
-      if (prefer != null && legal.includes(prefer)) return { t: "meeple", feature: prefer };
-      // gierig: Kloster > Stadt > Straße > Wiese
+      if (prefer != null && legal.includes(prefer)) {
+        // Stufe 3: Bauern nur bei guter Wiese
+        if (level >= 3 && S.lastPlace) {
+          const { x, y } = S.lastPlace;
+          const type = TYPES[S.board[keyXY(x, y)].id];
+          const f = type.feats[prefer];
+          if (f && f.k === "F" && meadowFarmerValue(S, type, f, x, y, S.lastPlace.r) <= 0) {
+            prefer = null;
+          } else return { t: "meeple", feature: prefer };
+        } else return { t: "meeple", feature: prefer };
+      }
       const { x, y } = S.lastPlace;
       const type = TYPES[S.board[keyXY(x, y)].id];
-      const rank = { K: 4, C: 3, R: 2, F: 1 };
-      legal.sort((a, b) => (rank[type.feats[b].k] || 0) - (rank[type.feats[a].k] || 0));
+      const scored = legal.map((fi) => {
+        const f = type.feats[fi];
+        let sc = { K: 4, C: 3, R: 2, F: 1 }[f.k] || 0;
+        if (level >= 3 && f.k === "F") {
+          const mv = meadowFarmerValue(S, type, f, x, y, S.lastPlace.r);
+          sc = mv > 0 ? 1 + mv : -9;
+        }
+        return { fi, sc };
+      }).sort((a, b) => b.sc - a.sc);
       if (level === 2 && Math.random() < 0.25) return { t: "meeple", feature: null };
-      return { t: "meeple", feature: legal[0] };
+      if (level >= 3 && scored[0].sc < 0) return { t: "meeple", feature: null };
+      return { t: "meeple", feature: scored[0].fi };
     }
     return null;
   }
@@ -826,7 +943,11 @@
     if (!S || (S.phase !== "place" && S.phase !== "meeple")) return null;
     const P = S.players[S.cur];
     if (!P || !P.bot) return null;
-    const delay = 2000 + Math.floor(Math.random() * 2000); // 2–4 s, unabhängig von Bot-Anzahl
+    let delay = 2000 + Math.floor(Math.random() * 2000); // 2–4 s, unabhängig von Bot-Anzahl
+    if (typeof process !== "undefined" && process.env && process.env.BOT_MS) {
+      const n = +process.env.BOT_MS;
+      if (Number.isFinite(n) && n >= 0) delay = n;
+    }
     return { pi: S.cur, delay, key: `bot:${S.round}:${S.turn}:${S.phase}:${S.cur}` };
   }
 
