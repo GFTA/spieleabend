@@ -2,7 +2,8 @@
 (() => {
   "use strict";
   const G = window.MachikoroGame;
-  if (!G || !G.botMove || !G.AVATARS) {
+  const A = window.MKArt;
+  if (!G || !G.botMove || !G.AVATARS || !A) {
     let tried = false;
     try { tried = sessionStorage.getItem("machikoro.reloaded") === "1"; sessionStorage.setItem("machikoro.reloaded", "1"); } catch (e) {}
     if (!tried) { const u = new URL(location.href); u.searchParams.set("fresh", Date.now()); location.replace(u.toString()); }
@@ -28,6 +29,10 @@
   let watching = false;
   let V = null;
   let animDice = false;
+  let spinning = false;
+  let wantDice = 1;
+  let sel = null;
+  let trade = null;
   let pulse = null;
   let coinFlash = null;
   let peek = false;
@@ -73,17 +78,18 @@
         if (flashes[ev.to] !== "out") flashes[ev.to] = "in";
         coinSfx = true;
       }
-      if (ev.t === "buy") { pulse = { pi: ev.pi, id: ev.id }; sfx("buy"); }
-      if (ev.t === "landmark") { pulse = { pi: ev.pi, id: ev.id }; sfx("landmark"); }
+      if (ev.t === "buy") { pulse = { pi: ev.pi, id: ev.id }; sfx("buy"); if (ev.pi === v.me) sel = null; }
+      if (ev.t === "landmark") { pulse = { pi: ev.pi, id: ev.id }; sfx("landmark"); if (ev.pi === v.me) sel = null; }
       if (ev.t === "trade") {
         const a = v.players[ev.pi], b = v.players[ev.with];
         const fromN = (G.CARDS[ev.from] && G.CARDS[ev.from].name) || ev.from;
         const theirN = (G.CARDS[ev.their] && G.CARDS[ev.their].name) || ev.their;
         pulse = { trade: true, pi: ev.pi, with: ev.with, from: ev.from, their: ev.their, ids: [ev.from, ev.their] };
+        trade = null;
         toast(`${a.name} tauscht ${fromN} gegen ${theirN} von ${b.name}`);
         sfx("pop");
       }
-      if (ev.t === "pass") { /* sichtbar im Zug-Log */ }
+      if (ev.t === "pass") sel = null;
       if (ev.t === "giveup") toast(ev.pi === v.me ? "Du hast aufgegeben." : `${v.players[ev.pi].name} gibt auf.`);
       if (ev.t === "end") setTimeout(() => sfx("win"), 500);
     }
@@ -160,12 +166,8 @@
     UI.update();
   }
 
-  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-  function dieHTML(value, cls) {
-    let pips = "";
-    for (let i = 0; i < 9; i++) pips += `<i${(PIPS[value] || []).includes(i) ? ' class="on"' : ""}></i>`;
-    return `<div class="die ${cls || ""}" aria-label="${value ? "Würfel zeigt " + value : "Würfel"}">${pips}</div>`;
-  }
+  const coinImg = A.coin();
+  const KIND = { blue: "Blau · jeder Zug", green: "Grün · dein Zug", red: "Rot · Zug der anderen", purple: "Lila · dein Zug", landmark: "Wahrzeichen" };
 
   function plateHTML(i) {
     const p = V.players[i], members = mode === "online" && R ? R.members : null;
@@ -175,82 +177,147 @@
     const pulsed = pulse && (pulse.pi === i || (pulse.trade && pulse.with === i));
     const cls = ["plate", V.phase === "play" && V.cur === i ? "active" : "", away ? "away" : "", pulsed ? "pulse" : "", flashCls].join(" ");
     const tag = p.bot ? "Computer" : away ? "offline" : i === V.me ? "du" : "";
-    const lm = `${p.landmarks}/4`;
+    const pips = G.LANDMARK_ORDER.map((id) => `<i${p.lm[id] ? ' class="on"' : ""}></i>`).join("");
     return `<div class="${cls}" data-seat="${i}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
       `<span class="pinfo"><span class="pname">${esc(p.name)}</span><span class="pmeta">${tag || "&nbsp;"}</span></span>` +
-      `<span class="pscore">${p.coins}💰<small>${lm} Wahrz.</small></span>` +
+      `<span class="pscore"><span class="coins">${p.coins}${coinImg}</span><span class="pips" title="${p.landmarks} von 4 Wahrzeichen">${pips}</span></span>` +
       `<span class="pwins" title="Siege">${p.wins}</span></div>`;
   }
 
-  function cardHTML(c, opts) {
-    const o = opts || {};
+  // One card. Scales with its own width (container query), same look in market, city and detail view.
+  function cardHTML(c, o) {
+    o = o || {};
+    const kind = c.color || "landmark", lm = !c.color;
+    const cls = ["card", kind, o.canbuy && "canbuy", o.dim && "dim", o.off && "off", o.built && "built", o.sel && "sel", o.hint && "pickme", o.pop && "pop"].filter(Boolean).join(" ");
     const rolls = (c.rolls || []).join("·");
-    const cls = ["card", c.color || "landmark", o.buyable ? "buyable" : "", o.off ? "off" : "", o.pop ? "pop" : ""].join(" ");
-    const qty = o.qty != null ? `<span class="qty">${o.qty}</span>` : "";
-    const data = o.action ? ` data-act='${JSON.stringify(o.action).replace(/'/g, "&#39;")}'` : "";
-    const tag = o.tag || (c.cost != null ? `<span class="cost">${c.cost}💰</span>` : "");
-    return `<button type="button" class="${cls}"${data}${o.buyable ? "" : " disabled"} title="${esc(c.desc || c.name)}">${qty}` +
-      (rolls ? `<span class="roll">${rolls}</span>` : "") +
-      `<span class="em">${c.emoji}</span><span class="nm">${esc(c.name)}</span>${tag}</button>`;
+    const top = lm ? "" : `<span class="top"><span class="roll">${rolls}</span>${A.glyph(kind)}</span>`;
+    const cost = o.built ? '<span class="cost done">✓</span>' : c.cost != null && !o.nocost ? `<span class="cost">${c.cost}${coinImg}</span>` : "";
+    const qty = o.qty ? `<span class="qty">${o.qty}</span>` : "";
+    const data = o.data || "";
+    const label = `${c.name}${rolls ? ", Würfel " + rolls : ""}${c.cost != null ? ", " + c.cost + " Münzen" : ""}`;
+    const inner = `${qty}${top}<span class="pic">${A.art(c.id)}</span><span class="nm">${nameHTML(c.name)}</span>${cost}`;
+    if (o.static) return `<div class="${cls}">${inner}</div>`;
+    return `<button type="button" class="${cls}" ${data} aria-label="${esc(label)}" aria-pressed="${!!o.sel}">${inner}</button>`;
+  }
+
+  const HY = { Familienrestaurant: "Familien&shy;restaurant", Einkaufszentrum: "Einkaufs&shy;zentrum", Fernsehsender: "Fernseh&shy;sender", Gemüsemarkt: "Gemüse&shy;markt", Apfelplantage: "Apfel&shy;plantage" };
+  const nameHTML = (n) => esc(n).replace(/[A-Za-zÄÖÜäöüß]+/g, (w) => (Object.prototype.hasOwnProperty.call(HY, w) ? HY[w] : w));
+  const cardAttr = (k, id, seat) => `data-k="${k}" data-id="${id}"${seat != null ? ` data-seat="${seat}"` : ""}`;
+
+  function renderDice() {
+    const host = $("#dice");
+    const station = !!V.players[V.me] && V.players[V.me].lm.station;
+    const rolled = V.dice.length > 0;
+    const n = rolled ? V.dice.length : (canPlay() && station && wantDice === 2 ? 2 : 1);
+    if (host.children.length !== n) {
+      host.innerHTML = Array.from({ length: n }, () => '<button class="die" type="button" data-f="0"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></button>').join("");
+    }
+    const can = canPlay() && (V.step === "roll" || V.step === "reroll");
+    [...host.children].forEach((d, i) => {
+      d.disabled = !can;
+      d.classList.toggle("go", can);
+      d.setAttribute("aria-label", rolled ? `Würfel zeigt ${V.dice[i]}` : "Würfeln");
+      if (!spinning) d.dataset.f = rolled ? V.dice[i] : 0;
+    });
+  }
+  function spinDice() {
+    const host = $("#dice");
+    const finals = V.dice.slice();
+    for (const d of host.children) { d.classList.remove("roll"); void d.offsetWidth; d.classList.add("roll"); }
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let k = 0;
+    clearInterval(spinDice.t);
+    spinning = true;
+    spinDice.t = setInterval(() => {
+      k++;
+      [...host.children].forEach((d, i) => { d.dataset.f = k >= 7 ? (finals[i] || 0) : 1 + Math.floor(Math.random() * 6); });
+      if (k >= 7) { clearInterval(spinDice.t); spinning = false; renderDice(); }
+    }, 60);
+  }
+  function tapDie() {
+    if (!V || V.phase !== "play") return;
+    if (!canPlay()) { toast(V.me < 0 ? "Du schaust zu." : `Warte, ${V.players[V.cur].name} ist dran.`); return; }
+    if (V.step === "roll") play({ t: "roll", dice: wantDice });
+    else if (V.step === "reroll") play({ t: "reroll" });
   }
 
   function renderGame() {
     if (V.phase !== "roundEnd") peek = false;
+    const turnKey = `${V.round}:${V.turn}:${V.cur}`;
+    if (renderGame.turn !== turnKey) { renderGame.turn = turnKey; trade = null; if (V.cur !== V.me) sel = null; }
+    if (V.step !== "trade") trade = null;
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · ${V.goal === 1 ? "eine Runde" : `bis ${V.goal} Siege`}`;
 
-    const tumble = animDice ? "tumble" : "";
-    $("#dice").innerHTML = V.dice.length
-      ? V.dice.map((d) => dieHTML(d, tumble)).join("")
-      : `<div class="die" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>`;
-    animDice = false;
+    renderDice();
+    if (animDice) { animDice = false; spinDice(); }
 
-    const inc = V.income;
-    $("#income").innerHTML = inc && inc.lines && inc.lines.length
-      ? `Wurf <b>${inc.total}</b>: ${esc(inc.lines.slice(0, 4).join(" · "))}${inc.lines.length > 4 ? " …" : ""}`
-      : (V.dice.length ? `Wurf <b>${V.dice.reduce((a, b) => a + b, 0)}</b>` : "");
+    const inc = V.income, total = V.dice.reduce((a, b) => a + b, 0);
+    const tk = $("#ticker");
+    tk.classList.toggle("empty", !V.dice.length);
+    tk.innerHTML = !V.dice.length ? "Noch nicht gewürfelt"
+      : `<span class="sum">${total}</span><span>${inc && inc.lines && inc.lines.length ? esc(inc.lines.slice(0, 4).join(" · ")) + (inc.lines.length > 4 ? " …" : "") : "Kein Gebäude passt"}</span>`;
 
-    // Market
     const canBuild = canPlay() && V.step === "build";
+    const trading = canPlay() && V.step === "trade";
     const affC = new Set((V.affordable && V.affordable.cards) || []);
+    const affL = new Set((V.affordable && V.affordable.landmarks) || []);
+    const isSel = (k, id, seat) => !!sel && sel.k === k && sel.id === id && (sel.seat ?? null) === (seat ?? null);
+
+    $("#market").parentElement.hidden = trading;
+    // Market
     $("#market").innerHTML = G.CARD_ORDER.map((id) => {
       const c = G.CARDS[id], qty = V.market[id] || 0;
-      if (!qty) return "";
-      return cardHTML(c, {
-        qty, buyable: canBuild && affC.has(id),
-        action: canBuild && affC.has(id) ? { t: "buy", id } : null,
-        pop: pulse && pulse.id === id
-      });
-    }).join("") || "<p class=\"hint\">Markt leer.</p>";
+      return qty ? cardHTML(c, {
+        qty, data: cardAttr("card", id), sel: isSel("card", id),
+        canbuy: canBuild && affC.has(id), dim: canBuild && !affC.has(id), pop: pulse && pulse.id === id && pulse.pi == null
+      }) : "";
+    }).join("") || '<p class="hint">Markt leer.</p>';
 
-    // Cities
-    const LM = G.LANDMARKS, LO = G.LANDMARK_ORDER;
-    const affL = new Set((V.affordable && V.affordable.landmarks) || []);
+    // Cities: mine first and full size, the others as small shelves (full size while trading)
     const tradePop = (i, id) => pulse && pulse.trade && pulse.ids && pulse.ids.includes(id) && (i === pulse.pi || i === pulse.with);
-    $("#cities").innerHTML = V.players.map((p, i) => {
-      const mine = i === V.me;
-      const head = `<div class="city-head">${p.avatar} ${esc(mine ? "Deine Stadt" : p.name)} · ${p.coins}💰 · ${p.landmarks}/4</div>`;
-      const est = Object.keys(p.cards).map((id) => {
+    const order = V.players.map((_, i) => i).sort((x, y) => (y === V.me) - (x === V.me));
+    $("#cities").innerHTML = order.map((i) => {
+      const p = V.players[i], mine = i === V.me;
+      const big = mine || trading;
+      const chips = mine ? `<span class="hint">${p.landmarks}/4 Wahrzeichen</span>` :
+        `<span class="lmrow">${G.LANDMARK_ORDER.map((id) => `<span class="lmchip${p.lm[id] ? "" : " off"}" title="${esc(G.LANDMARKS[id].name)}">${A.art(id)}</span>`).join("")}</span>`;
+      const head = `<div class="city-head"><span aria-hidden="true">${p.avatar}</span><span class="nm">${esc(mine ? "Deine Stadt" : p.name)}</span>${chips}<span class="coins">${p.coins}${coinImg}</span></div>`;
+      const est = G.CARD_ORDER.filter((id) => p.cards[id] > 0).map((id) => {
         const c = G.CARDS[id];
-        if (!c) return "";
-        return cardHTML(c, { qty: p.cards[id] > 1 ? p.cards[id] : null, tag: "", pop: (pulse && pulse.pi === i && pulse.id === id) || tradePop(i, id) });
-      }).join("");
-      const lms = LO.map((id) => {
-        const Lmk = LM[id], on = !!p.lm[id];
-        const canBuy = canBuild && mine && affL.has(id);
-        return cardHTML(Lmk, {
-          off: !on, buyable: canBuy,
-          action: canBuy ? { t: "landmark", id } : null,
-          tag: on ? "<span class=\"cost\">✓</span>" : `<span class="cost">${Lmk.cost}💰</span>`,
-          pop: pulse && pulse.pi === i && pulse.id === id
+        const canPick = trading && c.color !== "purple";
+        const chosen = trade && ((mine && trade.from === id) || (!mine && trade.with === i && trade.their === id));
+        return cardHTML(c, {
+          qty: p.cards[id] > 1 ? p.cards[id] : null, nocost: !big,
+          data: canPick ? `data-tr="${mine ? "mine" : "their"}" data-id="${id}" data-seat="${i}"` : cardAttr("card", id, i),
+          sel: canPick ? !!chosen : isSel("card", id, i), hint: canPick && !chosen, dim: trading && c.color === "purple",
+          pop: (pulse && pulse.pi === i && pulse.id === id) || tradePop(i, id)
         });
       }).join("");
-      return `<div class="city">${head}<div class="cards">${est}${lms}</div></div>`;
+      const lms = mine ? `<div class="shelf lm">${G.LANDMARK_ORDER.map((id) => cardHTML(G.LANDMARKS[id], {
+        off: !p.lm[id], built: !!p.lm[id], data: cardAttr("lm", id, i), sel: isSel("lm", id, i),
+        canbuy: canBuild && affL.has(id), pop: pulse && pulse.pi === i && pulse.id === id
+      })).join("")}</div>` : "";
+      return `<div class="city">${head}<div class="shelf${big ? "" : " mini"}">${est}</div>${lms}</div>`;
     }).join("");
+
+    // Detail of the tapped card
+    const pk = $("#pick");
+    const pc = sel && (sel.k === "lm" ? (G.LANDMARKS[sel.id]) : G.CARDS[sel.id]);
+    if (pc && !trading) {
+      const lm = sel.k === "lm";
+      const buyable = canBuild && (lm ? sel.seat === V.me && affL.has(sel.id) : sel.seat == null && affC.has(sel.id));
+      const why = buyable || !canBuild || (!lm && sel.seat != null) ? "" : "Zu wenig Münzen.";
+      pk.hidden = false;
+      pk.innerHTML = cardHTML(pc, { static: true }) +
+        `<div class="pi"><em>${KIND[pc.color || "landmark"]}${pc.rolls ? " · Würfel " + pc.rolls.join("/") : ""}</em><b>${esc(pc.name)}</b><p>${esc(pc.desc)}</p>` +
+        (buyable ? `<button class="btn btn-primary" type="button" data-buy>Kaufen · ${pc.cost}${coinImg}</button>` : why ? `<p class="why">${why}</p>` : "") + `</div>` +
+        `<button class="x" type="button" data-x aria-label="Schließen">×</button>`;
+    } else { pk.hidden = true; pk.innerHTML = ""; }
 
     pulse = null; coinFlash = null;
 
-    const lmEl = $("#lastMove"), lines = V.log.slice(-2), lmKey = lines.join("\n");
+    const lmEl = $("#lastMove"), lines = V.log.slice(-1), lmKey = lines.join("\n");
     if (lmEl.dataset.k !== lmKey) {
       lmEl.dataset.k = lmKey;
       lmEl.innerHTML = lines.map((l, i) => `<div${i < lines.length - 1 ? ' class="old"' : ""}>${esc(l)}</div>`).join("");
@@ -271,23 +338,25 @@
       av = P.avatar;
       if (canPlay()) {
         who = "Du bist dran";
+        const station = V.players[V.me].lm.station;
         if (V.step === "roll") {
-          hint = V.players[V.me].lm.station ? "Mit 1 oder 2 Würfeln würfeln." : "Würfle!";
-          acts.innerHTML = `<button class="btn btn-primary" data-a='{"t":"roll","dice":1}' type="button">1 Würfel</button>` +
-            (V.players[V.me].lm.station ? `<button class="btn btn-primary" data-a='{"t":"roll","dice":2}' type="button">2 Würfel</button>` : "");
+          hint = station ? "Tippe den Würfel, oder wähle 1 oder 2." : "Tippe den Würfel!";
+          if (station) acts.innerHTML = [1, 2].map((n) => `<button class="btn${wantDice === n ? " btn-primary" : ""}" data-a='{"t":"roll","dice":${n}}' type="button">${n} Würfel</button>`).join("");
         } else if (V.step === "reroll") {
-          hint = "Nochmal würfeln (Funkturm) oder behalten?";
+          hint = "Funkturm: nochmal würfeln oder behalten?";
           acts.innerHTML = `<button class="btn btn-primary" data-a='{"t":"reroll"}' type="button">Neu würfeln</button>` +
             `<button class="btn" data-a='{"t":"keep"}' type="button">Behalten</button>`;
         } else if (V.step === "tv") {
-          hint = "Wen zapfst du mit dem Fernsehsender ab?";
+          hint = "Wen zapfst du mit dem Fernsehsender an (5 Münzen)?";
           acts.innerHTML = V.players.map((op, i) => i === V.me ? "" :
-            `<button class="btn" data-a='{"t":"tv","target":${i}}' type="button">${esc(op.name)} (${op.coins}💰)</button>`).join("");
+            `<button class="btn" data-a='{"t":"tv","target":${i}}' type="button">${avi(op.avatar)}${esc(op.name)} · ${op.coins}${coinImg}</button>`).join("");
         } else if (V.step === "trade") {
-          hint = "Unternehmen: Tausch überspringen oder Karte tippen (vereinfacht: überspringen).";
-          acts.innerHTML = `<button class="btn" data-a='{"t":"trade","skip":true}' type="button">Nicht tauschen</button>`;
+          const ready = trade && trade.from && trade.their;
+          hint = !trade || !trade.from ? "Unternehmen: tippe ein eigenes Gebäude …" : !trade.their ? "… und dann ein Gebäude eines Mitspielers." : "Tausch bereit.";
+          acts.innerHTML = (ready ? `<button class="btn btn-primary" data-a='${JSON.stringify({ t: "trade", from: trade.from, with: trade.with, their: trade.their })}' type="button">Tauschen</button>` : "") +
+            `<button class="btn" data-a='{"t":"trade","skip":true}' type="button">Nicht tauschen</button>`;
         } else if (V.step === "build") {
-          hint = "Gebäude/Wahrzeichen tippen oder passen.";
+          hint = V.affordable && (V.affordable.cards.length || V.affordable.landmarks.length) ? "Tippe eine Karte, um sie zu kaufen — oder passe." : "Dir fehlen Münzen — du kannst passen.";
           acts.innerHTML = `<button class="btn" data-a='{"t":"pass"}' type="button">Passen</button>`;
         }
       } else {
@@ -302,6 +371,7 @@
     $("#resultBtn").hidden = !(V.phase === "roundEnd" && peek);
     $("#reactBtn").hidden = mode !== "online";
     $("#keys").innerHTML = canPlay() && V.step === "roll" ? "<kbd>Leertaste</kbd> würfeln" : "";
+    acts.hidden = !acts.children.length;
 
     const key = `${V.round}:${V.turn}:${V.cur}:${V.step}`;
     if (canPlay() && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
@@ -321,17 +391,36 @@
   $("#acts").addEventListener("click", (e) => {
     const b = e.target.closest("[data-a]");
     if (!b) return;
-    try { play(JSON.parse(b.getAttribute("data-a"))); } catch (err) {}
+    try {
+      const a = JSON.parse(b.getAttribute("data-a"));
+      if (a.t === "roll") wantDice = a.dice;
+      play(a);
+    } catch (err) {}
   });
-  $("#market").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-act]");
+  $("#dice").addEventListener("click", tapDie);
+  function tapCard(e) {
+    const b = e.target.closest("[data-k], [data-tr]");
     if (!b) return;
-    try { play(JSON.parse(b.getAttribute("data-act"))); } catch (err) {}
-  });
-  $("#cities").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-act]");
-    if (!b) return;
-    try { play(JSON.parse(b.getAttribute("data-act"))); } catch (err) {}
+    const id = b.dataset.id, seat = b.dataset.seat == null ? null : +b.dataset.seat;
+    if (b.dataset.tr) {
+      if (!canPlay() || V.step !== "trade") return;
+      trade = Object.assign({}, trade || {});
+      if (b.dataset.tr === "mine") trade.from = trade.from === id ? null : id;
+      else if (trade.with === seat && trade.their === id) { trade.with = null; trade.their = null; }
+      else { trade.with = seat; trade.their = id; }
+      sfx("pop"); render();
+      return;
+    }
+    const same = sel && sel.k === b.dataset.k && sel.id === id && (sel.seat ?? null) === seat;
+    sel = same ? null : { k: b.dataset.k, id, seat };
+    sfx("pop"); render();
+    if (sel) { const pk = $("#pick"); if (pk && !pk.hidden) pk.scrollIntoView({ block: "nearest" }); }
+  }
+  $("#market").addEventListener("click", tapCard);
+  $("#cities").addEventListener("click", tapCard);
+  $("#pick").addEventListener("click", (e) => {
+    if (e.target.closest("[data-x]")) { sel = null; render(); return; }
+    if (e.target.closest("[data-buy]") && sel) play(sel.k === "lm" ? { t: "landmark", id: sel.id } : { t: "buy", id: sel.id });
   });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
@@ -342,7 +431,7 @@
     if (open || $("#game").hidden || !$("#roundEnd").hidden || !canPlay()) return;
     if ((e.key === " " || e.key.toLowerCase() === "r") && V.step === "roll") {
       e.preventDefault();
-      play({ t: "roll", dice: 1 });
+      play({ t: "roll", dice: wantDice });
     }
   });
 
