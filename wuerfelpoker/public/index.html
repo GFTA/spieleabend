@@ -40,7 +40,6 @@
 .die.mini{--dw:22px;border-radius:24%;padding:calc(var(--dw) * .12);box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .die.mini i{box-shadow:none}
 /* ---------- start ---------- */
-.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px;max-width:620px;width:100%;margin:0 auto}
 .hero-dice{display:flex;gap:10px;height:84px;align-items:center}
 .hero-dice .die{--dw:54px}
 .hero-dice .die:nth-child(odd){transform:rotate(-12deg) translateY(6px)}
@@ -138,7 +137,6 @@
 /* waiting room actions in one row: main buttons, then small icon buttons */
 /* waiting room: code and players left, settings right on wide screens (same as the other games) */
 @media (min-width:900px) and (min-height:700px){
-  #lobby{padding-inline:24px;max-width:none}
 }
 /* in-game menu: one bottom row (continue, leave, start page), host actions folded */
 </style>
