@@ -51,7 +51,7 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   assert.strictEqual(lobby.members[1].color, "", "colours outside the palette are dropped");
   assert.ok(Game.AVATARS.includes(lobby.members[1].avatar));
   assert.strictEqual(lobby.size, 8);
-  assert.deepStrictEqual(lobby.rules, { popout: true, five: false, clock: false });
+  assert.deepStrictEqual(lobby.rules, { popout: true, five: false, pie: false, clock: false });
 
   // the room is full: a third person watches
   c.send({ t: "join", code: joined.code, name: "Chris", avatar: "🦉" });

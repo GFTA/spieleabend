@@ -20,6 +20,7 @@
   const RULES = [
     { k: "popout", name: "Pop Out", desc: "Statt einzuwerfen darfst du eine eigene Scheibe aus der untersten Reihe herausziehen, alles darüber rutscht nach. Entstehen dabei zwei Viererreihen, gewinnt, wer gezogen hat." },
     { k: "five", name: "5 gewinnt", desc: "Du brauchst fünf Scheiben in einer Reihe statt vier. Am spannendsten auf den größeren Feldern." },
+    { k: "pie", name: "Tauschregel", desc: "Nach dem ersten Zug darf der Zweite statt zu ziehen die gesetzte Scheibe übernehmen (die Farben werden getauscht). Wer beginnt, spielt dann lieber nicht in die Mitte." },
     { k: "clock", name: "Zugzeit", desc: "15 Sekunden pro Zug, sonst wirft das Spiel zufällig für dich ein." }
   ];
   function normRules(r) {
@@ -81,6 +82,8 @@
     S.lastMove = null;
     S.log = [];
     S.players.forEach((p) => { p.moves = 0; });
+    S.hist = [];
+    S.canSwap = false;
     S.turn = 0;
     const first = S.starter % 2;
     S.starter = (S.starter + 1) % 2;
@@ -129,6 +132,7 @@
     if (S.phase !== "play") return fail("Gerade ist niemand dran.");
     if (a.t === "skip") { // host moves on when the current player is away
       log(S, `${S.players[S.cur].name} wird übersprungen.`);
+      S.canSwap = false;
       beginTurn(S, 1 - S.cur);
       return ok();
     }
@@ -139,6 +143,34 @@
       return ok();
     }
     if (S.cur !== pi) return fail(`${S.players[S.cur].name} ist dran.`);
+
+    if (a.t === "swap") {
+      if (!swapOpen(S, pi)) return fail("Tauschen geht jetzt nicht.");
+      const first = S.hist[0];
+      for (let i = 0; i < S.grid.length; i++) if (S.grid[i] === 1 - pi) S.grid[i] = pi;
+      S.players[1 - pi].moves--; P.moves++;
+      S.hist.push({ pi, t: "swap" });
+      S.canSwap = false;
+      S.lastMove = { pi, col: first.col, row: first.row, pop: false, turn: S.turn };
+      events.push({ t: "swap", pi, col: first.col, row: first.row });
+      log(S, `${P.name} übernimmt die Scheibe in Spalte ${first.col + 1} (Tauschregel).`);
+      beginTurn(S, 1 - pi);
+      return ok();
+    }
+    if (a.t === "undo") {
+      if (!canUndo(S, pi)) return fail("Zurücknehmen geht nur gegen den Computer und nach einem eigenen Zug.");
+      const gone = [];
+      while (S.hist.length) {
+        const m = S.hist.pop();
+        if (m.t === "drop") gone.push({ idx: m.col + m.row * S.cols, p: m.pi });
+        if (m.pi === pi) break;
+      }
+      rebuild(S);
+      log(S, `${P.name} nimmt den Zug zurück.`);
+      events.push({ t: "undo", pi, cells: gone });
+      beginTurn(S, pi);
+      return ok();
+    }
     const col = +a.col;
     if (!Number.isInteger(col) || col < 0 || col >= S.cols) return fail("Diese Spalte gibt es nicht.");
 
@@ -147,6 +179,8 @@
       if (r >= S.rows) return fail("Diese Spalte ist voll.");
       S.grid[col + r * S.cols] = pi;
       P.moves++;
+      (S.hist || (S.hist = [])).push({ pi, t: "drop", col, row: r });
+      S.canSwap = !!S.rules.pie && S.hist.length === 1;
       S.lastMove = { pi, col, row: r, pop: false, turn: S.turn };
       events.push({ t: "drop", pi, col, row: r });
       const win = lines(S.grid, S.cols, S.rows, pi, need(S));
@@ -167,6 +201,8 @@
       for (let r = 0; r < S.rows - 1; r++) S.grid[col + r * S.cols] = S.grid[col + (r + 1) * S.cols];
       S.grid[col + (S.rows - 1) * S.cols] = -1;
       P.moves++;
+      (S.hist || (S.hist = [])).push({ pi, t: "pop", col });
+      S.canSwap = false;
       S.lastMove = { pi, col, row: 0, pop: true, turn: S.turn };
       events.push({ t: "pop", pi, col });
       const mine = lines(S.grid, S.cols, S.rows, pi, need(S)), theirs = lines(S.grid, S.cols, S.rows, 1 - pi, need(S));
@@ -180,6 +216,27 @@
       return ok();
     }
     return fail("Unbekannte Aktion.");
+  }
+
+  // the second player may take over the first disc (pie rule)
+  const swapOpen = (S, pi) => !!S.canSwap && S.phase === "play" && S.cur === pi && S.hist && S.hist.length === 1 && S.hist[0].pi !== pi;
+  // against the computer you may take back your last move (and the reply to it)
+  const canUndo = (S, pi) => S.phase === "play" && S.cur === pi && S.players.length === 2 && !!S.players[1 - pi] && S.players[1 - pi].bot &&
+    !!S.hist && S.hist.some((m) => m.pi === pi);
+  // the board from the move list
+  function rebuild(S) {
+    S.grid.fill(-1);
+    S.players.forEach((p) => { p.moves = 0; });
+    S.lastMove = null;
+    for (const m of S.hist) {
+      const P = S.players[m.pi];
+      if (m.t === "drop") { const r = height(S, m.col); S.grid[m.col + r * S.cols] = m.pi; m.row = r; P.moves++; S.lastMove = { pi: m.pi, col: m.col, row: r, pop: false, turn: S.turn }; }
+      else if (m.t === "pop") {
+        for (let r = 0; r < S.rows - 1; r++) S.grid[m.col + r * S.cols] = S.grid[m.col + (r + 1) * S.cols];
+        S.grid[m.col + (S.rows - 1) * S.cols] = -1; P.moves++; S.lastMove = { pi: m.pi, col: m.col, row: 0, pop: true, turn: S.turn };
+      } else { for (let i = 0; i < S.grid.length; i++) if (S.grid[i] === 1 - m.pi) S.grid[i] = m.pi; S.players[1 - m.pi].moves--; P.moves++; }
+    }
+    S.canSwap = !!S.rules.pie && S.hist.length === 1 && S.hist[0].t === "drop";
   }
 
   // Resolve a turn clock that ran out: the game drops a disc at random for the player.
@@ -218,9 +275,14 @@
     }
     return s;
   }
-  function botMove(S, pi) {
+  // level: override the player's strength (the tip button asks for the best the computer can do)
+  function botMove(S, pi, lvl) {
     if (S.phase !== "play" || S.cur !== pi) return null;
-    const { cols, rows } = S, n = need(S), level = lvOf(S, pi);
+    const { cols, rows } = S, n = need(S), level = lvl || lvOf(S, pi), mid = (cols - 1) / 2;
+    if (S.canSwap && S.hist && S.hist.length === 1) { // pie rule: take a strong (central) opening disc over
+      const central = Math.abs(S.hist[0].col - mid) <= 1;
+      if (Math.random() < (level === 3 ? (central ? 1 : 0) : level === 2 ? (central ? 0.85 : 0.15) : (central ? 0.4 : 0.2))) return { t: "swap" };
+    }
     const grid = S.grid.slice();
     const h = new Array(cols).fill(0).map((_, c) => height(S, c));
     const order = [...Array(cols).keys()].sort((a, b) => Math.abs(a - (cols - 1) / 2) - Math.abs(b - (cols - 1) / 2));
@@ -247,6 +309,10 @@
     }
     const legal = order.filter((c) => h[c] < rows);
     if (!legal.length) return null;
+    if (S.rules.pie && S.hist && !S.hist.length && level > 1) { // the opponent may take over the first disc: open off-centre
+      const side = legal.filter((c) => Math.abs(c - mid) >= 1.5 && Math.abs(c - mid) <= 2.5);
+      if (side.length) return { t: "drop", col: side[rand(side.length)] };
+    }
     if (level === 1 && Math.random() < 0.35) return { t: "drop", col: legal[rand(legal.length)] };
     let bestCol = legal[0], bestV = -Infinity;
     const scored = [];
@@ -273,12 +339,17 @@
       cols: S.cols, rows: S.rows, need: need(S), rules: S.rules, grid: S.grid.slice(), draws: S.draws || 0, nextStarter: S.starter % 2,
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => ({ name: p.name, bot: p.bot, avatar: avatarOf(p, i), wins: p.wins, moves: p.moves || 0 })),
-      lastMove: S.lastMove, log: S.log.slice(), last: S.last
+      lastMove: S.lastMove, log: S.log.slice(), last: S.last,
+      hist: (S.hist || []).map((m) => ({ pi: m.pi, t: m.t, col: m.col })),
+      canSwap: swapOpen(S, pi), canUndo: canUndo(S, pi)
     };
   }
 
+  // the best move for player pi as the computer sees it (works on a state or on a view)
+  const suggest = (S, pi) => botMove(S, pi, 3);
+
   return {
     SIZES, MAX_PLAYERS, COLORS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, RULES, normRules, normSize, normGoal, normLevel,
-    lines, newGame, startRound, act, tick, nextDeadline, resetClock, botMove, view
+    lines, newGame, startRound, act, tick, nextDeadline, resetClock, botMove, suggest, view
   };
 });

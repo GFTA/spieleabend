@@ -38,6 +38,7 @@
   let R = null;           // last online room message
   let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
+  let flipIdx = null, vanish = null, tip = null; // swap flip, undone discs fading out, tip {key, col|swap}
   let anim = null;        // { idx } disc that just fell, animated on the next board render
   let peek = false;       // round over, looking at the board
   let popMode = false;    // Pop Out: the next tap pulls a disc out at the bottom
@@ -94,6 +95,8 @@
     for (const ev of events || []) {
       if (ev.t === "drop") { const fall = v.rows - ev.row; anim = { idx: ev.col + ev.row * v.cols, fall }; sfx("drop", fall); }
       if (ev.t === "pop") sfx("pull");
+      if (ev.t === "swap") { flipIdx = ev.col + ev.row * v.cols; sfx("pull"); toast(`${mode === "online" && ev.pi === v.me ? "Du übernimmst" : v.players[ev.pi].name + " übernimmt"} die erste Scheibe.`); }
+      if (ev.t === "undo") { vanish = ev.cells; sfx("pop"); }
       if (ev.t === "timeout") { toast(mode === "online" && ev.pi === v.me ? "Zu langsam! Das Spiel hat für dich eingeworfen." : `${v.players[ev.pi].name} war zu langsam, Zufallszug!`); sfx("bad"); }
       if (ev.t === "giveup") toast(mode === "online" && ev.pi === v.me ? "Du hast aufgegeben." : `${v.players[ev.pi].name} gibt auf.`);
       if (ev.t === "end") {
@@ -226,12 +229,14 @@
         if (x >= 0) {
           const cls = ["disc", "p" + x];
           if (o.last === idx) cls.push("last");
+          if (o.flip === idx) cls.push("flip");
           if (o.win && o.win.includes(idx)) cls.push("win");
           let style = "";
           if (o.anim && o.anim.idx === idx) { cls.push("fall"); style = ` style="--fall:${o.anim.fall}"`; }
           disc = `<span class="${cls.join(" ")}"${style}></span>`;
-        } else if (o.ghost != null && o.ghost.col === c && r === top) disc = `<span class="disc ghost p${o.ghost.p}"></span>`;
-        cells += `<span class="hole">${disc}</span>`;
+        } else if (o.vanish && o.vanish.some((x) => x.idx === idx)) disc = `<span class="disc vanish p${o.vanish.find((x) => x.idx === idx).p}"></span>`;
+        else if (o.ghost != null && o.ghost.col === c && r === top) disc = `<span class="disc ghost p${o.ghost.p}"></span>`;
+        cells += `<span class="hole${o.tip === c && r === top ? " tip" : ""}">${disc}</span>`;
       }
       const off = o.disabled && o.disabled(c, top);
       h += o.buttons ? `<button type="button" class="col" data-col="${c}" aria-label="Spalte ${c + 1}"${off ? " disabled" : ""}>${cells}</button>` : `<span class="col">${cells}</span>`;
@@ -276,12 +281,13 @@
 
     // board
     const board = $("#board"), play = canPlay(), lm = V.lastMove;
+    const tp = tip && tip.key === `${V.round}:${V.turn}` && play ? tip : null;
     board.innerHTML = boardHTML(V, {
-      buttons: true, anim, win: V.last && V.last.cells, last: lm && V.phase === "play" && !lm.pop ? lm.col + lm.row * V.cols : null,
+      buttons: true, anim, flip: flipIdx, vanish, tip: tp && tp.col != null ? tp.col : null, win: V.last && V.last.cells, last: lm && V.phase === "play" && !lm.pop ? lm.col + lm.row * V.cols : null,
       ghost: play && keyCol != null && !popMode ? { col: keyCol, p: V.cur } : null,
       disabled: (c, top) => !play || (popMode ? V.grid[c] !== V.cur : top >= V.rows)
     });
-    anim = null;
+    anim = null; flipIdx = null; vanish = null;
     board.classList.toggle("play", play);
     board.classList.toggle("popmode", play && popMode);
     layoutBoard();
@@ -317,6 +323,10 @@
     $("#whoHint").textContent = hint;
     $("#dock").classList.toggle("myturn", play);
     const canPop = play && V.rules.popout && V.grid.slice(0, V.cols).some((x) => x === V.cur);
+    $("#hintBtn").hidden = !play;
+    $("#swapBtn").hidden = !(play && V.canSwap);
+    $("#swapBtn").classList.toggle("tip", !!(tp && tp.swap));
+    $("#undoBtn").hidden = !(play && V.canUndo);
     $("#popBtn").hidden = !canPop;
     $("#popBtn").setAttribute("aria-pressed", String(popMode));
     $("#popBtn").textContent = popMode ? "Doch lieber einwerfen" : "Unten herausziehen";
@@ -353,6 +363,16 @@
   }
   $("#board").addEventListener("mouseover", (e) => { const b = e.target.closest("[data-col]"); hoverGhost(b ? +b.dataset.col : null); });
   $("#board").addEventListener("mouseleave", () => hoverGhost(null));
+  $("#hintBtn").addEventListener("click", () => {
+    if (!canPlay()) return;
+    const a = G.suggest(V, V.cur);
+    if (!a) return;
+    tip = { key: `${V.round}:${V.turn}`, col: a.t === "drop" ? a.col : null, swap: a.t === "swap" };
+    toast(a.t === "swap" ? "Tipp: Übernimm die erste Scheibe." : `Tipp: Spalte ${a.col + 1}.`);
+    renderGame();
+  });
+  $("#swapBtn").addEventListener("click", () => { if (canPlay() && V.canSwap) doAct({ t: "swap" }); });
+  $("#undoBtn").addEventListener("click", () => { if (canPlay() && V.canUndo) doAct({ t: "undo" }); });
   $("#popBtn").addEventListener("click", () => { popMode = !popMode; renderGame(); });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 

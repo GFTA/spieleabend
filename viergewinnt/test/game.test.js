@@ -14,7 +14,7 @@ const drop = (S, col) => G.act(S, S.cur, { t: "drop", col });
 const play = (S, cols) => cols.map((c) => drop(S, c)).pop();
 
 test("settings are normalised", () => {
-  assert.deepStrictEqual(G.normRules({ popout: true, five: "yes", bogus: 1 }), { popout: true, five: false, clock: false });
+  assert.deepStrictEqual(G.normRules({ popout: true, five: "yes", bogus: 1 }), { popout: true, five: false, pie: false, clock: false });
   assert.strictEqual(G.normSize(10), 10);
   assert.strictEqual(G.normSize(9), 7);
   assert.strictEqual(G.normGoal(3), 3);
@@ -166,4 +166,61 @@ test("the computer takes a win and blocks one", () => {
     while (S.phase === "play" && k++ < 200) assert.ok(G.act(S, S.cur, G.botMove(S, S.cur)).ok);
     assert.strictEqual(S.phase, "roundEnd");
   }
+});
+
+test("pie rule: the second player may take over the first disc, only right then", () => {
+  const S = game({ pie: true });
+  assert.ok(!G.view(S, 1).canSwap);
+  drop(S, 3);
+  assert.ok(G.view(S, 1).canSwap);
+  assert.ok(!G.view(S, 0).canSwap);
+  const r = G.act(S, 1, { t: "swap" });
+  assert.ok(r.ok);
+  assert.deepStrictEqual(r.events[0], { t: "swap", pi: 1, col: 3, row: 0 });
+  assert.strictEqual(S.grid[3], 1);
+  assert.strictEqual(S.cur, 0);
+  assert.deepStrictEqual(S.players.map((p) => p.moves), [0, 1]);
+  assert.ok(!G.act(S, 0, { t: "swap" }).ok);
+  const T = game({ pie: true });
+  drop(T, 3); drop(T, 4);
+  assert.ok(!G.act(T, T.cur, { t: "swap" }).ok);
+  const N = game({});
+  drop(N, 3);
+  assert.ok(!G.act(N, 1, { t: "swap" }).ok);
+});
+
+test("undo: only against the computer, takes back the reply too", () => {
+  const S = G.newGame([{ name: "Anna" }, { name: "Robo", bot: true }], 1, 7, { popout: true });
+  S.round = 0; S.starter = 0; G.startRound(S);
+  assert.ok(!G.view(S, 0).canUndo);
+  drop(S, 0); drop(S, 1);
+  assert.ok(G.view(S, 0).canUndo);
+  drop(S, 0); drop(S, 1);
+  assert.ok(G.act(S, 0, { t: "pop", col: 0 }).ok);
+  drop(S, 2);
+  assert.strictEqual(S.grid[0 + 0 * 7], 0);
+  const r = G.act(S, 0, { t: "undo" });
+  assert.ok(r.ok);
+  assert.deepStrictEqual(r.events[0].t, "undo");
+  assert.strictEqual(S.cur, 0);
+  const at = (c, row) => S.grid[c + row * 7];
+  assert.deepStrictEqual([at(0, 0), at(0, 1), at(1, 0), at(1, 1), at(2, 0)], [0, 0, 1, 1, -1]);
+  assert.deepStrictEqual(S.players.map((p) => p.moves), [2, 2]);
+  const H = game({});
+  drop(H, 3);
+  assert.ok(!G.act(H, 1, { t: "undo" }).ok);
+  assert.ok(!G.act(H, 0, { t: "undo" }).ok);
+});
+
+test("tip: takes a win, blocks a threat, takes over a central opening with the pie rule", () => {
+  const S = game({});
+  play(S, [0, 0, 1, 1, 2]); // red has 0,1,2 on the bottom row, yellow to move
+  assert.deepStrictEqual(G.suggest(S, 1), { t: "drop", col: 3 });
+  const W = game({});
+  play(W, [0, 0, 1, 1, 2, 2]); // red to move and wins in column 3
+  assert.deepStrictEqual(G.suggest(W, 0), { t: "drop", col: 3 });
+  const P = game({ pie: true });
+  drop(P, 3);
+  assert.deepStrictEqual(G.suggest(P, 1), { t: "swap" });
+  assert.deepStrictEqual(G.suggest(G.view(S, 1), 1), { t: "drop", col: 3 }); // a view works as well
 });

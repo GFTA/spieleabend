@@ -16,7 +16,13 @@ voll, ist es unentschieden. In jeder Runde beginnt der andere.
 - **Spielfelder**: 7×6 (klassisch), 8×7 und 10×8. Spielziel: eine Runde, bis 2 oder bis
   3 Siege.
 - **Hausregeln**: Pop Out (eigene Scheibe unten herausziehen, alles rutscht nach),
-  5 gewinnt, Zugzeit (15 Sekunden, sonst Zufallszug).
+  5 gewinnt, Tauschregel (nach dem ersten Zug darf der Zweite die Scheibe übernehmen,
+  die Scheibe dreht sich um; der Computer eröffnet dann nicht in der Mitte), Zugzeit
+  (15 Sekunden, sonst Zufallszug).
+- **Tipp**: Der Button zeigt das Feld, in das der Computer auf Profi-Stärke einwerfen
+  würde (oder dass sich das Übernehmen lohnt).
+- **Zug zurück** gegen den Computer: nimmt den eigenen Zug samt Antwort zurück, die
+  Scheiben lösen sich animiert auf.
 - **Computer-Gegner** in drei Stufen: Leicht, Normal und Profi. Er rechnet mit Minimax
   und Alpha-Beta-Suche mehrere Züge voraus.
 - **Wie bei den anderen Spielen**: Raum-Code mit QR, Zuschauer mit „Mitspielen“,
