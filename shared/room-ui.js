@@ -26,6 +26,7 @@
 
   ICONS.sliders = SVG('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>');
   ICONS.chat = SVG('<path d="M4 5h16v11H9l-5 4z"/>', ' stroke-linejoin="round"');
+  ICONS.share = SVG('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/>', ' stroke-linejoin="round"');
   const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
 
   // ---------- markup ----------
@@ -35,11 +36,9 @@
   lobby.innerHTML = `
     <div class="panel nowplaying" id="nowPlaying" hidden></div>
     <div class="cols"><div class="col">
-    <div class="panel invite">
-      <div class="label invite-lab">Raum-Code</div><div class="roomcode" id="roomCode"></div>
-      <div class="qr" id="qr" hidden></div>
-      <p class="hint" id="joinHint"></p>
-      <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button><button class="btn" id="shareBtn" type="button" hidden>Teilen</button></div>
+    <div class="panel invite" id="partyBar" hidden>
+      <div class="label invite-lab">Party</div><div class="partycode" id="partyCode"></div>
+      <button class="btn" id="inviteBtn" type="button">${ICONS.share}<span>Einladen</span></button>
     </div>
     <div class="panel">
       <div class="label" id="membersLabel"></div>
@@ -305,21 +304,13 @@
     $("#chat").addEventListener("click", (e) => { if (e.target.id === "chat" && !wide.matches) $("#chat").hidden = true; });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#chat").hidden) { $("#chat").hidden = true; e.stopPropagation(); } }, true);
 
-    function joinUrl() {
-      const r = R(), server = app.server();
-      const local = /^(localhost|127\.|\[::1\])/.test(location.hostname);
-      // opened on the server box itself: link to its LAN address instead (not a Docker-internal one)
-      const ip = local && server && server.ips && server.ips.find((x) => !/^172\.(1[6-9]|2\d|3[01])\./.test(x));
-      const base = ip ? `${location.protocol}//${ip}:${location.port || server.port}/` : location.origin + location.pathname;
-      return `${base}?r=${r.code}`;
-    }
-    function drawQr(url) {
-      const box = $("#qr");
+    function drawQr(box, url) {
+      if (box.dataset.url === url && box.firstChild) { box.hidden = false; return; }
       const paint = () => {
         try {
           const q = window.qrcode(0, "M"); q.addData(url); q.make();
           box.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-          box.hidden = false;
+          box.dataset.url = url; box.hidden = false;
         } catch (e) { box.hidden = true; }
       };
       if (window.qrcode) return paint();
@@ -328,16 +319,9 @@
       document.head.appendChild(s);
     }
 
-    let qrFor = null;
     function renderLobby() {
       const r = R(), max = app.maxPlayers;
-      $("#roomCode").textContent = r.code;
-      const url = joinUrl();
-      $("#joinUrl").textContent = url;
-      if (qrFor !== url) { qrFor = url; drawQr(url); }
-      const lan = /^http:\/\/(\d+\.){3}\d+[:/]/.test(url);
-      $("#joinHint").textContent = "Scannt den QR-Code oder öffnet den Link." +
-        (app.watchers ? " Wer nicht mehr reinpasst, schaut zu." : "") + (lan ? " Alle müssen im selben WLAN sein." : "");
+      $("#partyBar").hidden = !r.party; $("#partyCode").textContent = r.party || "";
       const host = r.you === r.host;
       $("#closeLobby").hidden = !host;
       $("#partyLobby").hidden = !r.party; if (r.party) $("#partyLobby").href = partyHref();
@@ -445,20 +429,36 @@
       b.classList.add("btn-danger"); app.toast("Nochmal tippen, dann ist der Raum für alle geschlossen.");
       closeArm = setTimeout(reset, 3500);
     });
-    $("#copyBtn").addEventListener("click", () => {
-      const url = $("#joinUrl").textContent;
-      const ok = () => app.toast("Link kopiert.");
-      const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#joinUrl")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); app.toast("Link markiert, jetzt kopieren."); };
-      try { navigator.clipboard.writeText(url).then(ok, fallback); } catch (e) { fallback(); }
-    });
-    // phones and some desktops have a share sheet: one tap to WhatsApp and friends
-    if (navigator.share) {
-      $("#shareBtn").hidden = false;
-      $("#shareBtn").addEventListener("click", () => {
-        const r = R();
-        navigator.share({ title: document.title, text: `Komm an den Tisch: ${document.title}, Raum ${r ? r.code : ""}`, url: $("#joinUrl").textContent }).catch(() => {});
-      });
+    // invite sheet: QR code of the party link, below it the button for the system share menu
+    const partyLink = () => startUrl(`?party=${R().party}`);
+    function shareSheet() {
+      const r = R(); if (!r || !r.party) return;
+      let o = $("#shareSheet");
+      if (!o) {
+        o = document.createElement("div"); o.className = "overlay"; o.id = "shareSheet"; o.hidden = true;
+        o.innerHTML = `<div class="sheet sharesheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle"><h2 id="shareTitle">Zur Party einladen</h2>` +
+          `<div class="qr big" id="shareQr" hidden></div><div class="sharecode" id="shareCode" aria-label="Party-Code"></div>` +
+          `<p class="hint">Scannt den QR-Code oder öffnet den Link.</p>` +
+          `<button class="btn btn-primary btn-block" id="shareGo" type="button"></button><button class="btn btn-ghost btn-block" id="shareClose" type="button">Schließen</button></div>`;
+        document.body.appendChild(o);
+        const close = () => { o.hidden = true; };
+        o.addEventListener("click", (e) => { if (e.target === o) close(); });
+        $("#shareClose").addEventListener("click", close);
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !o.hidden) { close(); e.stopPropagation(); } }, true);
+        $("#shareGo").addEventListener("click", async () => {
+          const url = partyLink(), code = R().party;
+          if (navigator.share) { navigator.share({ title: "Spieleabend", text: `Komm in meine Spieleabend-Party! Code: ${code}`, url }).catch(() => {}); return; }
+          try { await navigator.clipboard.writeText(url); app.toast("Link kopiert."); }
+          catch (e) { app.toast("Kopieren geht hier nicht."); }
+        });
+      }
+      const url = partyLink();
+      $("#shareCode").textContent = r.party;
+      $("#shareGo").innerHTML = navigator.share ? `${ICONS.share}<span>Teilen</span>` : "<span>Link kopieren</span>";
+      drawQr($("#shareQr"), url);
+      o.hidden = false;
     }
+    $("#inviteBtn").addEventListener("click", shareSheet);
     $("#addBot").addEventListener("click", () => send({ t: "bot" }));
     $("#sitBtn").addEventListener("click", () => send({ t: "sit" }));
     const lobbyAv = document.createElement("div");
@@ -585,6 +585,6 @@
             return code;
     }
 
-    return { send, resume, update, renderLobby, renderReady, rematchStatus, roundEndFooter, armed, openMenu, joinUrl, detectServer, roomCode, ICONS };
+    return { send, resume, update, renderLobby, renderReady, rematchStatus, roundEndFooter, armed, openMenu, detectServer, roomCode, ICONS };
   };
 })();
