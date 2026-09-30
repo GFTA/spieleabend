@@ -193,3 +193,8 @@ details.fold[open] summary{margin-bottom:8px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @keyframes bang{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.35) rotate(-4deg);opacity:0}}
 @media (hover:hover) and (pointer:fine){.btn:not(:disabled):hover{filter:brightness(1.08)}}
+
+/* game home: one centred column, same title treatment everywhere */
+h1{font-family:var(--display);font-weight:400;font-size:var(--h1,38px);letter-spacing:.01em;margin:8px 0 0;line-height:1.02;text-align:center;text-wrap:balance;overflow-wrap:break-word}
+#home>*{width:100%;max-width:560px;align-self:center}
+@media (min-width:900px) and (min-height:700px){h1{font-size:var(--h1d,44px)}}
