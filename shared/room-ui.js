@@ -40,7 +40,7 @@
       <div class="roomcode" id="roomCode"></div>
       <div class="qr" id="qr" hidden></div>
       <p class="hint" style="text-align:center" id="joinHint"></p>
-      <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button></div>
+      <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button><button class="btn" id="shareBtn" type="button" hidden>Teilen</button></div>
     </div>
     <div class="panel">
       <div class="label" id="membersLabel"></div>
@@ -238,7 +238,17 @@
       $("#chatBtn").hidden = !online || !R();
       if (!online) $("#chat").hidden = true;
       renderBadge();
+      turnCue();
     }
+
+    // the tab title says when it is my turn while the tab is in the background (phones: the task switcher)
+    const baseTitle = document.title;
+    function turnCue() {
+      const v = V(), mine = app.mode() === "online" && !!v && v.me >= 0 && v.cur === v.me && (v.phase === "play" || v.phase === "drawn");
+      const want = mine && document.visibilityState === "hidden" ? `● Du bist dran · ${baseTitle}` : baseTitle;
+      if (document.title !== want) document.title = want;
+    }
+    document.addEventListener("visibilitychange", turnCue);
 
     // ---------- chat: one per room, in the waiting room and as a sheet during the game ----------
     let chat = [], unread = 0;
@@ -442,6 +452,14 @@
       const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#joinUrl")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); app.toast("Link markiert, jetzt kopieren."); };
       try { navigator.clipboard.writeText(url).then(ok, fallback); } catch (e) { fallback(); }
     });
+    // phones and some desktops have a share sheet: one tap to WhatsApp and friends
+    if (navigator.share) {
+      $("#shareBtn").hidden = false;
+      $("#shareBtn").addEventListener("click", () => {
+        const r = R();
+        navigator.share({ title: document.title, text: `Komm an den Tisch: ${document.title}, Raum ${r ? r.code : ""}`, url: $("#joinUrl").textContent }).catch(() => {});
+      });
+    }
     $("#addBot").addEventListener("click", () => send({ t: "bot" }));
     $("#sitBtn").addEventListener("click", () => send({ t: "sit" }));
     const lobbyAv = document.createElement("div");
