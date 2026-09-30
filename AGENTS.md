@@ -4,6 +4,21 @@ Kurzfassung für Menschen und KI-Agenten. Die Details stehen in [`ARCHITECTURE.m
 Vorlage in `scripts/game-template/`. Dieses Repo ist öffentlich: keine Heimnetz-Angaben, IPs oder Secrets
 (`.env` bleibt lokal und ist ignoriert).
 
+## Die zehn wichtigsten Regeln (Rest unten zum Nachschlagen)
+
+1. Starte **immer** mit `scripts/new-game <id> "<Titel>"`. Nie einen Ordner von Hand anlegen oder ein Spiel kopieren.
+2. Lies ein ähnliches bestehendes Spiel, bevor du Regeln schreibst. Kopiere dessen Muster, erfinde keine eigenen.
+3. Regeln, Bots und Bot-Tempo stehen **nur** in `public/game.js` (kein DOM). Server und Browser rufen sie bloß auf.
+4. `server.js` ist ein dünner Adapter um `../shared/room-server.js`. `app.js` nutzt `RoomUI`, `HomeUI` und `Spieleabend.*`. Nichts davon selbst nachbauen.
+5. Das Rundenende läuft **immer** über `UI.roundEndFooter`, danach genau einmal `profile.result(...)` und bei Sieg `confetti()`.
+6. Kein Hot-Seat. Einzelspieler ist Mensch plus Computer-Gegner (`HomeUI({ min: 0 })`, wenn das Spiel auch allein Spaß macht).
+7. Alles, was sich bewegt, ist sichtbar animiert, auch Bot-Züge und Züge der anderen.
+8. Die Engine muss schnell sein (keine Sekunden-Generatoren) und Computer-Gegner spielen in Menschen-Tempo. Beides braucht einen Test.
+9. Eingaben zeigen sofort Wirkung (optimistisch), Uhren laufen vom Server-Wert aus.
+10. Fertig ist ein Spiel erst, wenn `npm test` und `scripts/check-games <id>` grün sind **und** du es im Browser bis zum Rundenende gespielt hast (Einzel- und Mehrspieler, Handy- und Desktop-Breite). Jede Warnung des Checkers beheben, auch wenn sie nicht abbricht.
+
+Privat bleibt privat: keine IPs, Hostnamen des eigenen Servers oder Secrets im Repo. Ein Commit pro Spielordner.
+
 ## Arbeitsablauf (in dieser Reihenfolge)
 
 1. **Generator zuerst, nie bei null anfangen.**

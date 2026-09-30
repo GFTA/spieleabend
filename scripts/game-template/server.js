@@ -21,4 +21,10 @@ module.exports = require("../shared/room-server.js")({
     if (msg.level != null) room.level = Game.normLevel(msg.level);
   },
   newGame: (room, players) => Game.newGame(players.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })), room.goal, room.target, room.level),
+
+  // Turn-based games need nothing more: the shared server lets the computer move after BOT_MS.
+  // A game where everybody plays at once (like Sudoku) puts the pacing into the engine instead:
+  //   Game.botPlan(state) -> { pi, delay, key } | null   (human pace, key changes only when the plan does)
+  //   botPlan(room, ctx) { const p = Game.botPlan(room.state); if (p && process.env.BOT_MS) p.delay = ctx.BOT_MS; return p; },
+  // The browser calls the same Game.botPlan for single player, so server and client never differ.
 });

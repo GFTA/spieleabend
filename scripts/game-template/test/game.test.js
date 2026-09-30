@@ -100,3 +100,15 @@ test("view marks who is me and hides nothing", () => {
   assert.strictEqual(Game.view(S, -1).me, -1);
   assert.strictEqual(Game.view(S, 0).players.length, 2);
 });
+
+// The engine runs on the server's only thread for every room at once: a rule step, a bot move or
+// a whole generated round must never take noticeable time. Keep a check like this for anything heavy.
+test("the engine is fast: 200 new games and bot-only rounds take well under a second", () => {
+  const t0 = Date.now();
+  for (let k = 0; k < 200; k++) {
+    const S = Game.newGame([{ name: "R1", bot: true }, { name: "R2", bot: true }], 1, 30, 2);
+    let guard = 0;
+    while (S.phase === "play" && guard++ < 2000) Game.act(S, S.cur, Game.botMove(S, S.cur));
+  }
+  assert.ok(Date.now() - t0 < 1500, `took ${Date.now() - t0} ms`);
+});

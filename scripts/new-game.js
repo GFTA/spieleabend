@@ -119,7 +119,7 @@ if (last >= 0) {
   fs.writeFileSync(readmePath, readme.join("\n"));
 }
 
-try { require("child_process").execFileSync(process.execPath, [path.join(__dirname, "check-games.js"), id], { stdio: "inherit" }); }
+try { require("child_process").execFileSync(process.execPath, [path.join(__dirname, "check-games.js"), "--strict", id], { stdio: "inherit" }); }
 catch { console.error("Das frisch erzeugte Spiel besteht den Konformitätscheck nicht, das ist ein Fehler im Generator."); process.exitCode = 1; }
 
 console.log(`

@@ -13,10 +13,13 @@ const read = (...p) => { try { return fs.readFileSync(path.join(root, ...p), "ut
 const exists = (...p) => fs.existsSync(path.join(root, ...p));
 
 const games = JSON.parse(read("start", "games.json"));
-const only = process.argv.slice(2);
+const strict = process.argv.includes("--strict"); // new games: warnings count as problems
+const only = process.argv.slice(2).filter((a) => a !== "--strict");
 const ids = only.length ? only : games.map((g) => g.id);
 const problems = [];
 const bad = (id, msg) => problems.push(`${id}: ${msg}`);
+const warnings = []; // older games may lack these; they are reported but do not fail the CI
+const warn = (id, msg) => (strict ? bad : (i, m) => warnings.push(`warning ` + i + `: ` + m))(id, msg);
 
 const PAGE_ORDER = ["kit.css", "room-ui.css", "avatars.js", "profile.js", "kit.js", "room-ui.js", "home-ui.js", "game.js", "app.js"];
 const REQUIRED_FILES = [
@@ -89,6 +92,10 @@ for (const id of ids) {
   if (!tests.some((f) => /server/.test(f))) bad(id, "test/ needs a server test (a real websocket round through the shared server)");
   const gt = read(id, "test", "game.test.js") || "";
   if ((gt.match(/\btest\(|\bit\(/g) || []).length < 5) bad(id, "test/game.test.js has fewer than 5 tests");
+  const all = tests.map((f) => read(id, "test", f) || "").join("\n");
+  if (!/botMove|botPlan/.test(all)) warn(id, "no test lets the computer play (botMove/botPlan must make legal moves and finish a round)");
+  if (!/Date\.now\(\)|performance\.now|hrtime/.test(all)) warn(id, "no timing test: the engine runs on the server's only thread, bound generation/bot time in a test");
+  if (!/roundEnd|over/.test(all)) warn(id, "no test reaches the round end");
 }
 
 // private details must never end up in the public repo
@@ -110,6 +117,7 @@ if (!only.length) {
   }
 }
 
+if (warnings.length) console.warn(warnings.join("\n") + "\n");
 if (problems.length) {
   console.error(problems.join("\n"));
   console.error(`\n${problems.length} problem(s). The rules are explained in ARCHITECTURE.md and AGENTS.md.`);
