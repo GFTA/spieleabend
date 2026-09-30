@@ -15,7 +15,11 @@ Rangfolge, beste zuerst: Fünfling · Vierling · Full House · Große Straße (
 Kleine Straße (1–5) · Drilling · Zwei Paare · Ein Paar · Nichts. Bei gleicher Hand
 entscheiden die höheren Augen, danach die Beizahlen.
 
-**Hausregeln**: Der Erste gibt die Würfe vor · Straße schlägt Full House · Zugzeit 30 Sekunden
+**Wer dran ist**, sieht, welche Hand zu schlagen ist, und live die Chance, mit dem nächsten Wurf
+besser zu werden oder den Führenden zu schlagen (ändert sich mit jedem behaltenen Würfel).
+Die Rangfolge im Menü zeigt die Wahrscheinlichkeit jeder Hand und folgt den Hausregeln.
+
+**Hausregeln**: Der Erste gibt die Würfe vor · Straße schlägt Full House · Stechen bei Gleichstand · Zugzeit 30 Sekunden
 (nur online). Dazu Computer-Gegner in drei Stärken, Avatare, Tisch-Designs, Würfelgröße,
 Emoji-Reaktionen und Tastenkürzel am Computer (Leertaste würfeln, Enter fertig, 1–5 behalten,
 H Tipp).

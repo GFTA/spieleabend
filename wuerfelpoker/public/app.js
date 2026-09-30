@@ -110,9 +110,10 @@
         rollAnim = { which: ev.which, dice: ev.dice }; sfx("rattle", ev.which.length); buzz(20);
       }
       if (ev.t === "hold") sfx("hold");
+      if (ev.t === "playoff") { toast(`Gleichstand! Stechen: ${ev.pis.map((i) => (players || L.players)[i].name).join(" und ")}`); sfx("big"); }
       if (ev.t === "done") {
         const ps = players || (L && L.players);
-        const r = ps && ps[ev.pi] && ps[ev.pi].result;
+        const r = ev.result || (ps && ps[ev.pi] && ps[ev.pi].result);
         const rolled = events.find((e) => e.t === "rolled" && e.pi === ev.pi);
         const dice = rolled ? rolled.dice : r ? r.dice : null;
         if (dice) {
@@ -157,6 +158,7 @@
   function showScreen(id) { for (const s of ["home", "lobby", "game"]) $("#" + s).hidden = s !== id; }
 
   function render() {
+    renderRanks(mode === "local" && L ? L.rules : R && R.rules ? R.rules : localRules);
     if (mode === "local" && L) {
       V = G.view(L, localViewer());
       showScreen("game"); renderGame();
@@ -176,7 +178,7 @@
   let lastTurnKey = null;
   function renderGame() {
     const me = V.players[V.me];
-    $("#roundInfo").innerHTML = `Runde <b>${V.round}</b>${V.goal ? ` · bis ${V.goal} Siege` : " · eine Runde"}${me && mode === "online" ? ` · du: <b>${me.score}</b>` : ""}`;
+    $("#roundInfo").innerHTML = `Runde <b>${V.round}</b>${V.playoff ? " · <b>Stechen</b>" : ""}${V.goal ? ` · bis ${V.goal} Siege` : " · eine Runde"}${me && mode === "online" ? ` · du: <b>${me.score}</b>` : ""}`;
     $("#reactBtn").hidden = mode !== "online";
     renderPlayers();
     renderTray();
@@ -241,9 +243,23 @@
       if (hn.textContent !== name) { hn.textContent = name; hn.classList.remove("pop"); void hn.offsetWidth; hn.classList.add("pop"); }
       const detail = handNow && /\((.*)\)/.exec(handNow.label);
       $("#handSub").textContent = blank ? (V.phase === "play" ? "Noch nicht gewürfelt" : "") : detail ? detail[1] : "";
+      renderOdds();
     };
     if (anim) { rolling = true; clearTimeout(renderTray.t); renderTray.t = setTimeout(() => { rolling = false; setHand(); sfx("land"); renderDock(); }, 760 + 60 * anim.which.length); }
     else if (!rolling) setHand();
+  }
+  // for whoever is on turn: the hand to beat and how likely the next roll gets there
+  function renderOdds() {
+    const el = $("#odds"), parts = [];
+    if (myTurn() && !hold && V.phase === "play") {
+      const t = V.target != null ? V.players[V.target] : null;
+      if (t) parts.push(`Zu schlagen: ${t.result.label.replace(/ \(.*\)$/, "")} (${esc(t.name)})`);
+      if (V.rolls && V.rolls < V.maxRolls) {
+        const o = G.odds(V.dice, V.hold, V.rules, t ? t.result : null), pc = (p) => (p > 0 && p < 0.01 ? "<1" : Math.round(p * 100)) + " %";
+        parts.push(`Nächster Wurf: ${pc(o.better)} besser${o.beat != null ? `, ${pc(o.beat)} schlägt ${esc(t.name)}` : ""}`);
+      }
+    }
+    el.innerHTML = parts.join(" · ");
   }
   function tumble(d, finalV, k) {
     const dur = 650 + k * 60;
@@ -508,7 +524,18 @@
 
   // best hand first, with an example throw
   const EXAMPLES = [[6, 6, 6, 6, 6], [4, 4, 4, 4, 2], [5, 5, 5, 3, 3], [2, 3, 4, 5, 6], [1, 2, 3, 4, 5], [3, 3, 3, 6, 1], [6, 6, 2, 2, 4], [5, 5, 1, 3, 6], [1, 3, 4, 5, 6]];
-  for (const ol of document.querySelectorAll(".ranklist")) ol.innerHTML = G.HANDS.slice().reverse().map((h, k) => `<li><b>${h}</b> <span class="res" style="display:inline-flex;gap:2px;vertical-align:middle">${EXAMPLES[k].map((v) => dieHTML(v, "mini")).join("")}</span></li>`).join("");
+  // with the odds of a single throw; the order follows the active house rules (straights vs. full house)
+  const CHANCE = [480, 3600, 1800, 1200, 120, 120, 300, 150, 6];
+  let ranksKey = null;
+  function renderRanks(rules) {
+    const key = JSON.stringify(rules || {});
+    if (key === ranksKey) return;
+    ranksKey = key;
+    const cats = EXAMPLES.map((ex) => G.evaluate(ex, rules)).sort((a, b) => b.rank - a.rank);
+    const html = cats.map((c) => `<li><b>${c.name}</b> <span class="res" style="display:inline-flex;gap:2px;vertical-align:middle">${EXAMPLES.find((ex) => G.evaluate(ex, rules).cat === c.cat).map((v) => dieHTML(v, "mini")).join("")}</span> <small style="color:var(--muted)">${(CHANCE[c.cat] / 77.76).toFixed(CHANCE[c.cat] < 100 ? 2 : 1).replace(".", ",")} %</small></li>`).join("");
+    for (const ol of document.querySelectorAll(".ranklist")) ol.innerHTML = html;
+  }
+  renderRanks(null);
 
   // keep the screen on while playing (needs HTTPS)
   document.addEventListener("visibilitychange", () => {

@@ -23,6 +23,7 @@
   const RULES = [
     { k: "firstSets", name: "Der Erste gibt die Würfe vor", desc: "Hört der Erste einer Runde schon nach 1 oder 2 Würfen auf, haben alle anderen auch nur so viele." },
     { k: "straightsHigh", name: "Straße schlägt Full House", desc: "Beide Straßen stehen in der Rangfolge über dem Full House." },
+    { k: "playoff", name: "Stechen bei Gleichstand", desc: "Haben mehrere dieselbe beste Hand, würfeln nur diese noch einmal um den Punkt (bis zu dreimal)." },
     { k: "turnTimer", name: "Zugzeit 30 Sekunden", desc: "Wer zu lange überlegt, dessen Zug endet automatisch.", onlineOnly: true }
   ];
   function normRules(r) {
@@ -93,6 +94,7 @@
     S.order = Array.from({ length: n }, (_, k) => (S.starter + k) % n);
     S.starter = (S.starter + 1) % n;
     S.done = 0;
+    S.contenders = null; S.playoff = 0;
     S.players.forEach((p) => { p.result = null; });
     log(S, `Runde ${S.round}: ${S.players[S.order[0]].name} beginnt.`);
     beginTurn(S, S.order[0]);
@@ -110,7 +112,7 @@
     const p = S.players[pi];
     p.result = S.rolls ? Object.assign(evaluate(S.dice, S.rules), { dice: S.dice.slice(), rolls: S.rolls }) : null;
     log(S, p.result ? `${p.name}: ${p.result.label}${S.rolls < S.maxRolls ? ` nach ${S.rolls} ${S.rolls === 1 ? "Wurf" : "Würfen"}` : ""}.` : `${p.name} hat nicht gewürfelt.`);
-    events.push({ t: "done", pi });
+    events.push({ t: "done", pi, result: p.result });
     // the first player of the round may limit everyone else's rolls
     if (S.rules.firstSets && S.done === 0 && S.rolls && S.rolls < S.maxRolls) {
       S.maxRolls = S.rolls;
@@ -121,14 +123,29 @@
     beginTurn(S, S.order[S.done]);
   }
 
+  // a tie for the best hand: only the tied players throw again
+  function startPlayoff(S, tied, label, events) {
+    S.playoff = (S.playoff || 0) + 1;
+    S.contenders = tied.slice();
+    S.order = tied.slice();
+    S.done = 0;
+    S.maxRolls = MAX_ROLLS;
+    tied.forEach((i) => { S.players[i].result = null; });
+    log(S, `Gleichstand bei ${label.replace(/ \(.*\)$/, "")}: ${tied.map((i) => S.players[i].name).join(" und ")} würfeln das Stechen.`);
+    events.push({ t: "playoff", pis: tied.slice(), label });
+    beginTurn(S, S.order[0]);
+  }
+
   function endRound(S, events) {
-    const ranked = S.players.map((p, i) => ({ i, r: p.result })).filter((x) => x.r)
+    const pool = S.contenders || S.players.map((_, i) => i);
+    const ranked = pool.map((i) => ({ i, r: S.players[i].result })).filter((x) => x.r)
       .sort((a, b) => compare(b.r, a.r));
     const best = ranked[0];
     const winners = best ? ranked.filter((x) => compare(x.r, best.r) === 0).map((x) => x.i) : [];
+    if (S.rules.playoff && winners.length > 1 && (S.playoff || 0) < 3) return startPlayoff(S, winners, best.r.label, events);
     winners.forEach((i) => { S.players[i].score++; });
     const over = S.goal > 0 ? S.players.some((p) => p.score >= S.goal) : true;
-    S.last = { winners, label: best ? best.r.label : "", over };
+    S.last = { winners, label: best ? best.r.label : "", over, playoffs: S.playoff || 0 };
     S.history.push({ round: S.round, winners, label: S.last.label });
     S.phase = "roundEnd";
     S.seq++;
@@ -200,6 +217,24 @@
     events.push({ t: "rolled", pi: S.cur, which, dice: S.dice.slice(), roll: S.rolls });
   }
 
+  // chances of the next roll if the dice marked in `hold` stay: better than now, and better than `target` (a result)
+  function odds(dice, hold, rules, target) {
+    const free = [];
+    dice.forEach((d, i) => { if (!hold[i]) free.push(i); });
+    const now = evaluate(dice, rules);
+    const total = Math.pow(6, free.length);
+    let better = 0, beat = 0;
+    const d = dice.slice();
+    for (let n = 0; n < total; n++) {
+      let m = n;
+      for (const i of free) { d[i] = 1 + (m % 6); m = Math.floor(m / 6); }
+      const r = evaluate(d, rules);
+      if (compare(r, now) > 0) better++;
+      if (target && compare(r, target) > 0) beat++;
+    }
+    return { better: better / total, beat: target ? beat / total : null };
+  }
+
   // no timers in this game; the server and the one-phone mode call these generically
   const tick = () => [];
   const nextDeadline = () => -1;
@@ -244,6 +279,16 @@
     return dice.map((d) => (d === hi && !done ? (done = true) : false));
   }
 
+  // the best finished hand so far this round (seat index), or null
+  function bestDone(S) {
+    let best = null;
+    for (const i of S.order.slice(0, S.done)) {
+      const r = S.players[i].result;
+      if (r && (best === null || compare(r, S.players[best].result) > 0)) best = i;
+    }
+    return best;
+  }
+
   function view(S, pi) {
     return {
       players: S.players.map((p) => ({ name: p.name, score: p.score, bot: !!p.bot, avatar: p.avatar || "", result: p.result })),
@@ -251,10 +296,12 @@
       dice: S.dice.slice(), hold: S.hold.slice(), rolls: S.rolls, maxRolls: S.maxRolls,
       hand: S.rolls ? evaluate(S.dice, S.rules) : null,
       next: S.order[S.done + 1] != null ? S.order[S.done + 1] : null,
+      target: bestDone(S),
+      playoff: S.playoff || 0,
       round: S.round, goal: S.goal, turn: S.turn, seq: S.seq, rules: S.rules,
       log: S.log.slice(-40), last: S.last, history: S.history
     };
   }
 
-  return { DICE, MAX_ROLLS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, normRules, evaluate, compare, newGame, startRound, act, tick, nextDeadline, suggest, view };
+  return { DICE, MAX_ROLLS, TURN_MS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, normRules, evaluate, compare, odds, newGame, startRound, act, tick, nextDeadline, suggest, view };
 });
