@@ -11,7 +11,7 @@ process.env.PORT = "0";
 process.env.BOT_MS = "20";
 process.env.PARTY_SECRET = "test-geheim";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "hangman-"));
-const { server, wss, rooms } = require("../server.js");
+const { server, wss, rooms, saveNow } = require("../server.js");
 test.after(() => { for (const ws of wss.clients) ws.terminate(); server.close(); });
 
 function client(port) {
@@ -154,4 +154,61 @@ test("ping is answered, so clients can tell a dead socket from a live one", asyn
   await c.open;
   c.send({ t: "ping" });
   assert.strictEqual((await c.next((m) => m.t === "pong")).t, "pong");
+});
+
+// ---- shared room server: transport and robustness ----
+const http = require("http");
+const get = (port, p, headers) => new Promise((res, rej) => http.get({ port, path: p, headers }, (r) => {
+  const chunks = [];
+  r.on("data", (c) => chunks.push(c));
+  r.on("end", () => res({ status: r.statusCode, headers: r.headers, body: Buffer.concat(chunks) }));
+}).on("error", rej));
+
+test("text is gzipped for browsers that accept it, with security headers on everything", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const port = server.address().port;
+  const plain = await get(port, "/app.js", {});
+  const gz = await get(port, "/app.js", { "accept-encoding": "gzip, deflate" });
+  assert.strictEqual(plain.headers["content-encoding"], undefined);
+  assert.strictEqual(gz.headers["content-encoding"], "gzip");
+  assert.strictEqual(require("zlib").gunzipSync(gz.body).toString(), plain.body.toString(), "same bytes once unpacked");
+  assert.ok(gz.body.length < plain.body.length / 2, "and much smaller");
+  const page = await get(port, "/", { "accept-encoding": "gzip" });
+  assert.strictEqual(page.headers["content-encoding"], "gzip");
+  assert.strictEqual(page.headers["x-content-type-options"], "nosniff");
+  assert.strictEqual(page.headers["referrer-policy"], "same-origin");
+  const png = await get(port, "/nope.png", { "accept-encoding": "gzip" });
+  assert.strictEqual(png.status, 404);
+  assert.strictEqual(png.headers["x-content-type-options"], "nosniff", "also on errors");
+});
+
+test("a connection that floods the server is slowed down, a normal one is not", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const port = server.address().port;
+  const calm = client(port), wild = client(port);
+  await calm.open; await wild.open;
+  for (let i = 0; i < 30; i++) calm.send({ t: "ping" });
+  let pongs = 0;
+  for (let i = 0; i < 30; i++) { await calm.next((m) => m.t === "pong"); pongs++; }
+  assert.strictEqual(pongs, 30, "a burst of 30 is fine");
+  let got = 0;
+  wild.ws.on("message", (d) => { if (JSON.parse(d).t === "pong") got++; });
+  for (let i = 0; i < 150; i++) wild.send({ t: "ping" });
+  const err = await wild.next((m) => m.t === "error");
+  assert.match(err.msg, /langsamer/);
+  await new Promise((r) => setTimeout(r, 300));
+  assert.ok(got >= 35 && got < 100, "only part of the flood got through: " + got);
+  calm.ws.close(); wild.ws.close();
+});
+
+test("saveNow writes the rooms to disk at once", async () => {
+  await new Promise((r) => (server.listening ? r() : server.once("listening", r)));
+  const c = client(server.address().port);
+  await c.open;
+  c.send({ t: "create", name: "Sven" });
+  const j = await c.next((m) => m.t === "joined");
+  saveNow();
+  const saved = JSON.parse(fs.readFileSync(path.join(process.env.DATA_DIR, "rooms.json"), "utf8"));
+  assert.ok(saved.some((r) => r.code === j.code));
+  c.ws.close();
 });

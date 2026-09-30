@@ -7,6 +7,7 @@ const fs = require("fs");
 const WebSocket = require("ws");
 
 process.env.PORT = "0";
+process.env.RATE_PER_S = "5000"; // this test plays a whole round at machine speed
 process.env.BOT_MS = "20";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "schiffe-"));
 const { server, wss, rooms } = require("../server.js");

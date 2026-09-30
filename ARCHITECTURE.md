@@ -273,6 +273,16 @@ const IDLE_TTL = 5 * 60 * 1000;      // Laufzeit-Cleanup: 5 Min ohne jede Aktion
 - Jede echte Aktion (Zug, Beitritt, …) setzt `room.touched = Date.now()`
 - Persistenz debounced nach `data/rooms.json` (`saveRooms()`), beim Start
   `loadRooms()` gefiltert nach `ROOM_TTL`
+- **Sauberes Beenden**: bei SIGTERM/SIGINT schreibt `saveNow()` die Räume sofort (kein Verlust
+  der letzten 500 ms), die Sockets werden mit Code 1001 geschlossen (Clients verbinden sich neu),
+  dann `process.exit(0)`. Ohne Handler ignoriert Node als PID 1 das Signal und `docker stop` wartet 10 s.
+- **Zeitgeber abgesichert**: Engine-Deadline, Computerzug und Zugzeit laufen durch `guard()`; eine
+  Exception in einer Spiel-Engine wird geloggt und reißt nicht den ganzen Server (alle Räume) mit.
+- **Rate-Limit** pro Verbindung (Token-Bucket, 40 Burst, 15 Nachrichten/s, `RATE_PER_S`): darüber
+  wird verworfen und einmal pro 2 s gewarnt, nach 400 verworfenen Nachrichten in Folge wird die Verbindung getrennt.
+- **HTTP**: `nosniff`, `Referrer-Policy: same-origin` und eine leere `Permissions-Policy` auf jeder
+  Antwort; Text (HTML/JS/CSS/JSON/SVG) geht per gzip raus, wenn der Browser es annimmt (die
+  komprimierte Kopie wird gemerkt, bis sich die Datei ändert).
 - **Idle-Cleanup**, alle 25s zusammen mit dem WS-Ping/Pong-Keepalive:
 
 ```js

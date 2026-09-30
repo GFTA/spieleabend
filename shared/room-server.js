@@ -20,7 +20,8 @@
 //     legacyPath, metaName    -> old /info alias and the version <meta> name
 //   })  -> { server, wss, rooms }
 //
-// Start a game with `node server.js` (PORT, HOST, DATA_DIR and BOT_MS are optional env vars).
+// Start a game with `node server.js` (PORT, HOST, DATA_DIR, BOT_MS and RATE_PER_S, the messages per second
+// one connection may send, are optional env vars).
 "use strict";
 
 const http = require("http");
@@ -28,6 +29,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { createRequire } = require("module");
 
 module.exports = function roomServer(g) {
@@ -74,16 +76,20 @@ module.exports = function roomServer(g) {
     } catch (e) { /* first start */ }
   }
   let saveTimer = null;
+  function saveNow() {
+    clearTimeout(saveTimer);
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(SAVE_FILE + ".tmp", JSON.stringify([...rooms.values()]));
+      fs.renameSync(SAVE_FILE + ".tmp", SAVE_FILE);
+    } catch (e) { console.error("Speichern fehlgeschlagen:", e.message); }
+  }
   function saveRooms() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-        fs.writeFileSync(SAVE_FILE + ".tmp", JSON.stringify([...rooms.values()]));
-        fs.renameSync(SAVE_FILE + ".tmp", SAVE_FILE);
-      } catch (e) { console.error("Speichern fehlgeschlagen:", e.message); }
-    }, 500);
+    saveTimer = setTimeout(saveNow, 500);
   }
+  // a timer callback that throws must not take the whole server, and with it every room, down
+  const guard = (what, fn) => () => { try { fn(); } catch (e) { console.error(`${g.id}: ${what} fehlgeschlagen:`, e); } };
 
   function newCode() {
     const A = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid mix-ups with 1/0
@@ -141,25 +147,25 @@ module.exports = function roomServer(g) {
     if (!S || !rooms.has(code)) { clearTimer(botTimers, code); clearTimer(turnTimers, code); return; }
     // the engine's own deadline: always re-armed, it counts to a fixed point in time
     const ms = Game.nextDeadline ? Game.nextDeadline(S) : -1;
-    if (ms >= 0) deadTimers.set(code, setTimeout(() => {
+    if (ms >= 0) deadTimers.set(code, setTimeout(guard("Zeitschritt", () => {
       deadTimers.delete(code);
       if (rooms.get(code) !== room || room.state !== S) return;
       const events = Game.tick(S);
       if (events.length) { room.touched = Date.now(); bump(room); broadcast(room, events); saveRooms(); }
       else schedule(room);
-    }, ms + 30).unref());
+    }), ms + 30).unref());
     if (S.phase === "roundEnd") { clearTimer(botTimers, code); clearTimer(turnTimers, code); return; }
     // the next computer move, restarted only when it is a different move than the waiting one
     const plan = (g.botPlan ? g.botPlan(room, ctx) : defaultBotPlan(room)) || { key: null };
     const old = botTimers.get(code);
     if (!old || old.key !== plan.key) {
       clearTimer(botTimers, code);
-      if (plan.key) botTimers.set(code, { key: plan.key, t: setTimeout(() => {
+      if (plan.key) botTimers.set(code, { key: plan.key, t: setTimeout(guard("Computerzug", () => {
         botTimers.delete(code);
         if (rooms.get(code) !== room || room.state !== S) return;
         const done = g.botMove ? g.botMove(room, plan.pi, ctx) : defaultBotMove(room, plan.pi);
         if (!done) schedule(room); // try again after another pause
-      }, plan.delay).unref() });
+      }), plan.delay).unref() });
     }
     // the 30 s turn clock (house rule): runs out into a {t:"timeout"} only the server may send
     const tkey = g.turnClock ? g.turnClock(room) : null;
@@ -167,10 +173,10 @@ module.exports = function roomServer(g) {
       const t = turnTimers.get(code);
       if (!t || t.key !== tkey) {
         clearTimer(turnTimers, code);
-        turnTimers.set(code, { key: tkey, ends: Date.now() + Game.TURN_MS, t: setTimeout(() => {
+        turnTimers.set(code, { key: tkey, ends: Date.now() + Game.TURN_MS, t: setTimeout(guard("Zugzeit", () => {
           turnTimers.delete(code);
           if (room.state === S && g.turnClock(room) === tkey) apply(room, S.cur, { t: "timeout" });
-        }, Game.TURN_MS).unref() });
+        }), Game.TURN_MS).unref() });
       }
     } else clearTimer(turnTimers, code);
   }
@@ -576,7 +582,25 @@ module.exports = function roomServer(g) {
     .replace('<script src="app.js"></script>', `<script src="app.js?v=${VERSION}"></script>`)
     .replace("<head>", `<head>\n<meta name="${g.metaName || g.id + "-version"}" content="${VERSION}">`);
 
+  // text goes out gzipped when the browser accepts it (the compressed copy is kept until the file changes)
+  const gzCache = new Map();
+  const COMPRESSIBLE = /^(text\/|application\/(json|manifest\+json)|image\/svg)/;
+  function reply(req, res, code, headers, data, key) {
+    const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (buf.length > 1024 && COMPRESSIBLE.test(headers["content-type"] || "") && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
+      let c = gzCache.get(key);
+      if (!c || !c.raw.equals(buf)) { c = { raw: buf, gz: zlib.gzipSync(buf, { level: 9 }) }; gzCache.set(key, c); }
+      res.writeHead(code, Object.assign({}, headers, { "content-encoding": "gzip", vary: "accept-encoding" }));
+      return res.end(c.gz);
+    }
+    res.writeHead(code, headers);
+    res.end(buf);
+  }
+
   const server = http.createServer((req, res) => {
+    res.setHeader("x-content-type-options", "nosniff");
+    res.setHeader("referrer-policy", "same-origin");
+    res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=()");
     const url = new URL(req.url, "http://x");
     if (url.pathname === "/info" || url.pathname === (g.legacyPath || `/${g.id}-server`)) {
       res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
@@ -597,18 +621,17 @@ module.exports = function roomServer(g) {
       });
       return;
     }
+    const p0 = url.pathname;
     if (url.pathname === "/vendor/qrcode.js") {
       return fs.readFile(QR_LIB, (e, data) => {
         if (e) { res.writeHead(404); return res.end(); }
-        res.writeHead(200, { "content-type": TYPES[".js"], "cache-control": "public, max-age=86400" });
-        res.end(data);
+        reply(req, res, 200, { "content-type": TYPES[".js"], "cache-control": "public, max-age=86400" }, data, p0);
       });
     }
     let p;
     try { p = decodeURIComponent(url.pathname); } catch (e) { res.writeHead(400); return res.end(); }
     if (p === "/" || p === "/index.html") {
-      res.writeHead(200, { "content-type": TYPES[".html"], "cache-control": "no-store" });
-      return res.end(INDEX);
+      return reply(req, res, 200, { "content-type": TYPES[".html"], "cache-control": "no-store" }, INDEX, "/");
     }
     const file = SHARED[p] || path.normalize(path.join(PUBLIC, p));
     if (!SHARED[p] && !file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
@@ -616,20 +639,29 @@ module.exports = function roomServer(g) {
       if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
       const ext = path.extname(file);
       const versioned = url.searchParams.get("v") === VERSION && SCRIPTS.includes(p);
-      res.writeHead(200, {
+      reply(req, res, 200, {
         "content-type": TYPES[ext] || "application/octet-stream",
         "cache-control": versioned ? "public, max-age=31536000, immutable"
           : ext === ".png" || ext === ".svg" ? "public, max-age=86400" : "no-store"
-      });
-      res.end(data);
+      }, data, file);
     });
   });
 
   const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 8192 });
+  // one connection may send a burst, then RATE_PER_S messages a second; more is dropped, a flood is cut off
+  const RATE_BURST = 40, RATE_PER_S = +process.env.RATE_PER_S || 15, FLOOD_CUT = 400;
   wss.on("connection", (ws) => {
-    ws.alive = true;
+    ws.alive = true; ws.tokens = RATE_BURST; ws.tokenAt = Date.now(); ws.dropped = 0; ws.warnAt = 0;
     ws.on("pong", () => { ws.alive = true; });
     ws.on("message", (raw) => {
+      const now = Date.now();
+      ws.tokens = Math.min(RATE_BURST, ws.tokens + ((now - ws.tokenAt) * RATE_PER_S) / 1000); ws.tokenAt = now;
+      if (ws.tokens < 1) {
+        if (++ws.dropped > FLOOD_CUT) return ws.terminate();
+        if (now - ws.warnAt > 2000) { ws.warnAt = now; send(ws, { t: "error", msg: "Zu viele Nachrichten, bitte etwas langsamer." }); }
+        return;
+      }
+      ws.tokens--; ws.dropped = 0;
       let msg;
       try { msg = JSON.parse(raw); } catch (e) { return; }
       if (msg && typeof msg.t === "string") {
@@ -653,10 +685,23 @@ module.exports = function roomServer(g) {
   }, 25000).unref();
 
   loadRooms();
+  // docker stop sends SIGTERM: write the rooms now (the save is debounced) and let the clients
+  // reconnect to the new container instead of waiting for the kill after ten seconds
+  let closing = false;
+  function shutdown(sig) {
+    if (closing) return;
+    closing = true;
+    console.log(`${sig}: speichere ${rooms.size} Räume und beende mich`);
+    saveNow();
+    for (const ws of wss.clients) ws.close(1001, "restart");
+    server.close();
+    setTimeout(() => process.exit(0), 300).unref();
+  }
+  if (!process.env.NO_SIGNAL_HANDLERS) for (const sig of ["SIGTERM", "SIGINT"]) process.once(sig, () => shutdown(sig));
   server.listen(PORT, HOST, () => {
     console.log(`${g.title} läuft auf Port ${PORT} (Version ${VERSION})`);
     for (const ip of lanIps()) console.log(`  im WLAN öffnen: http://${ip}:${PORT}`);
   });
 
-  return { server, wss, rooms };
+  return { server, wss, rooms, saveNow };
 };
