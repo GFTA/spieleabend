@@ -1,0 +1,19 @@
+services:
+  machikoro:
+    build:
+      context: ..
+      dockerfile: machikoro/Dockerfile
+      args:
+        GAME: machikoro
+    image: machikoro:latest
+    container_name: machikoro
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${MACHIKORO_PORT:-8091}:8080"
+    volumes:
+      - machikoro-data:/data
+
+volumes:
+  machikoro-data:

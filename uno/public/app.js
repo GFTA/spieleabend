@@ -955,6 +955,7 @@
     const id = pendingWild; pendingWild = null;
     if (id != null) doAct({ t: "play", id, color: b.dataset.color });
   });
+  $("#picker").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.closest("[data-color]")) { e.preventDefault(); e.target.closest("[data-color]").dispatchEvent(new MouseEvent("click", { bubbles: true })); } });
   $("#pickCancel").addEventListener("click", () => { $("#picker").hidden = true; pendingWild = null; });
 
   $("#reBtn").addEventListener("click", () => doAct({ t: "next" }));

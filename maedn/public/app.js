@@ -267,7 +267,7 @@
     geo.track.forEach((xy, i) => { h += field(xy, i % 10 === 0 ? `start c${i / 10}${used.has(i / 10) ? "" : " off"}` : ""); });
     if (o.extra) h += o.extra;
     if (o.dice != null && o.diceSeat != null) {
-      const d = `class="die${o.canRoll ? " go" : ""}" data-f="${o.dice}" style="${at(DICE_AT[o.diceSeat])}"`;
+      const d = `class="d6${o.canRoll ? " go" : ""}" data-f="${o.dice}" style="${at(DICE_AT[o.diceSeat])}"`;
       h += o.canRoll ? `<button type="button" ${d} data-roll aria-label="Würfeln">${DIE}</button>` : `<span ${d}>${DIE}</span>`;
     }
     const can = new Map((o.moves || []).map((m, i) => [m.k, i]));

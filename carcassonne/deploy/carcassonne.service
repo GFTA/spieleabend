@@ -10,7 +10,7 @@ Wants=network-online.target
 [Service]
 WorkingDirectory=/opt/carcassonne
 ExecStart=/usr/bin/node server.js
-Environment=PORT=8091
+Environment=PORT=8093
 Environment=DATA_DIR=/var/lib/carcassonne
 StateDirectory=carcassonne
 DynamicUser=yes
