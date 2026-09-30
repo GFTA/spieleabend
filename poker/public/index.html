@@ -29,26 +29,7 @@
 :root[data-table="blossom"]{--felt:#f5d5e2}
 /* the page itself never scrolls (iOS would slide it under its toolbar); inner areas do */
 /* ---------- shared controls ---------- */
-.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
-.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
-.btn.small{flex:none;padding:8px 11px;font-size:13px;border-radius:11px}
-@media (hover:hover){ .btn:not(:disabled):hover{filter:brightness(1.08)} }
-.row .btn{flex:1}
-.seg.four{grid-template-columns:repeat(4,1fr)}
-.toggle{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
-.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:2px 0 0;transition:background .2s;cursor:pointer}
-.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
-.toggle span{display:flex;flex-direction:column;font-weight:800}
-.toggle small{font-weight:400;color:var(--muted);font-size:13px}
-details.fold summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-details.fold summary::-webkit-details-marker{display:none}
-details.fold summary::after{content:"▾";color:var(--muted);transition:transform .2s}
-details.fold[open] summary::after{transform:rotate(180deg)}
-details.fold[open] summary{margin-bottom:8px}
-.fold-sum{flex:1;text-align:right;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.5)}
+
 /* ---------- cards and chips ---------- */
 .card{--cw:46px;position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;flex:none;width:var(--cw);aspect-ratio:5/7;border-radius:calc(var(--cw) * .14);
   background:var(--ivory);color:var(--pip);font-weight:800;line-height:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 3px 8px rgba(0,0,0,.4);transition:transform .2s}
@@ -73,15 +54,10 @@ details.fold[open] summary{margin-bottom:8px}
 /* ---------- start ---------- */
 .screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px;max-width:620px;width:100%;margin:0 auto}
 h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01em;margin:6px 0 0;line-height:1;text-align:center}
-.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
-.avrow{display:flex;gap:8px}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
-.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-.prow .botbtn{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:20px;filter:grayscale(1);opacity:.55}
-.prow .botbtn[aria-pressed="true"]{filter:none;opacity:1;box-shadow:inset 0 0 0 2px var(--accent)}
+
 /* ---------- lobby ---------- */
 /* ---------- table ---------- */
-.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+
 .roundinfo{flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .players{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 6px}
 .players::-webkit-scrollbar{display:none}
@@ -110,10 +86,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .board .card{--cw:calc(clamp(46px,14vw,80px) * var(--cs))}
 .streetline{font-size:13px;color:var(--muted);text-align:center;min-height:1.3em;font-weight:600}
 .dock{background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
-.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
-.turnbar{height:4px;margin:-6px 0 0;border-radius:2px;background:var(--line);overflow:hidden}
-.turnbar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:0 50%}
-.turnbar.low i{background:var(--red)}
+
 .mine{display:flex;align-items:center;gap:12px;min-height:64px;padding-left:4px}
 .hole{display:flex;gap:6px;flex:none}
 .hole .card{--cw:calc(50px * var(--cs))}
@@ -164,21 +137,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .card.hole-in{will-change:transform}
 @keyframes flash{50%{box-shadow:inset 0 0 0 2.5px var(--accent)}}
 /* ---------- overlays ---------- */
-.sheet{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
-.ranking{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.ranking li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--surface)}
-.ranking li.win{box-shadow:inset 0 0 0 2px var(--accent)}
-.ranking .av{font-size:22px;grid-row:span 2}
-.ranking .nm{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ranking .w{font-weight:800;font-variant-numeric:tabular-nums;grid-row:span 2}
-.ranking .res{font-size:12px;color:var(--muted)}
-.rules ul,.rules ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
-  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
-#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
-#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;flex-wrap:wrap;justify-content:center;max-width:300px;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
-#reactBar .phrase{width:auto;height:36px;padding:0 10px;font-size:13px;font-weight:800;border-radius:10px;background:var(--bg2)}
-.bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
+
 @media (min-width:900px) and (min-height:700px){
   .pcard{flex-basis:150px}
   .hole .card{--cw:60px}
@@ -202,7 +161,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .mine .txt b{font-size:22px}.mine .txt small{font-size:15px}.mine .txt .hand{font-size:16px}
   .acts .btn{padding:20px 12px;font-size:18px}
 }
-@media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
+
 /* back to the Spieleabend start page, and the game rules in the waiting room */
 /* waiting room: ready up, watch a running game, rematch status */
 /* waiting room actions in one row: main buttons, then small icon buttons */
