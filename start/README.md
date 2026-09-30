@@ -1,7 +1,7 @@
 # Spieleabend – Startseite
 
 Eine Übersichtsseite mit allen Spielen (`games.cool-kidz.net`). Pro Spiel gibt es einen
-Knopf zum Spielen, ein Feld für den Raum-Code (springt direkt in den Raum) und eine
+Knopf zum Spielen, Party-Code mit Teilen-Sheet (QR) und eine
 Live-Anzeige, ob der Spiel-Server läuft und wie viele Räume offen sind.
 
 **Party**: Einer erstellt eine Party (4-Buchstaben-Code oder Link), die anderen treten bei. Nur der
