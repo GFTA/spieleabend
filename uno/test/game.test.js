@@ -324,7 +324,7 @@ test("random games stay consistent", () => {
   for (let g = 0; g < 300; g++) {
     const pick = () => Math.random() < 0.5;
     const S = G.newGame(["a", "b", "c", "d"].slice(0, 2 + (g % 3)), 0,
-      { chaos: pick(), stack: pick(), skipAfterDraw: pick(), drawUntil: pick(), sevenZero: pick(), jumpIn: pick() });
+      { chaos: pick(), stack: pick(), skipAfterDraw: pick(), drawUntil: pick(), sevenZero: pick(), jumpIn: pick(), challenge: pick() });
     for (let step = 0; step < 2000 && S.phase !== "roundEnd"; step++) {
       const p = S.players[S.cur];
       for (const w of S.unoWaits) if (g % 3) G.act(S, w.pi, { t: "uno" });
@@ -344,4 +344,86 @@ test("random games stay consistent", () => {
       assert.strictEqual(total(S), size(S));
     }
   }
+});
+
+// a game where player 0 is about to play a +4 on player 1
+function d4Table(hadColor) {
+  const S = G.newGame(["a", "b", "c"], 0, { challenge: true });
+  S.cur = 0; S.dir = 1; S.phase = "play"; S.pending = 0; S.unoWaits = [];
+  S.color = "r";
+  S.discard = [card("r", "5", 900)];
+  S.players[0].hand = [card("w", "d4", 901), card("g", "1", 902), ...(hadColor ? [card("r", "9", 903)] : [])];
+  S.players[1].hand = [card("g", "2", 904), card("b", "3", 905)];
+  S.players[2].hand = [card("y", "4", 906)];
+  return S;
+}
+
+test("challenge: a +4 bluff is caught, the bluffer draws 4 and the doubter plays on", () => {
+  const S = d4Table(true);
+  assert.ok(G.act(S, 0, { t: "play", id: 901, color: "b" }).ok);
+  assert.strictEqual(S.pending, 4);
+  assert.strictEqual(G.view(S, 1).canChallenge, true);
+  assert.strictEqual(G.view(S, 2).canChallenge, false);
+  const r = G.act(S, 1, { t: "challenge" });
+  assert.ok(r.ok);
+  assert.strictEqual(S.players[0].hand.length, 2 + 4);
+  assert.strictEqual(S.players[1].hand.length, 2);
+  assert.strictEqual(S.pending, 0);
+  assert.strictEqual(S.cur, 1);
+  assert.strictEqual(S.color, "b");
+  assert.ok(r.events.some((e) => e.t === "challenge" && e.won));
+});
+
+test("challenge: a fair +4 costs the doubter 6 cards and the turn", () => {
+  const S = d4Table(false);
+  assert.ok(G.act(S, 0, { t: "play", id: 901, color: "b" }).ok);
+  const r = G.act(S, 1, { t: "challenge" });
+  assert.ok(r.ok);
+  assert.strictEqual(S.players[1].hand.length, 2 + 6);
+  assert.strictEqual(S.players[0].hand.length, 1);
+  assert.strictEqual(S.pending, 0);
+  assert.strictEqual(S.cur, 2);
+  assert.ok(r.events.some((e) => e.t === "challenge" && !e.won));
+});
+
+test("challenge: not without the rule, not when stacked, not after a move", () => {
+  const off = d4Table(true); off.rules.challenge = false;
+  G.act(off, 0, { t: "play", id: 901, color: "b" });
+  assert.strictEqual(G.act(off, 1, { t: "challenge" }).ok, false);
+
+  const S = d4Table(true);
+  G.act(S, 0, { t: "play", id: 901, color: "b" });
+  assert.strictEqual(G.act(S, 0, { t: "challenge" }).ok, false, "only the one facing the +4");
+  G.act(S, 1, { t: "draw" }); // takes the 4 instead
+  assert.strictEqual(G.act(S, 2, { t: "challenge" }).ok, false);
+
+  const T = d4Table(true); T.rules.stack = true;
+  T.discard = [card("r", "5", 900), card("b", "d2", 910)]; T.pending = 2; T.color = "b";
+  G.act(T, 0, { t: "play", id: 901, color: "g" });
+  assert.strictEqual(T.pending, 6);
+  assert.strictEqual(G.view(T, 1).canChallenge, false, "a stacked +4 cannot be doubted");
+});
+
+test("round end awards: the clean winner and the card collector", () => {
+  const S = G.newGame(["a", "b", "c"], 0, {});
+  S.players[1].st = { drew: 7, acts: 0, played: 1 };
+  S.players[2].st = { drew: 1, acts: 0, played: 2 };
+  S.players[0].st = { drew: 0, acts: 0, played: 7 };
+  S.players[0].hand = [card("r", "1", 1)];
+  S.cur = 0; S.color = "r"; S.discard = [card("r", "5", 900)]; S.unoWaits = [];
+  S.players[1].hand = [card("g", "2", 2)]; S.players[2].hand = [card("g", "3", 3)];
+  S.players[0].hand = [card("r", "1", 1)];
+  assert.ok(G.act(S, 0, { t: "play", id: 1 }).ok);
+  const titles = S.last.awards.map((w) => w.title);
+  assert.ok(titles.includes("Kartensammler"));
+  assert.ok(titles.includes("Glatter Sieg"));
+  assert.strictEqual(S.last.awards.find((w) => w.title === "Kartensammler").pi, 1);
+});
+
+test("view lists the last played cards, newest first", () => {
+  const S = G.newGame(["a", "b"], 0, {});
+  S.discard = [card("r", "1", 1), card("r", "2", 2), card("r", "3", 3), card("r", "4", 4)];
+  const v = G.view(S, 0);
+  assert.deepStrictEqual(v.recent.map((c) => c.id), [3, 2, 1]);
+  assert.strictEqual(v.top.id, 4);
 });

@@ -107,6 +107,10 @@
     const who = (i) => (i === me ? "Du" : players[i].name);
     if (ev.t === "took") toast(ev.pi === me ? `+${ev.n} Karten für dich.` : `${who(ev.pi)} zieht ${ev.n} Karten.`);
     if (ev.t === "swap") toast(`${who(ev.pi)} tauscht die Hand mit ${ev.with === me ? "dir" : players[ev.with].name}!`);
+    if (ev.t === "challenge") {
+      toast(ev.won ? `${who(ev.pi)} zweifelt an und hat recht! ${who(ev.target)} zieht 4.` : `${who(ev.pi)} zweifelt an, aber die +4 war echt: +6 und aussetzen.`);
+      sfx(ev.won ? "uno" : "bad");
+    }
     if (ev.t === "rotate") toast("Alle Hände wandern eins weiter!");
     if (ev.t === "jump") { toast(`${who(ev.pi)} wirft rein!`); sfx("uno"); }
     if (ev.t === "timeout") toast(ev.pi === me ? "Zeit abgelaufen: du hast eine Karte gezogen." : `${players[ev.pi].name}: Zeit abgelaufen.`);
@@ -415,6 +419,16 @@
     for (const sl of Object.keys(html)) { const el = tbl.querySelector(".s-" + sl); if (el.innerHTML !== html[sl]) el.innerHTML = html[sl]; }
   }
 
+  // the cards played before the top card, newest first
+  function renderRecent() {
+    const box = $("#recent"), list = V.recent || [];
+    box.hidden = !list.length;
+    const k = list.map((c) => c.id).join();
+    if (box.dataset.k === k) return;
+    box.dataset.k = k;
+    box.innerHTML = list.map((c) => `<i class="${c.c === "y" ? "cy" : ""}" style="background:${c.c === "w" ? "#2b2b36" : CVAR[c.c]}" title="${esc(G.cardName(c))}">${G.isNum(c) ? c.v : c.v === "skip" ? "⊘" : c.v === "rev" ? "⇄" : c.v === "d2" ? "+2" : c.v === "d4" ? "+4" : "★"}</i>`).join("");
+  }
+
   function renderGame() {
     renderSeats();
     const meP = V.players[V.me];
@@ -433,6 +447,7 @@
     $("#deckCount").textContent = `${V.deckCount} Karten`;
     $("#dir").classList.toggle("ccw", V.dir < 0);
     $("#dirText").textContent = `Danach: ${pname(V.next)}`;
+    renderRecent();
     $("#drawPile").classList.toggle("can", myTurn() && V.phase === "play");
 
     // dock
@@ -457,6 +472,7 @@
     $("#whoName").textContent = who;
     $("#whoHint").textContent = hint;
     $("#keepBtn").hidden = !(mine && V.phase === "drawn");
+    $("#challengeBtn").hidden = !(mine && V.canChallenge);
     $("#hintBtn").hidden = !mine;
     $("#sortBtn").hidden = mode === "online" && V.me < 0;
     $("#sortBtn").textContent = sortMode === "value" ? "⇅ Zahl" : "⇅ Farbe";
@@ -772,6 +788,7 @@
     $("#reTitle").textContent = `${winnerName} ${last.over ? "das Spiel" : "die Runde"}!`;
     $("#reText").textContent = `${last.pts} Punkte aus den Karten der anderen.` + (V.goal > 0 && !last.over ? ` Gespielt wird bis ${V.goal}.` : "");
     scoreList($("#reScores"), last.winner);
+    $("#reAwards").innerHTML = (last.awards || []).map((w) => `<li><span class="ic">${w.icon}</span><span><b>${w.title}: ${esc(V.players[w.pi].name)}${w.pi === V.me && mode === "online" ? " (du)" : ""}</b><small>${w.text}</small></span></li>`).join("");
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
   }
 
@@ -916,10 +933,11 @@
   // host closes the room for everyone; tap twice, like the menu actions
 
   $("#keepBtn").addEventListener("click", () => doAct({ t: "keep" }));
+  $("#challengeBtn").addEventListener("click", () => doAct({ t: "challenge" }));
   function showHint() {
     if (!myTurn()) return;
     const a = G.suggest(V);
-    if (!a || a.t === "uno") return;
+    if (!a || a.t === "uno" || a.t === "challenge") return;
     if (a.t === "draw") { toast(V.pending ? `Tipp: zieh die ${V.pending} Karten.` : "Tipp: Nichts passt, zieh eine Karte vom Stapel."); return; }
     if (a.t === "keep") { toast("Tipp: Behalte die Karte."); return; }
     const c = V.hand.find((x) => x.id === a.id);

@@ -22,7 +22,7 @@ Online gibt es **Emoji-Reaktionen**, dazu Töne, Vibration und Konfetti für den
 
 **Hausregeln** (Host im Warteraum, bzw. beim Spiel mit einem Handy aufklappbar):
 +2 und +4 stapeln · Nach +2/+4 aussetzen · Ziehen, bis es passt · 7 tauscht, 0 dreht ·
-Reinwerfen (nur online) · Chaos-Modus · Zugzeit 30 Sekunden (nur online).
+Reinwerfen (nur online) · +4 anzweifeln · Chaos-Modus · Zugzeit 30 Sekunden (nur online).
 
 **Computer-Gegner**: online fügt der Host sie im Warteraum hinzu, beim Spiel mit einem
 Handy wird jeder Platz per 🤖 zum Computer (auch allein gegen den Computer spielbar).
@@ -34,7 +34,11 @@ S sortieren, Esc schließen).
 **Anpassen**: Avatar für jeden Spieler, vier Tisch-Designs (Nacht, Filz, Ozean, Hell) und
 drei Kartengrößen, Stärke der Computer-Gegner (Einfach vergisst auch mal UNO). Gegner-Karten
 fliegen sichtbar vom Platz auf den Stapel, die Punkte jeder Runde stehen im Spielverlauf,
-und online gibt es neben Emojis auch kurze Sprüche.
+und online gibt es neben Emojis auch kurze Sprüche. Ein kleiner Streifen unter dem
+Ablagestapel zeigt die zuletzt gelegten Karten, am Rundenende gibt es Auszeichnungen
+(Kartensammler, Sonderkarten-Fan, Glatter Sieg). Bei „+4 anzweifeln“ entscheidet der
+Nachbar, ob er der +4 glaubt: hatte der Spieler die Farbe noch, zieht er selbst 4,
+sonst zieht der Zweifler 6.
 
 ## Auf dem Server installieren
 

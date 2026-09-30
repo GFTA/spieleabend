@@ -47,6 +47,7 @@
     { k: "drawUntil", name: "Ziehen, bis es passt", desc: "Wer vom Stapel zieht, zieht so lange, bis eine passende Karte kommt." },
     { k: "sevenZero", name: "7 tauscht, 0 dreht", desc: "Mit einer 7 tauschst du deine Hand mit jemandem. Bei einer 0 geben alle ihre Hand in Spielrichtung weiter." },
     { k: "jumpIn", name: "Reinwerfen", desc: "Wer genau dieselbe Karte hat (Farbe und Wert), darf sie sofort legen, auch wenn er nicht dran ist.", onlineOnly: true },
+    { k: "challenge", name: "+4 anzweifeln", desc: "Wer eine +4 bekommt, darf sie anzweifeln. Hatte der Spieler noch die alte Farbe auf der Hand, zieht er selbst 4 Karten. Sonst zieht der Zweifler 6 und setzt aus." },
     { k: "chaos", name: "Chaos-Modus", desc: "Alle Sonderkarten doppelt im Stapel (140 statt 108 Karten)." },
     { k: "turnTimer", name: "Zugzeit 30 Sekunden", desc: "Wer zu lange überlegt, zieht automatisch eine Karte und ist fertig.", onlineOnly: true }
   ];
@@ -93,6 +94,12 @@
     return rulesOf(S).jumpIn && !S.pending && c.c !== "w" && c.c === t.c && c.v === t.v;
   }
 
+  // the +4 on top is a single one (not stacked), was played on `pi`, and there was no move since
+  function canChallenge(S, pi) {
+    const d = S.d4;
+    return !!(d && rulesOf(S).challenge && S.phase === "play" && S.cur === pi && S.pending === 4 && top(S).v === "d4" && d.turn === S.turn);
+  }
+
   // next seat in play direction, skipping players who gave up this round
   function nextIdx(S, from, steps = 1) {
     const n = S.players.length;
@@ -107,6 +114,8 @@
   }
   const activeCount = (S) => S.players.filter((p) => !p.out).length;
 
+  const stat = (p) => p.st || (p.st = { drew: 0, acts: 0, played: 0 });
+
   function draw(S, pi, n) {
     const got = [];
     for (let i = 0; i < n; i++) {
@@ -120,6 +129,7 @@
       S.players[pi].hand.push(c);
       got.push(c);
     }
+    stat(S.players[pi]).drew += got.length;
     return got;
   }
 
@@ -152,6 +162,7 @@
     S.last = null;
     S.players.forEach((p) => { p.hand = []; p.out = false; });
     for (let k = 0; k < 7; k++) S.players.forEach((_, i) => draw(S, i, 1));
+    S.players.forEach((p) => { p.st = { drew: 0, acts: 0, played: 0 }; });
     let c = S.deck.pop();
     while (!isNum(c)) {
       S.deck.splice(Math.floor(Math.random() * S.deck.length), 0, c);
@@ -192,6 +203,25 @@
     }
   }
 
+  // small prizes for the round end: who drew the most, who played the most action cards, a clean win
+  function awardsOf(S, wi) {
+    const out = [];
+    const best = (key, min) => {
+      let bi = -1, bv = min - 1, tie = false;
+      S.players.forEach((p, i) => {
+        const v = stat(p)[key];
+        if (v > bv) { bv = v; bi = i; tie = false; } else if (v === bv) tie = true;
+      });
+      return bi >= 0 && !tie ? { pi: bi, n: bv } : null;
+    };
+    const d = best("drew", 4), a = best("acts", 3);
+    if (d) out.push({ pi: d.pi, icon: "🧲", title: "Kartensammler", text: `${d.n} Karten gezogen` });
+    if (a) out.push({ pi: a.pi, icon: "⚡", title: "Sonderkarten-Fan", text: `${a.n} Sonderkarten gelegt` });
+    const w = stat(S.players[wi]);
+    if (w.played && w.drew <= 2) out.push({ pi: wi, icon: "🏎️", title: "Glatter Sieg", text: w.drew === 0 ? "kein einziges Mal gezogen" : `nur ${w.drew} Karte${w.drew === 1 ? "" : "n"} gezogen` });
+    return out;
+  }
+
   function endRound(S, wi, events) {
     if (S.pending) { // a +2/+4 as the last card still has to be drawn
       const v = nextIdx(S, wi);
@@ -204,7 +234,7 @@
     S.players.forEach((p, i) => { if (i !== wi) p.hand.forEach((c) => { pts += points(c); }); });
     S.players[wi].score += pts;
     const over = S.goal > 0 ? S.players[wi].score >= S.goal : true;
-    S.last = { winner: wi, pts, over };
+    S.last = { winner: wi, pts, over, awards: awardsOf(S, wi) };
     (S.history = S.history || []).push({ round: S.round, winner: wi, pts });
     S.phase = "roundEnd";
     S.unoWaits = [];
@@ -306,6 +336,25 @@
       S.cur = pi; S.phase = "play"; S.drawnId = null; S.turn++;
     }
 
+    if (a.t === "challenge") { // doubt the +4 that was just played on you
+      if (!canChallenge(S, pi)) return fail("Hier gibt es nichts anzuzweifeln.");
+      const d = S.d4, liar = S.players[d.pi];
+      S.pending = 0; S.d4 = null;
+      if (d.had) {
+        draw(S, d.pi, 4);
+        log(S, `${p.name} zweifelt an, und ${liar.name} hatte ${CNAME[d.color]}! ${liar.name} zieht 4 Karten, ${p.name} spielt normal weiter.`);
+        events.push({ t: "challenge", pi, target: d.pi, won: true });
+        events.push({ t: "took", pi: d.pi, n: 4 });
+      } else {
+        draw(S, pi, 6);
+        log(S, `${p.name} zweifelt an, aber ${liar.name} hatte kein ${CNAME[d.color]}. ${p.name} zieht 6 Karten und setzt aus.`);
+        events.push({ t: "challenge", pi, target: d.pi, won: false });
+        events.push({ t: "took", pi, n: 6 });
+        beginTurn(S, nextIdx(S, pi), events);
+      }
+      return { ok: true, events };
+    }
+
     if (a.t === "draw") {
       if (S.phase !== "play") return fail("Du hast schon gezogen.");
       if (S.pending) { takePending(S, pi, events); return { ok: true, events }; }
@@ -361,9 +410,12 @@
         unoPenalty(S, pi, events);
       }
 
+      const colorBefore = S.color, hadColor = p.hand.some((x) => x.c === colorBefore);
       p.hand.splice(i, 1);
       S.discard.push(c);
       S.color = c.c === "w" ? a.color : c.c;
+      const st = stat(p); st.played++;
+      if ((c.c !== "w" && !isNum(c)) || c.v === "d4") st.acts++;
       log(S, `${p.name} legt ${cardName(c)}${c.c === "w" ? ` und wünscht sich ${CNAME[a.color]}` : ""}.`);
       events.push({ t: "played", pi, id: c.id });
 
@@ -397,6 +449,7 @@
 
       if (p.hand.length === 0) { endRound(S, pi, events); return { ok: true, events }; }
       beginTurn(S, nextIdx(S, pi, steps), events);
+      S.d4 = c.v === "d4" && R.challenge && S.pending === 4 ? { pi, color: colorBefore, had: hadColor, turn: S.turn } : null;
       return { ok: true, events };
     }
 
@@ -411,6 +464,7 @@
     if (!v || !v.hand) return null;
     if ((v.unoWaits || []).some((w) => w.pi === v.me)) return { t: "uno" };
     if ((v.phase !== "play" && v.phase !== "drawn") || v.cur !== v.me) return null;
+    if (level && v.canChallenge && Math.random() < (level === "hard" ? 0.35 : level === "normal" ? 0.2 : 0)) return { t: "challenge" };
     const stackOk = (c) => !v.pending || (v.top.v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4");
     const fits = (c) => stackOk(c) && (c.c === "w" || c.c === v.color || c.v === v.top.v);
     let options = v.hand.filter(fits);
@@ -468,6 +522,8 @@
       unoWaits: (S.unoWaits || []).map((w) => ({ pi: w.pi, id: w.id, ms: Math.max(0, w.until - Date.now()) })),
       rules: rulesOf(S), chaos: rulesOf(S).chaos, pending: S.pending || 0,
       deckCount: S.deck.length,
+      recent: S.discard.slice(-6, -1).reverse(),
+      canChallenge: pi >= 0 && canChallenge(S, pi),
       round: S.round, goal: S.goal, turn: S.turn,
       log: S.log.slice(-40), last: S.last, history: S.history || []
     };

@@ -84,7 +84,7 @@ test("create, join, start and play over WebSockets", async () => {
   b.send({ t: "rules", rules: { stack: true } }); // not the host: ignored
   a.send({ t: "rules", rules: { chaos: true, stack: true } });
   const ruled = await b.next((m) => m.t === "room" && m.rules.stack);
-  assert.deepStrictEqual(ruled.rules, { stack: true, skipAfterDraw: false, drawUntil: false, sevenZero: false, jumpIn: false, chaos: true, turnTimer: false });
+  assert.deepStrictEqual(ruled.rules, { stack: true, skipAfterDraw: false, drawUntil: false, sevenZero: false, jumpIn: false, challenge: false, chaos: true, turnTimer: false });
 
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
