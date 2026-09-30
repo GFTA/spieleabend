@@ -7,10 +7,8 @@ const vm = require("vm");
 
 const pub = path.join(__dirname, "..", "public"), shared = path.join(__dirname, "..", "..", "shared");
 
-test("the start page's copies of avatars.js and profile.js match shared/", () => {
-  for (const f of ["avatars.js", "profile.js"]) {
-    assert.strictEqual(fs.readFileSync(path.join(pub, f), "utf8"), fs.readFileSync(path.join(shared, f), "utf8"), `${f}: cp shared/${f} start/public/`);
-  }
+test("avatars.js and profile.js have one source: shared/, not a copy in public/", () => {
+  for (const f of ["avatars.js", "profile.js"]) assert.ok(!fs.existsSync(path.join(pub, f)), `start/public/${f} must not exist; the server serves shared/${f}`);
 });
 
 // profile.js in a fake browser: cookie jar + localStorage

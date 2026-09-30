@@ -4,6 +4,9 @@ Eine Übersichtsseite mit allen Spielen (`games.cool-kidz.net`). Pro Spiel gibt 
 Knopf zum Spielen, Party-Code mit Teilen-Sheet (QR) und eine
 Live-Anzeige, ob der Spiel-Server läuft und wie viele Räume offen sind.
 
+Das Image baut aus dem Repo-Root (wie die Spiele): `avatars.js` und `profile.js` kommen aus `../shared`
+und werden von der Startseite direkt von dort ausgeliefert, es gibt keine Kopie in `public/`.
+
 **Party**: Einer erstellt eine Party (4-Buchstaben-Code oder Link), die anderen treten bei. Nur der
 Host wählt das Spiel, dann landen alle automatisch im selben Raum (Name und Avatar wandern mit).
 Hat die Party mehr Leute als das Spiel Plätze, spielen der Host und alle mit „Bereit“, die anderen
@@ -20,7 +23,7 @@ braucht es `up -d --build`).
 
 ## Starten
 
-Auf dem Server, im selben Docker-Netzwerk wie `cloudflared`, `pass-uno`, `schiffe`, `viergewinnt`, `wuerfelpoker` und `maedn`:
+Auf dem Server, im selben Docker-Netzwerk wie `cloudflared` und die Spiele (`pass-uno`, `schiffe`, `viergewinnt`, `wuerfelpoker`, `maedn`, `hangman`, `phase10`, `kniffel`, `poker`):
 
 ```sh
 cd spieleabend/start

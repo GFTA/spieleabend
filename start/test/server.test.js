@@ -36,6 +36,12 @@ test("lists games and reports which servers are up", async () => {
   assert.strictEqual(page.headers.get("cache-control"), "no-store");
   assert.strictEqual((await fetch(base + "/../server.js")).status, 404);
 
+  for (const f of ["avatars.js", "profile.js"]) {
+    const r = await fetch(base + "/" + f);
+    assert.strictEqual(r.status, 200, f);
+    assert.strictEqual(await r.text(), fs.readFileSync(path.join(__dirname, "..", "..", "shared", f), "utf8"), `${f} comes from shared/`);
+  }
+
   // link previews (Discord): plain link and party link
   const plain = await (await fetch(base + "/", { headers: { "x-forwarded-host": "games.example", "x-forwarded-proto": "https" } })).text();
   assert.match(plain, /property="og:title" content="Spieleabend"/);

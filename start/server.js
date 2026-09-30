@@ -13,6 +13,9 @@ const PORT = process.env.PORT ? +process.env.PORT : 8080;
 const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC = path.join(__dirname, "public");
 const GAMES_FILE = process.env.GAMES_FILE || path.join(__dirname, "games.json");
+// avatars.js and profile.js live only in ../shared (in the image: /app/shared); the page loads them from here
+const SHARED_FILES = new Set(["/avatars.js", "/profile.js"]);
+const SHARED = [process.env.SHARED_DIR, path.join(__dirname, "shared"), path.join(__dirname, "..", "shared")].filter(Boolean).find((d) => fs.existsSync(path.join(d, "avatars.js")));
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -103,8 +106,9 @@ const server = http.createServer(async (req, res) => {
   let p;
   try { p = decodeURIComponent(url.pathname); } catch (e) { res.writeHead(400); return res.end(); }
   if (p === "/") p = "/index.html";
-  const file = path.normalize(path.join(PUBLIC, p));
-  if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
+  const shared = SHARED_FILES.has(p) && SHARED;
+  const file = shared ? path.join(SHARED, p) : path.normalize(path.join(PUBLIC, p));
+  if (!shared && !file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (e, body) => {
     if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
     const ext = path.extname(file);

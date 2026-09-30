@@ -1,6 +1,8 @@
 services:
   spiele-start:
-    build: .
+    build:
+      context: ..
+      dockerfile: start/Dockerfile
     image: spiele-start:latest
     container_name: spiele-start
     restart: unless-stopped
@@ -12,3 +14,4 @@ services:
     volumes:
       - ./games.json:/app/games.json:ro
       - ./public:/app/public:ro
+      - ../shared:/app/shared:ro
