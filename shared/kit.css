@@ -201,3 +201,53 @@ h1{font-family:var(--display);font-weight:400;font-size:var(--h1,38px);letter-sp
 
 /* full-height scrolling screens (home, lobby): one centred column */
 .screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px;max-width:620px;width:100%;margin:0 auto}
+
+/* ---- shared: pip die (.d6) and turn dock (.tdock) ----
+   .d6: data-f 0 = not rolled ("?"), 1..6 = pips. button.d6 is tappable, .go pulses, .roll tumbles. Nine <b> children.
+   .tdock (next to .dock): phones = sheet on the bottom edge, desktop = bar across the bottom like Uno.
+   Markup: .who (.wav, div > b + small, then the die/.dice) · optional .pick · .acts · .keys. Games only add game-specific overrides. */
+.d6{--ds:56px;position:relative;flex:none;width:var(--ds);height:var(--ds);border:0;padding:calc(var(--ds) * .14);border-radius:calc(var(--ds) * .22);background:#fffdf7;color:#1b1325;
+  box-shadow:inset 0 calc(var(--ds) * -.07) 0 rgba(0,0,0,.14),0 calc(var(--ds) * .06) calc(var(--ds) * .14) rgba(0,0,0,.35);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr)}
+.d6 b{width:72%;height:72%;margin:auto;border-radius:50%;background:currentColor;visibility:hidden}
+.d6[data-f="1"] b:nth-child(5),
+.d6[data-f="2"] b:nth-child(1),.d6[data-f="2"] b:nth-child(9),
+.d6[data-f="3"] b:nth-child(1),.d6[data-f="3"] b:nth-child(5),.d6[data-f="3"] b:nth-child(9),
+.d6[data-f="4"] b:is(:nth-child(1),:nth-child(3),:nth-child(7),:nth-child(9)),
+.d6[data-f="5"] b:is(:nth-child(1),:nth-child(3),:nth-child(5),:nth-child(7),:nth-child(9)),
+.d6[data-f="6"] b:is(:nth-child(1),:nth-child(3),:nth-child(4),:nth-child(6),:nth-child(7),:nth-child(9)){visibility:visible}
+.d6[data-f="6"]{color:var(--red)}
+.d6[data-f="0"]{opacity:.55}
+.d6[data-f="0"]::after{content:"?";position:absolute;inset:0;display:grid;place-items:center;font:400 calc(var(--ds) * .5)/1 var(--display);color:#1b1325}
+button.d6.go[data-f="0"]{opacity:1}
+.d6.roll{animation:tumble .5s cubic-bezier(.3,.7,.4,1)}
+@keyframes tumble{0%{transform:rotate(-200deg) scale(.6)}60%{transform:rotate(20deg) scale(1.1)}100%{transform:none}}
+button.d6{cursor:pointer}
+button.d6.go{box-shadow:inset 0 calc(var(--ds) * -.07) 0 rgba(0,0,0,.14),0 0 0 3px var(--accent),0 0 22px rgba(242,194,48,.55);animation:nudge 1.4s ease-in-out infinite}
+@keyframes nudge{0%,70%,100%{transform:none}80%{transform:rotate(-10deg)}90%{transform:rotate(8deg)}}
+button.d6:disabled{cursor:default}
+.tdock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.tdock .who{display:flex;align-items:center;gap:10px}
+.tdock .who > div:not(.dice){flex:1;min-width:0}
+.tdock .wav{font-size:30px;line-height:1;flex:none}
+.tdock .who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.tdock .who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
+.tdock .dice{display:flex;gap:8px;flex:none}
+.tdock .d6{--ds:64px}
+.tdock .d6:disabled{opacity:.6}
+.tdock .d6:disabled[data-f="0"]{opacity:.35}
+.tdock .acts{display:flex;flex-wrap:wrap;gap:8px}
+.tdock .acts[hidden]{display:none}
+.tdock .acts .btn{flex:1;min-width:110px;padding:12px 12px;font-size:15px}
+@media (min-width:900px) and (min-height:700px){
+  #game:has(.tdock){padding-bottom:0}
+  .tdock{width:100%;max-width:1120px;align-self:center;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 28px;padding:14px 32px calc(16px + env(safe-area-inset-bottom,0px))}
+  .tdock .who{flex:1 1 300px;min-width:0;gap:14px}
+  .tdock .wav{font-size:38px}
+  .tdock .who b{font-size:20px}
+  .tdock .who small{font-size:14px}
+  .tdock .d6{--ds:84px}
+  .tdock .acts{flex:0 1 auto;flex-wrap:nowrap}
+  .tdock .acts .btn{flex:none;padding:13px 20px;font-size:16px}
+  .tdock .clock,.tdock .tries{flex:1 0 100%}
+  .tdock .keys{display:block;flex:1 0 100%;text-align:center}
+}
