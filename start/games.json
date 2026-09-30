@@ -98,5 +98,15 @@
     "url": "https://sudoku.cool-kidz.net/",
     "max": 8,
     "status": "http://sudoku:8080/info"
+  },
+  {
+    "id": "carcassonne",
+    "name": "Carcassonne",
+    "title": "Carcassonne",
+    "desc": "Landschaft legen, Gefolgsleute setzen, Punkte sammeln",
+    "players": "2–5 Spieler + Zuschauer",
+    "url": "https://carcassonne.cool-kidz.net/",
+    "max": 5,
+    "status": "http://carcassonne:8080/info"
   }
 ]
