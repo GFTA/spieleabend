@@ -210,7 +210,7 @@
     const rolled = V.dice.length > 0;
     const n = rolled ? V.dice.length : (canPlay() && station && wantDice === 2 ? 2 : 1);
     if (host.children.length !== n) {
-      host.innerHTML = Array.from({ length: n }, () => '<button class="die" type="button" data-f="0"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></button>').join("");
+      host.innerHTML = Array.from({ length: n }, () => '<button class="d6" type="button" data-f="0"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></button>').join("");
     }
     const can = canPlay() && (V.step === "roll" || V.step === "reroll");
     [...host.children].forEach((d, i) => {
