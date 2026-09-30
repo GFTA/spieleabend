@@ -48,7 +48,8 @@
 .lobby-actions .iconact svg{width:22px;height:22px}
 @media (max-width:360px){.lobby-actions{gap:6px}.lobby-actions > .btn{padding:13px 8px;font-size:14px}.lobby-actions > .btn.iconact{width:44px}.lobby-actions .cnt{display:none}}
 @media (min-width:900px) and (min-height:700px){
-  #lobby{padding-inline:24px}
+  #lobby{padding-inline:24px;max-width:none}
+  #lobby .col + .col{padding-top:34px}
   #lobby .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
   .lobby-actions{margin-inline:-24px;padding-inline:24px}
 }
