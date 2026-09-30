@@ -112,3 +112,18 @@ test("the engine is fast: 200 new games and bot-only rounds take well under a se
   }
   assert.ok(Date.now() - t0 < 1500, `took ${Date.now() - t0} ms`);
 });
+
+// Every message from a browser reaches Game.act unchecked: nothing hostile may change the state or throw.
+// Table lookups by a client value need hasOwnProperty, else "constructor" / "__proto__" slip through.
+test("hostile messages are rejected and leave the state untouched", () => {
+  const S = two();
+  const hostile = [null, undefined, 5, "roll", [], {}, { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" },
+    { t: "roll", id: "constructor" }, { t: "hold", target: "__proto__", n: NaN }, { t: "roll", i: -1, dice: Infinity }];
+  for (let pi = -1; pi <= 2; pi++) for (const a of hostile) {
+    const before = JSON.stringify(S);
+    let res;
+    assert.doesNotThrow(() => { res = Game.act(S, pi, a); });
+    if (!res.ok) assert.strictEqual(JSON.stringify(S), before, "a rejected action must not change the state: " + JSON.stringify(a));
+    Object.assign(S, JSON.parse(before)); // keep one fixed start state even if a harmless action was accepted
+  }
+});
