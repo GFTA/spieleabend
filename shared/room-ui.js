@@ -35,11 +35,10 @@
   lobby.innerHTML = `
     <div class="panel nowplaying" id="nowPlaying" hidden></div>
     <div class="cols"><div class="col">
-    <div class="panel">
-      <div class="label" style="text-align:center">Raum-Code</div>
-      <div class="roomcode" id="roomCode"></div>
+    <div class="panel invite">
+      <div class="label invite-lab">Raum-Code</div><div class="roomcode" id="roomCode"></div>
       <div class="qr" id="qr" hidden></div>
-      <p class="hint" style="text-align:center" id="joinHint"></p>
+      <p class="hint" id="joinHint"></p>
       <div class="link"><code id="joinUrl"></code><button class="btn" id="copyBtn" type="button">Kopieren</button><button class="btn" id="shareBtn" type="button" hidden>Teilen</button></div>
     </div>
     <div class="panel">
@@ -337,8 +336,8 @@
       $("#joinUrl").textContent = url;
       if (qrFor !== url) { qrFor = url; drawQr(url); }
       const lan = /^http:\/\/(\d+\.){3}\d+[:/]/.test(url);
-      $("#joinHint").textContent = "Die anderen scannen den QR-Code oder öffnen den Link und geben den Code ein." +
-        (app.watchers ? " Ist der Raum voll, schauen weitere Leute zu." : "") + (lan ? " Alle müssen im selben WLAN sein." : "");
+      $("#joinHint").textContent = "Scannt den QR-Code oder öffnet den Link." +
+        (app.watchers ? " Wer nicht mehr reinpasst, schaut zu." : "") + (lan ? " Alle müssen im selben WLAN sein." : "");
       const host = r.you === r.host;
       $("#closeLobby").hidden = !host;
       $("#partyLobby").hidden = !r.party; if (r.party) $("#partyLobby").href = partyHref();
