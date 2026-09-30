@@ -222,3 +222,45 @@ test("potOdds: share of the final pot needed to break even", () => {
   assert.strictEqual(G.potOdds(50, 150), 0.25);
   assert.strictEqual(G.potOdds(100, 100), 0.5);
 });
+
+function fakePreView(holeTxt, { call, pot, cbet, bb, chips, raises }) {
+  const hole = C(holeTxt);
+  const me = { name: "me", bot: true, chips: chips || 1000, bet: (cbet || 0) - (call || 0), folded: false, out: false, allin: false };
+  const villain = { name: "v", bot: false, chips: 1000, bet: cbet || 0, folded: false, out: false, allin: false };
+  return {
+    phase: "play", cur: 0, me: 0, street: "pre", hole, board: [],
+    pot: pot || 100, cbet: cbet || 20, raises: raises || 1, blinds: { sb: (bb || 20) / 2, bb: bb || 20 },
+    players: [me, villain],
+    opts: {
+      call: call || 0, canCheck: !call, canRaise: true,
+      minTo: (cbet || 20) + (bb || 20), maxTo: me.chips + me.bet
+    }
+  };
+}
+
+test("suggest preflop: trash folds to a big raise on normal/hard; never-fold-pre is gone", () => {
+  const trash = fakePreView("7c 2d", { call: 200, pot: 60, cbet: 220, bb: 20, chips: 800, raises: 1 });
+  assert.ok(G.preflopStrength(trash.hole) < 0.3, "72o is junk");
+  const rnd = Math.random;
+  Math.random = () => 0.5;
+  try {
+    assert.strictEqual(G.suggest(trash, "normal").t, "fold");
+    assert.strictEqual(G.suggest(trash, "hard").t, "fold");
+    // easy may still call (call-happy), but normal/hard must be allowed to fold pre
+    const easy = G.suggest(trash, "easy");
+    assert.ok(easy && (easy.t === "call" || easy.t === "fold"), "easy returns a legal action");
+  } finally { Math.random = rnd; }
+});
+
+test("suggest preflop: a strong pair does not fold to a min-raise", () => {
+  const pair = fakePreView("As Ad", { call: 20, pot: 40, cbet: 40, bb: 20, chips: 960, raises: 1 });
+  assert.ok(G.preflopStrength(pair.hole) > 0.8, "AA is strong");
+  const rnd = Math.random;
+  Math.random = () => 0.5;
+  try {
+    for (const lvl of ["easy", "normal", "hard"]) {
+      const a = G.suggest(pair, lvl);
+      assert.ok(a && a.t !== "fold", `${lvl} keeps AA vs min-raise (${a && a.t})`);
+    }
+  } finally { Math.random = rnd; }
+});

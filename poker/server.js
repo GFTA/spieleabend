@@ -27,13 +27,6 @@ module.exports = require("../shared/room-server.js")({
   newGame(room, players) {
     return Game.newGame(players.map((m) => ({ name: m.name, bot: !!m.bot, avatar: m.bot ? "🤖" : m.avatar })), room.chips, roomRules(room), true);
   },
-  // leaving a running game: the computer takes over the seat and its cards
-  leaveGame(room, pid) {
-    const S = room.state, m = room.members[pid];
-    room.members[pid] = { name: m.name, bot: true, secret: null, avatar: "🤖" };
-    S.players[pid].bot = true; S.players[pid].avatar = "🤖";
-    room.touched = Date.now();
-  },
 
   // every action changes seq, so a computer plays one visible step at a time
   botPlan(room) {

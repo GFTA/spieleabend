@@ -22,8 +22,4 @@ module.exports = require("../shared/room-server.js")({
     if (msg.level != null) room.level = Game.normLevel(msg.level);
   },
   newGame: (room, players) => Game.newGame(players.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })), room.goal, room.pick, room.rules, room.level),
-  // leaving a running game: out of this round (a chooser's word becomes a random one)
-  leaveGame(room, pid, { apply }) {
-    if (room.state.phase !== "roundEnd" && !room.state.players[pid].out) apply(room, pid, { t: "giveup" });
-  }
 });
