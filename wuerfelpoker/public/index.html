@@ -29,26 +29,7 @@
 :root[data-table="blossom"]{--felt:#f5d5e2}
 /* the page itself never scrolls (iOS would slide it under its toolbar); inner areas do */
 /* ---------- shared controls ---------- */
-.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
-.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
-.btn.small{flex:none;padding:8px 11px;font-size:13px;border-radius:11px}
-@media (hover:hover){ .btn:not(:disabled):hover{filter:brightness(1.08)} }
-.row .btn{flex:1}
-.seg.four{grid-template-columns:repeat(4,1fr)}
-.toggle{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
-.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:2px 0 0;transition:background .2s;cursor:pointer}
-.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
-.toggle span{display:flex;flex-direction:column;font-weight:800}
-.toggle small{font-weight:400;color:var(--muted);font-size:13px}
-details.fold summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-details.fold summary::-webkit-details-marker{display:none}
-details.fold summary::after{content:"▾";color:var(--muted);transition:transform .2s}
-details.fold[open] summary::after{transform:rotate(180deg)}
-details.fold[open] summary{margin-bottom:8px}
-.fold-sum{flex:1;text-align:right;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.5)}
+
 /* ---------- dice ---------- */
 .die{--dw:56px;position:relative;width:var(--dw);height:var(--dw);flex:none;border-radius:22%;background:var(--ivory);
   display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:calc(var(--dw) * .14);border:0;
@@ -66,15 +47,10 @@ details.fold[open] summary{margin-bottom:8px}
 .hero-dice .die:nth-child(even){transform:rotate(9deg) translateY(-6px)}
 .hero-dice .die.held{transform:translateY(-14px);box-shadow:0 0 0 3px var(--accent),0 10px 18px rgba(0,0,0,.5)}
 h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01em;margin:6px 0 0;line-height:1;text-align:center}
-.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
-.avrow{display:flex;gap:8px}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
-.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-.prow .botbtn{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:20px;filter:grayscale(1);opacity:.55}
-.prow .botbtn[aria-pressed="true"]{filter:none;opacity:1;box-shadow:inset 0 0 0 2px var(--accent)}
+
 /* ---------- lobby ---------- */
 /* ---------- table ---------- */
-.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+
 .roundinfo{flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .players{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 4px}
 .players::-webkit-scrollbar{display:none}
@@ -120,10 +96,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .felt.shake{animation:shake .25s}
 @keyframes shake{25%{translate:-3px 0}75%{translate:3px 0}}
 .dock{background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
-.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
-.turnbar{height:4px;margin:-6px 0 0;border-radius:2px;background:var(--line);overflow:hidden}
-.turnbar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:0 50%}
-.turnbar.low i{background:var(--red)}
+
 .dock .status{display:flex;align-items:center;gap:10px;min-height:40px}
 .dock .status .txt{flex:1;min-width:0}
 .dock .status b{display:block;font-size:16px}
@@ -131,26 +104,14 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .acts{display:grid;grid-template-columns:2fr 1fr;gap:8px}
 .acts .btn{padding:15px 12px}
 /* ---------- overlays ---------- */
-.sheet{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
-.ranking{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.ranking li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--surface)}
-.ranking li.win{box-shadow:inset 0 0 0 2px var(--accent)}
-.ranking .av{font-size:22px;grid-row:span 2}
-.ranking .nm{font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ranking .w{font-weight:800;font-variant-numeric:tabular-nums;grid-row:span 2}
+
 .ranking .res{display:flex;gap:3px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .ranking .res .lbl{margin-left:6px}
 .hist{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .hist th,.hist td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
 .hist th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .histwrap{max-height:180px;overflow-y:auto}
-.rules ul,.rules ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
-  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
-#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
-#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;flex-wrap:wrap;justify-content:center;max-width:300px;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
-#reactBar .phrase{width:auto;height:36px;padding:0 10px;font-size:13px;font-weight:800;border-radius:10px;background:var(--bg2)}
-.bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
+
 @media (min-width:900px) and (min-height:700px){
   .pcard{flex-basis:170px}
   .pcard .die.mini{--dw:26px}
@@ -171,7 +132,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .dock{padding:18px 28px 22px;gap:14px;width:100%;max-width:1200px;align-self:center}
   .dock .status b{font-size:20px}.dock .status small{font-size:15px}
 }
-@media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
+
 /* back to the Spieleabend start page, and the game rules in the waiting room */
 /* waiting room: ready up, watch a running game, rematch status */
 /* waiting room actions in one row: main buttons, then small icon buttons */
