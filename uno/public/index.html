@@ -189,8 +189,19 @@
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
 /* ---------- overlays ---------- */
 
-.picker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.picker button{border:0;border-radius:18px;aspect-ratio:1.4;font-weight:800;font-size:18px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.wheel{display:block;width:min(74vw,320px);height:auto;margin:6px auto 12px;overflow:visible;animation:wheelin .3s cubic-bezier(.3,1.4,.5,1)}
+.wheel .seg{cursor:pointer;outline:0;transform-origin:0 0;transition:transform .16s cubic-bezier(.3,1.5,.5,1),filter .16s}
+.wheel .seg path{stroke:var(--bg2);stroke-width:5;stroke-linejoin:round}
+.wheel .seg text{font:800 15px var(--ui);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.wheel:has(.seg:focus-visible) .seg:not(:focus-visible){filter:brightness(.55) saturate(.8)}
+.wheel .seg:focus-visible{transform:scale(1.13)}
+@media (hover:hover){
+.wheel:has(.seg:hover) .seg:not(:hover){filter:brightness(.55) saturate(.8)}
+.wheel .seg:hover{transform:scale(1.13)}
+}
+.wheel .seg:active{transform:scale(1.07)}
+.wheel .seg:focus-visible path{stroke:#fff}
+@keyframes wheelin{from{transform:scale(.6) rotate(-25deg);opacity:0}}
 
 @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
 .pending-tag{font-family:var(--display);font-size:12px;color:#231a05;background:var(--accent);padding:2px 8px;border-radius:6px}
@@ -376,12 +387,12 @@
 <div class="overlay" id="picker" hidden>
   <div class="sheet">
     <h2>Welche Farbe wünschst du dir?</h2>
-    <div class="picker">
-      <button type="button" data-color="r" style="background:var(--red)">Rot</button>
-      <button type="button" data-color="y" style="background:var(--yellow);color:#231a05;text-shadow:none">Gelb</button>
-      <button type="button" data-color="g" style="background:var(--green)">Grün</button>
-      <button type="button" data-color="b" style="background:var(--blue)">Blau</button>
-    </div>
+    <svg class="wheel" viewBox="-110 -110 220 220" role="group" aria-label="Farbe wählen">
+        <g class="seg" data-color="r" role="button" tabindex="0" aria-label="Rot"><path d="M-94 0A94 94 0 0 1 0 -94L0 -27A27 27 0 0 0 -27 0Z" fill="var(--red)"/><text x="-43.8" y="-43.8" fill="#fff">Rot</text></g>
+        <g class="seg" data-color="y" role="button" tabindex="0" aria-label="Gelb"><path d="M0 -94A94 94 0 0 1 94 0L27 0A27 27 0 0 0 0 -27Z" fill="var(--yellow)"/><text x="43.8" y="-43.8" fill="#231a05">Gelb</text></g>
+        <g class="seg" data-color="g" role="button" tabindex="0" aria-label="Grün"><path d="M94 0A94 94 0 0 1 0 94L0 27A27 27 0 0 0 27 0Z" fill="var(--green)"/><text x="43.8" y="43.8" fill="#fff">Grün</text></g>
+        <g class="seg" data-color="b" role="button" tabindex="0" aria-label="Blau"><path d="M0 94A94 94 0 0 1 -94 0L-27 0A27 27 0 0 0 0 27Z" fill="var(--blue)"/><text x="-43.8" y="43.8" fill="#fff">Blau</text></g>
+    </svg>
     <button class="btn btn-ghost" id="pickCancel" type="button">Abbrechen</button>
   </div>
 </div>
