@@ -1,7 +1,7 @@
 # Kniffel
 
 Kniffel im Browser für Android, iOS und Desktop, im Stil der anderen Spieleabend-Spiele.
-Online mit eigenen Handys (Raum-Code und QR-Code) oder mit einem Handy für alle.
+Online mit eigenen Handys (Party-Einladung und QR-Code) oder mit einem Handy für alle.
 Nichts ist geheim: Alle sehen jeden Wurf, welche Würfel behalten werden und die Blöcke aller Mitspieler.
 Das Würfelsystem (Würfel, Behalten, Wurf-Animation, Wurf-Anzeige) stammt aus Würfelpoker.
 
