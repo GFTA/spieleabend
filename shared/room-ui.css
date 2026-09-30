@@ -109,3 +109,4 @@ body:has(#game:not([hidden])) .setfab{display:none}
   #chat #chatClose{background:none;box-shadow:none;color:var(--muted);font-weight:600;min-height:0;padding:8px}
   body.chatopen{right:320px}
 }
+:root[data-table="light"] :is(.partycode,.sharecode),:root[data-table="blossom"] :is(.partycode,.sharecode),:root[data-table="mint"] :is(.partycode,.sharecode){color:var(--text)}
