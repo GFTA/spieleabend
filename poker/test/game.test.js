@@ -168,3 +168,57 @@ test("timeout checks when free and folds otherwise", () => {
   assert.ok(G.act(S, cur, { t: "timeout" }).ok);
   assert.ok(S.players[cur].folded);
 });
+
+test("ante: everybody pays into the pot before the blinds, not as part of a bet", () => {
+  const S = G.newGame([{ name: "a" }, { name: "b" }, { name: "c" }], 1000, { ante: true }, true);
+  assert.strictEqual(S.ante, 2);
+  assert.strictEqual(G.view(S, 0).ante, 2);
+  const sb = S.sbSeat, bb = S.bbSeat, third = 3 - sb - bb;
+  assert.strictEqual(S.players[sb].bet, 10);
+  assert.strictEqual(S.players[sb].total, 12);
+  assert.strictEqual(S.players[third].bet, 0);
+  assert.strictEqual(S.players[third].total, 2);
+  assert.strictEqual(G.view(S, 0).pot, 12 + 22 + 2);
+  assert.strictEqual(chipsTotal(S), 3000);
+  assert.strictEqual(G.act(S, S.cur, { t: "check" }).ok, false, "the ante does not count as the call");
+  assert.strictEqual(G.newGame([{ name: "a" }, { name: "b" }], 1000, {}, true).ante, 0);
+});
+
+test("ante: a short stack is all-in by the ante, and the pots still add up", () => {
+  const S = G.newGame([{ name: "a", bot: true }, { name: "b", bot: true }, { name: "c", bot: true }], 1000, { ante: true }, false);
+  S.players.forEach((p, i) => { p.chips = i === 0 ? 1 : 1000; p.total = 0; p.bet = 0; p.out = false; });
+  S.phase = "roundEnd"; S.last = { kind: "fold", over: false }; G.act(S, 0, { t: "next" });
+  assert.strictEqual(S.players[0].allin, true, "one chip cannot cover the ante");
+  const total = S.players.reduce((s, p) => s + p.chips + p.total, 0);
+  assert.strictEqual(total, 2001);
+  for (let k = 0; k < 40 && S.phase === "play"; k++) {
+    const o = G.options(S);
+    G.act(S, S.cur, { t: o.canCheck ? "check" : "call" });
+  }
+  while (S.phase === "runout") { S.nextAt = 1; G.tick(S); }
+  assert.strictEqual(S.phase, "roundEnd");
+  assert.strictEqual(S.players.reduce((s, p) => s + p.chips, 0), 2001, "no chips lost or made");
+});
+
+test("show: after a fold win anybody with cards may turn them over once, others see them", () => {
+  const S = G.newGame([{ name: "a" }, { name: "b" }, { name: "c" }], 1000, {}, true);
+  assert.strictEqual(G.act(S, 0, { t: "show" }).ok, false, "not while the hand is on");
+  while (S.phase === "play") G.act(S, S.cur, { t: "fold" });
+  assert.strictEqual(S.last.kind, "fold");
+  const w = S.last.winners[0], other = (w + 1) % 3;
+  assert.strictEqual(G.view(S, other).players[w].hole[0], null, "hidden before");
+  const r = G.act(S, w, { t: "show" });
+  assert.strictEqual(r.ok, true);
+  assert.deepStrictEqual(r.events, [{ t: "show", pi: w }]);
+  assert.strictEqual(G.view(S, other).players[w].hole.length, 2);
+  assert.strictEqual(G.view(S, other).players[w].shown, true);
+  assert.strictEqual(G.act(S, w, { t: "show" }).ok, false, "only once");
+  assert.strictEqual(G.act(S, -1, { t: "show" }).ok, false, "spectators have no cards");
+  assert.strictEqual(G.act(S, other, { t: "show" }).ok, true, "folded players may show too");
+});
+
+test("potOdds: share of the final pot needed to break even", () => {
+  assert.strictEqual(G.potOdds(0, 100), 0);
+  assert.strictEqual(G.potOdds(50, 150), 0.25);
+  assert.strictEqual(G.potOdds(100, 100), 0.5);
+});

@@ -126,6 +126,16 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .acts{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px}
 .acts .btn{padding:15px 8px;font-size:15px}
 .acts.one{grid-template-columns:1fr}
+.acts.one.two{grid-template-columns:1fr 1.4fr}
+.oddsrow{display:flex;gap:8px;flex-wrap:wrap}
+.oddsrow[hidden]{display:none}
+.oddsrow span{font-size:13px;font-weight:700;padding:4px 11px;border-radius:99px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);animation:oddsin .25s ease both}
+.oddsrow span b{color:var(--text);margin-left:3px}
+.oddsrow span.good{box-shadow:inset 0 0 0 1.5px var(--green)}
+.oddsrow span.good b{color:var(--green)}
+.oddsrow span.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
+.oddsrow span.bad b{color:var(--red)}
+@keyframes oddsin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .raisebox{display:flex;flex-direction:column;gap:10px;padding:10px 12px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line)}
 .presets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .presets button{border:0;border-radius:10px;padding:9px 2px;font-weight:800;font-size:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
@@ -301,6 +311,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
         <div class="txt"><b id="whoName"></b><small id="whoHint"></small><span class="meter" id="meter" aria-hidden="true" hidden><i></i><i></i><i></i><i></i><i></i></span><span class="hand" id="handNow"></span></div>
         <button class="btn small" id="hintBtn" type="button" hidden title="Tipp (H)">Tipp</button>
       </div>
+      <div class="oddsrow" id="oddsRow" hidden aria-live="polite"></div>
       <div class="raisebox" id="raiseBox" hidden>
         <div class="presets" id="presets"></div>
         <div class="raiserow"><input type="range" id="raiseRange" aria-label="Einsatz"><output id="raiseOut" for="raiseRange"></output></div>
@@ -312,6 +323,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
         <button class="btn" id="raiseBtn" type="button">Erhöhen</button>
       </div>
       <div class="acts one" id="actsNext" hidden>
+        <button class="btn" id="showBtn" type="button" hidden>Karten zeigen</button>
         <button class="btn btn-primary" id="nextBtn" type="button">Nächste Hand</button>
       </div>
     </div>
@@ -330,6 +342,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 </div>
 
 <div class="overlay" id="menu" hidden data-title="Chips" data-scores="ranking" data-rules-title="Spielregeln und Rangfolge">
+  <template data-slot="settings"><label class="toggle" for="oddsHelp"><input type="checkbox" id="oddsHelp"><span>Gewinnchance anzeigen<small>Wenn du mitgehen musst: deine geschätzte Gewinnchance gegen den nötigen Anteil am Pot (Pot-Odds).</small></span></label></template>
   <template data-slot="rules">
         <ul>
           <li>Jeder bekommt <b>zwei Karten</b> auf die Hand. Dazu kommen nacheinander fünf gemeinsame Karten auf den Tisch: <b>Flop</b> (3), <b>Turn</b> (1) und <b>River</b> (1). Deine Hand besteht aus den besten fünf von diesen sieben Karten.</li>

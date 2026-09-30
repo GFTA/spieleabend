@@ -15,7 +15,7 @@
   const $ = (s) => document.querySelector(s);
   const K = { local: "poker.v1",
     online: "poker.online", me: "poker.me", avatar: "poker.avatar", rules: "poker.rules",
-    level: "poker.level", look: "poker.look", sound: "poker.sound", chips: "poker.chips" };
+    level: "poker.level", look: "poker.look", sound: "poker.sound", chips: "poker.chips", help: "poker.help" };
   const store = Spieleabend.store;
 
   let mode = null;        // "local" | "online" | null
@@ -30,6 +30,7 @@
   let chipsLocal = G.normChips(store.get(K.chips));
   let localLevel = G.BOT_LEVELS[store.get(K.level)] ? store.get(K.level) : "normal";
   let localRules = G.normRules(store.get(K.rules) || {});
+  let oddsHelp = store.get(K.help) !== false, oddsKey = "", oddsEq = 0;
   let myAvatar = Spieleabend.identity({ me: K.me, avatar: K.avatar, avatars: G.AVATARS });
 
   // ---------- helpers ----------
@@ -240,6 +241,9 @@
           fly(seatEl(ev.pi), $("#potLine"), coins(ev.amount));
           if (ev.kind === "allin") afterRender.push(() => shoveFx(ev.pi));
         }
+      } else if (ev.t === "show") {
+        sfx("deal", 2);
+        afterRender.push(() => { const el = seatEl(ev.pi); if (el && !calm()) el.querySelectorAll(".cards .card").forEach((c, j) => flipIn(c, j * 110, 560)); });
       } else if (ev.t === "runout") {
         const st = mode === "local" ? L : R && R.view;
         const seats = st ? st.players.map((p, i) => i).filter((i) => !st.players[i].folded && !st.players[i].out && i !== (V && V.me) && unseen(i)) : [];
@@ -259,7 +263,9 @@
       if (el) el.querySelectorAll(".cards .card").forEach((c, j) => dealFrom(c, from, (j * seats.length + k) * 70));
       if (i === V.me) document.querySelectorAll("#hole .card").forEach((c, j) => dealFrom(c, from, (j * seats.length + k) * 70, 560));
     });
-    [V.sbSeat, V.bbSeat].forEach((i, k) => fly(seatEl(i), $("#potLine"), 1, { delay: seats.length * 140 + 200 + k * 120 }));
+    if (V.ante) seats.forEach((i, k) => fly(seatEl(i), $("#potLine"), 1, { delay: seats.length * 140 + 100 + k * 60 }));
+    const blindAt = seats.length * 140 + 200 + (V.ante ? seats.length * 60 : 0);
+    [V.sbSeat, V.bbSeat].forEach((i, k) => fly(seatEl(i), $("#potLine"), 1, { delay: blindAt + k * 120 }));
   }
 
   // ---------- the player's own moves ----------
@@ -326,7 +332,7 @@
   let lastTurnKey = null, lastHand = null, lastBoard = 0, overReady = 0, overKey = null;
   function renderGame() {
     const me = V.players[V.me];
-    $("#roundInfo").innerHTML = `Hand <b>${V.hand}</b> · Blinds <b>${money(V.blinds.sb)}/${money(V.blinds.bb)}</b>` +
+    $("#roundInfo").innerHTML = `Hand <b>${V.hand}</b> · Blinds <b>${money(V.blinds.sb)}/${money(V.blinds.bb)}</b>${V.ante ? ` · Ante <b>${money(V.ante)}</b>` : ""}` +
       `${V.nextBlinds === 1 ? " · steigen nach dieser Hand" : ""}${me && mode === "online" ? ` · du: <b>${money(me.chips)}</b>` : ""}`;
     $("#reactBtn").hidden = mode !== "online";
     if (V.hand !== lastHand) { lastHand = V.hand; lastBoard = 0; raiseOpen = false; }
@@ -364,13 +370,15 @@
         inHand.forEach((i, k) => { eq[i] = eqVal[k]; });
       }
     }
+    const showTag = (p) => V.last && V.last.kind === "fold" && p.shown && p.hole[0] != null && !p.out ? G.handName(G.handInfo(p.hole, V.board).key) : "";
     $("#players").innerHTML = V.players.map((p, i) => {
       const active = V.phase === "play" && i === V.cur;
       const away = members && members[i] && !members[i].online && !p.bot;
       let act = "", cls = "";
       if (p.out) act = `ausgeschieden${p.place ? `, Platz ${p.place}` : ""}`;
       else if (ended && won[i]) { act = G.HANDS[won[i].cat] + (won[i].won ? ` · +${money(won[i].won)}` : ""); if (winners.includes(i)) cls = " good"; }
-      else if (ended && winners.includes(i)) { act = `+${money(V.last.pot)}`; cls = " good"; }
+      else if (ended && winners.includes(i)) { act = `+${money(V.last.pot)}${showTag(p) ? ` · ${showTag(p)}` : ""}`; cls = " good"; }
+      else if (ended && showTag(p)) act = `zeigt: ${showTag(p)}`;
       else if (wait && won[i] && !revealing.has(i)) act = G.HANDS[won[i].cat];
       else if (eq[i] != null) { act = `${Math.round(eq[i] * 100)} % Chance`; cls = ` eq ${eq[i] >= 0.5 ? "hi" : "lo"}`; }
       else if (active) act = "ist dran";
@@ -475,6 +483,10 @@
     rb.textContent = V.cbet === 0 ? "Setzen" : "Erhöhen";
     rb.classList.toggle("btn-primary", raiseOpen);
     $("#hintBtn").hidden = !mine;
+    const sh = $("#showBtn");
+    sh.hidden = !(ended && !V.last.over && V.last.kind === "fold" && p && !p.out && !p.shown && p.hole[0] != null && (mode === "online" || V.players.filter((q) => !q.bot).length === 1));
+    $("#actsNext").classList.toggle("two", !sh.hidden);
+    renderOdds(mine);
     // raise panel
     const box = $("#raiseBox");
     box.hidden = !(mine && raiseOpen);
@@ -498,6 +510,25 @@
       } else nb.textContent = "Nächste Hand";
     }
     renderClock();
+  }
+
+  // what my cards are worth against what the call costs (pot odds), only when there is something to call
+  function renderOdds(mine) {
+    const row = $("#oddsRow");
+    let html = "";
+    if (oddsHelp && mine && V.opts.call > 0 && V.hole.length === 2 && V.hole[0] != null) {
+      const key = `${V.hand}:${V.turn}:${V.board.length}`;
+      if (oddsKey !== key) {
+        oddsKey = key;
+        const opp = V.players.filter((q, i) => i !== V.me && !q.folded && !q.out).length;
+        oddsEq = G.equity(V.hole, V.board, Math.max(1, opp), 600);
+      }
+      const need = G.potOdds(V.opts.call, V.pot);
+      const pc = (x) => Math.round(x * 100) + " %";
+      html = `<span class="${oddsEq >= need ? "good" : "bad"}" title="Geschätzt gegen zufällige Hände der Gegner">Gewinnchance ≈<b>${pc(oddsEq)}</b></span><span>Mitgehen lohnt ab<b>${pc(need)}</b></span>`;
+    }
+    row.hidden = !html;
+    if (row.dataset.k !== html) { row.dataset.k = html; row.innerHTML = html; }
   }
 
   // online house rule: 30 s per turn, shown as a shrinking bar
@@ -627,6 +658,7 @@
     menu: {
       open() {
         $("#menuScores").innerHTML = rankingHTML(false);
+        $("#oddsHelp").checked = oddsHelp;
         const on = activeNames(V.rules);
         $("#menuRules").textContent = `Start mit ${money(V.startChips)} Chips.${on.length ? ` Hausregeln: ${on.join(", ")}.` : " Keine Hausregeln."}`;
         LOOK.render();
@@ -679,6 +711,8 @@
   $("#presets").addEventListener("click", (e) => { const b = e.target.closest("[data-to]"); if (b) { raiseVal = +b.dataset.to; sfx("hint"); renderDock(); } });
   $("#nextBtn").addEventListener("click", () => doAct({ t: "next" }));
   $("#hintBtn").addEventListener("click", showHint);
+  $("#showBtn").addEventListener("click", () => doAct({ t: "show" }, V.me));
+  $("#oddsHelp").addEventListener("change", (e) => { oddsHelp = e.target.checked; store.set(K.help, oddsHelp); if (V) renderDock(); });
   $("#reBtn").addEventListener("click", () => doAct({ t: "next" }));
   $("#reBack").addEventListener("click", () => {
     if (mode === "local") { store.del(K.local); L = null; mode = null; render(); }

@@ -28,6 +28,7 @@
   // House rules; the UI renders one switch per entry.
   const RULES = [
     { k: "blindsUp", name: "Blinds steigen", desc: `Alle ${BLIND_HANDS} Hände verdoppeln sich die Blinds, damit das Spiel ein Ende findet.` },
+    { k: "ante", name: "Ante", desc: "Vor jeder Hand zahlt jeder einen kleinen Einsatz (ein Zehntel vom Big Blind) in den Pot. Das macht mehr Druck, und Passen wird teurer." },
     { k: "turnTimer", name: "Zugzeit 30 Sekunden", desc: "Wer zu lange überlegt, checkt automatisch oder passt.", onlineOnly: true }
   ];
   function normRules(r) {
@@ -154,6 +155,7 @@
     S.dealer = seatAfter(S, S.dealer, (p) => !p.out);
     const lvl = S.rules.blindsUp ? Math.floor((S.hand - 1) / BLIND_HANDS) : 0;
     S.sb = S.baseSb * Math.pow(2, lvl); S.bb = S.sb * 2;
+    S.ante = S.rules.ante ? Math.max(1, Math.round(S.bb / 10)) : 0;
     const headsUp = live(S).length === 2;
     const sbSeat = headsUp ? S.dealer : seatAfter(S, S.dealer, (p) => !p.out);
     const bbSeat = seatAfter(S, sbSeat, (p) => !p.out);
@@ -163,11 +165,14 @@
       for (let k = 0; k < live(S).length; k++) { P[s].hole.push(S.deck.pop()); s = seatAfter(S, s, (p) => !p.out); }
     }
     S.sbSeat = sbSeat; S.bbSeat = bbSeat;
+    if (S.ante) { // dead money: in the pot, but not part of anybody's bet
+      P.forEach((p) => { if (p.out) return; const a = Math.min(S.ante, p.chips); p.chips -= a; p.total += a; if (!p.chips) p.allin = true; });
+    }
     post(S, sbSeat, S.sb); post(S, bbSeat, S.bb);
     P[sbSeat].act = P[sbSeat].allin ? "allin" : "sb"; P[bbSeat].act = P[bbSeat].allin ? "allin" : "bb";
     S.cbet = S.bb; S.minRaise = S.bb; S.raises = 0;
-    log(S, `Hand ${S.hand}: ${P[S.dealer].name} gibt. Blinds ${money(S.sb)}/${money(S.bb)}${lvl ? " (gestiegen)" : ""}.`);
-    events.push({ t: "deal" });
+    log(S, `Hand ${S.hand}: ${P[S.dealer].name} gibt. Blinds ${money(S.sb)}/${money(S.bb)}${lvl ? " (gestiegen)" : ""}${S.ante ? `, Ante ${money(S.ante)}` : ""}.`);
+    events.push({ t: "deal", ante: S.ante });
     S.turn++; S.seq++;
     const nx = pickActor(S, bbSeat);
     if (nx < 0) beginRunout(S, events); else S.cur = nx;
@@ -315,6 +320,16 @@
       if (S.last && S.last.over) restart(S); else startHand(S, events);
       return { ok: true, events };
     }
+    if (a.t === "show") { // after a hand that ended by folding, anybody may turn their cards over
+      const q = P[pi];
+      if (S.phase !== "roundEnd" || !S.last || S.last.kind !== "fold") return fail("Jetzt kann niemand Karten zeigen.");
+      if (!q || q.out || !q.hole.length) return fail("Du hast keine Karten.");
+      if (q.shown) return fail("Deine Karten sind schon offen.");
+      q.shown = true; S.seq++;
+      log(S, `${q.name} zeigt ${q.hole.map(cardText).join(" ")}.`);
+      events.push({ t: "show", pi });
+      return { ok: true, events };
+    }
     if (S.phase === "runout") return fail("Die Karten werden gerade aufgedeckt.");
     if (S.phase !== "play") return fail("Die Hand ist vorbei.");
     if (a.t === "skip" || a.t === "timeout") {
@@ -417,6 +432,8 @@
     }
     return score / samples;
   }
+  // share of the pot I must win to break even when calling: call / (pot + call)
+  const potOdds = (call, pot) => (call > 0 ? call / (pot + call) : 0);
   const SAMPLES = { easy: 50, normal: 160, hard: 320 };
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
@@ -519,13 +536,13 @@
     return {
       players: P.map((p, i) => ({
         name: p.name, bot: p.bot, avatar: p.avatar, chips: p.chips, bet: p.bet, total: p.total,
-        folded: p.folded, allin: p.allin, out: p.out, act: p.act, actTo: p.actTo || 0, place: p.place,
+        folded: p.folded, allin: p.allin, out: p.out, shown: !!p.shown, act: p.act, actTo: p.actTo || 0, place: p.place,
         hole: i === pi || p.shown ? p.hole.slice() : p.hole.length && !p.folded ? [null, null] : []
       })),
       me: pi, hole: me ? me.hole.slice() : [], cur: S.cur, dealer: S.dealer, sbSeat: S.sbSeat, bbSeat: S.bbSeat,
       board: S.board.slice(), street: S.street, phase: S.phase, hand: S.hand,
       pot: inHand ? P.reduce((s, p) => s + p.total, 0) : 0, cbet: S.cbet, minRaise: S.minRaise, raises: S.raises,
-      blinds: { sb: S.sb, bb: S.bb }, nextBlinds: S.rules.blindsUp ? BLIND_HANDS - ((S.hand - 1) % BLIND_HANDS) : 0,
+      blinds: { sb: S.sb, bb: S.bb }, ante: S.ante || 0, nextBlinds: S.rules.blindsUp ? BLIND_HANDS - ((S.hand - 1) % BLIND_HANDS) : 0,
       opts: pi === S.cur && S.phase === "play" ? options(S) : null,
       handNow: me && !me.folded && !me.out ? handInfo(me.hole, S.board) : null,
       nextIn: S.nextAt ? Math.max(0, S.nextAt - Date.now()) : 0, auto: S.auto,
@@ -536,7 +553,7 @@
 
   return {
     MAX_PLAYERS, TURN_MS, RUNOUT_MS, HAND_MS, BLIND_HANDS, CHIPS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, SUITS,
-    normRules, normChips, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity, equities, handInfo,
+    normRules, normChips, potOdds, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity, equities, handInfo,
     newGame, act, tick, nextDeadline, suggest, view, options
   };
 });
