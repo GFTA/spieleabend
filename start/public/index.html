@@ -32,36 +32,43 @@
 :root[data-table="mint"]{color-scheme:light;--bg:#dff3ea;--bg2:#f4fcf8;--surface:#c9e9db;--line:#b0d8c6;--text:#12352a;--muted:#4d7a68;--sea:#cfe9e0;--hull:#3f6656}
 *{box-sizing:border-box}
 html{background:var(--bg)}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent;
-  padding:calc(env(safe-area-inset-top,0px) + 28px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 32px) max(16px,env(safe-area-inset-left,0px))}
+body{margin:0;min-height:100vh;background:radial-gradient(90% 420px at 50% -80px,color-mix(in srgb,var(--accent) 9%,transparent),transparent 70%) no-repeat,var(--bg);color:var(--text);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent;
+  padding:calc(env(safe-area-inset-top,0px) + 22px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 32px) max(16px,env(safe-area-inset-left,0px))}
 button,input{font:inherit;color:inherit}
 button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
-main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 
-.hero{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,11vw,64px);line-height:1;margin:0;letter-spacing:.01em}
+.hero{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,10vw,56px);line-height:1;margin:0;letter-spacing:.01em}
 h1 span{color:var(--accent)}
-.hero h1{position:relative;font-size:clamp(32px,9vw,64px)}
+.hero h1{position:relative;font-size:clamp(32px,9vw,56px)}
 .hero h1::before{content:"";position:absolute;right:100%;top:50%;width:1.15em;height:1.1em;margin:-.55em .1em 0 0;transform:rotate(-14deg);background:url(logo-mark.svg) center/contain no-repeat;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
 .tagline{margin:0;color:var(--muted);max-width:44ch;text-wrap:balance}
 .label{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 
-.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
-.game{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:24px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.game .top{display:flex;gap:16px;align-items:center}
-.game .top>div:last-child{min-width:0}
-.game .art{flex:none;width:88px;height:88px;border-radius:22px;display:grid;place-items:center;background:var(--surface);overflow:hidden}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:12px}
+.gamescol{display:flex;flex-direction:column;gap:12px}
+.section-head{display:flex;flex-direction:column;gap:2px;margin:6px 2px 0}
+.section-head .hint{margin:0;font-size:13px;color:var(--muted)}
+.game{--tint:var(--accent);position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) auto;grid-template-areas:"art title play" "desc desc desc" "pb pb pb";align-items:center;gap:10px 14px;padding:14px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .15s}
+.game .top{display:contents}
+.game .art{grid-area:art;width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--tint) 24%,var(--surface));overflow:hidden}
 .game .art img{width:100%;height:100%;display:block}
-.game h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(20px,6.4vw,26px);line-height:1.05;text-wrap:balance;overflow-wrap:anywhere}
-.game .meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:6px;font-size:13px;color:var(--muted);font-weight:600}
-.game p{margin:0;color:var(--muted)}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--surface);font-size:12px;font-weight:800;color:var(--text)}
+.game .top>div:last-child{grid-area:title;min-width:0}
+.game h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(15px,4.2vw,21px);line-height:1.1;text-wrap:balance;overflow-wrap:break-word;hyphens:auto}
+.game .meta{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center;margin-top:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.game p{grid-area:desc;margin:0;color:var(--muted);font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .pill.on::before{background:var(--green);box-shadow:0 0 0 3px rgba(47,163,91,.25)}
 .pill.off::before{background:var(--red)}
-.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
-.actions .btn-primary{flex:1 1 150px}
+.actions{grid-area:play;display:flex}
+.actions .btn-primary{width:44px;height:44px;padding:0;font-size:0;border-radius:50%;box-shadow:0 3px 0 #b78d12}
+.actions .btn-primary::before{content:"";width:0;height:0;margin-left:4px;border-left:13px solid #231a05;border-top:8px solid transparent;border-bottom:8px solid transparent;border-radius:2px}
+.actions .btn-primary::after{content:"";position:absolute;inset:0;border-radius:22px}
+.actions .btn-primary:active{box-shadow:0 1px 0 #b78d12;transform:translateY(2px)}
+.partybox{grid-area:pb;display:flex;flex-direction:column;gap:8px}
 .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;text-decoration:none;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
 .btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
 .btn-primary:active{box-shadow:0 2px 0 #b78d12;transform:translateY(2px)}
@@ -70,12 +77,14 @@ h1 span{color:var(--accent)}
 .join input::placeholder{color:var(--muted);letter-spacing:.1em}
 .join .btn{padding:10px 14px;font-size:14px}
 .layout,.side{display:contents}
-.how{order:1} footer{order:2}
+footer{order:2}
 @media (min-width:1000px){
   body{padding-top:calc(env(safe-area-inset-top,0px) + 20px)}
   main{max-width:1400px;gap:22px}
-  .game h2{font-size:24px;overflow-wrap:normal;hyphens:auto}
-  .actions .btn-primary{flex:1 1 110px}
+  .game{grid-template-columns:72px minmax(0,1fr) auto;padding:16px}
+  .game .art{width:72px;height:72px;border-radius:20px}
+  .game h2{font-size:22px;overflow-wrap:normal;hyphens:auto}
+  .game p{-webkit-line-clamp:3}
   .join{flex:1 1 180px}
   .hero{gap:6px}
   .hero h1{font-size:72px}
@@ -84,15 +93,11 @@ h1 span{color:var(--accent)}
   .layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;align-items:start}
   .side{display:flex;flex-direction:column;gap:14px}
   .side>.me,.side>.party{width:100%;align-self:stretch}
-  .games{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:14px}
+  .games{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:14px;align-content:start}
   .hero{padding-bottom:8px}
 }
-@media (hover:hover){ .btn:hover{filter:brightness(1.08)} .game:hover{box-shadow:inset 0 0 0 1.5px var(--accent)} }
+@media (hover:hover){ .btn:hover{filter:brightness(1.08)} .game:hover{box-shadow:inset 0 0 0 1.5px var(--tint)} }
 
-.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
-.how div{padding:14px 16px;border-radius:18px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
-.how b{display:block;margin-bottom:4px}
-.how p{margin:0;color:var(--muted);font-size:14px}
 
 .topbar{display:flex;justify-content:flex-end}
 .seg{display:inline-flex;gap:6px;background:var(--bg2);padding:5px;border-radius:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
@@ -118,6 +123,9 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .avgrid .avcols button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
 .me .hint{margin:0;color:var(--muted);font-size:13px}
 
+.merow2{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.profilelink{font-size:14px;font-weight:800;color:var(--muted);text-decoration:none;padding:8px 4px}
+.profilelink:hover{color:var(--text)}
 /* party: play together, the host picks the game */
 .party{align-self:center;width:min(100%,560px);display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:20px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
 .party h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px}
@@ -125,11 +133,13 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .party .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .party .row>.btn{flex:1 1 140px;padding:12px 16px;font-size:15px}
 .party .join{flex:1 1 200px}
-.pcode{font-family:var(--display);font-size:34px;letter-spacing:.2em;text-align:center;line-height:1}
+.pinvite{display:flex;align-items:center;gap:8px}
+.pinvite .btn{padding:10px 12px;font-size:14px;flex:none}
+.pcode{flex:1;min-width:0;font-family:var(--display);font-size:28px;letter-spacing:.1em;line-height:1}
 .plink{display:flex;gap:8px;align-items:center}
 .plink code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13px;box-shadow:inset 0 0 0 1.5px var(--line)}
 .plink .btn{padding:10px 14px;font-size:14px}
-.pshare{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.pshare{display:flex;align-items:center;justify-content:center;gap:6px}
 .pmembers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .pmembers li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:var(--surface)}
 .pmembers .av{font-size:21px;line-height:1}
@@ -154,7 +164,6 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 </head>
 <body>
 <main>
-  <div class="topbar"><div class="seg" id="tables" role="group" aria-label="Design wählen"></div></div>
   <header class="hero">
     <div class="label">cool-kidz.net</div>
     <h1>Spiele<span>abend</span></h1>
@@ -163,26 +172,23 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <div class="layout">
   <aside class="side">
   <section class="me" aria-label="Du">
-    <div class="label">Du</div>
+    <div class="label">Du · gilt in allen Spielen</div>
     <div class="merow">
       <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen" aria-expanded="false"></button>
       <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="Dein Name" aria-label="Dein Name">
     </div>
     <div class="avgrid" id="avatarGrid" hidden></div>
-    <p class="hint">Name, Avatar und Design nimmst du in jedes Spiel mit, das du von hier aus öffnest.</p>
-    <a class="btn btn-ghost" href="profile.html">Profil &amp; Statistik</a>
+    <div class="merow2"><div class="seg" id="tables" role="group" aria-label="Design wählen"></div><a class="profilelink" href="profile.html">Profil &amp; Statistik ›</a></div>
   </section>
 
   <section class="party" id="party" aria-label="Party"></section>
 
-  <section class="how" aria-label="So geht's">
-    <div><b>Party erstellen</b><p>Einer erstellt eine Party und teilt den Code oder den Einladungslink.</p></div>
-    <div><b>Beitreten</b><p>Die anderen tippen den Party-Code hier ein oder öffnen den Link. Der Host wählt das Spiel, dann landen alle im selben Raum.</p></div>
-    <div><b>Allein?</b><p>Ohne Party startet „Spielen“ ein Spiel allein gegen den Computer.</p></div>
-  </section>
   </aside>
 
+  <div class="gamescol">
+  <div class="section-head"><div class="label">Spiele</div><p class="hint">Ohne Party startet ein Spiel allein gegen den Computer.</p></div>
   <section class="games" id="games" aria-label="Spiele"></section>
+  </div>
   </div>
 
 
@@ -266,6 +272,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     for (const a of document.querySelectorAll(".game a[data-url]")) a.href = gameUrl(a.dataset.url);
   }
 
+  const TINT = { uno: "#e0393e", schiffe: "#2d6fd6", viergewinnt: "#f2c230", wuerfelpoker: "#f28a1f", kniffel: "#2fa35b", poker: "#8a4fd0", maedn: "#1fb5c9", hangman: "#b98a5a", phase10: "#ec6fb2" };
   let games = [];
   function render(status) {
     const st = Object.fromEntries((status || []).map((s) => [s.id, s]));
@@ -274,7 +281,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       const pill = !s ? `<span class="pill">Prüfe …</span>`
         : s.online ? `<span class="pill on">Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}</span>`
         : `<span class="pill off">Gerade nicht erreichbar</span>`;
-      return `<article class="game" data-id="${esc(g.id)}">
+      return `<article class="game" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
         <div class="top">
           <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88"></div>
           <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}</div></div>
@@ -400,9 +407,9 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         (r.watching || r.out ? `<span class="pnote">${r.playing} spielen${r.watching ? `, ${r.watching} schauen zu` : ""}${r.out ? `, ${r.out} ohne Platz` : ""}.</span>` : "") + `</div>`;
     }
     box.innerHTML = `<h3>Deine Party</h3>
-      <div class="pcode" aria-label="Party-Code">${esc(party.code)}</div>
-      <div class="plink"><code>${esc(link)}</code><button class="btn" type="button" data-p="copy">Kopieren</button></div>
-      <button class="btn pshare" type="button" data-p="share">${SHARE_ICON}Einladung teilen</button>
+      <div class="pinvite"><div class="pcode" aria-label="Party-Code">${esc(party.code)}</div>
+      <button class="btn" type="button" data-p="copy" title="${esc(link)}">Kopieren</button>
+      <button class="btn pshare" type="button" data-p="share">${SHARE_ICON}<span>Teilen</span></button></div>
       <ul class="pmembers">${party.members.map((m, i) => `<li><span class="dot${m.online ? "" : " off"}" title="${m.online ? "hier" : "gerade im Spiel oder weg"}"></span><span class="av avc${i === party.host ? " crown" : ""}" style="--avc:${esc(/^#[0-9a-f]{6}$/.test(m.color) ? m.color : "transparent")}">${esc(m.avatar)}</span><span class="nm">${esc(m.name)}</span>${m.ready ? '<span class="tag ok">Bereit</span>' : ""}${i === party.host ? '<span class="tag">Host</span>' : ""}${i === party.you ? '<span class="tag">du</span>' : ""}${host && i !== party.you ? `<button class="rm" type="button" data-kick="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("")}</ul>
       ${game}
       <p>${host ? "Du bist der Host: Wähl unten ein Spiel." : "Der Host wählt das Spiel, dann geht es für alle automatisch los."} „Bereit“ zeigt, wer mitspielen will, falls das Spiel zu wenige Plätze hat.</p>
@@ -428,7 +435,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         case "share": {
           const url = `${location.origin}/?party=${party.code}`, text = `Komm in meine Spieleabend-Party! Code: ${party.code}`;
           if (navigator.share) { try { await navigator.share({ title: "Spieleabend", text, url }); } catch (err) { if (err.name !== "AbortError") say("Teilen hat nicht geklappt."); } break; }
-          try { await navigator.clipboard.writeText(`${text}\n${url}`); b.lastChild.textContent = "Einladung kopiert, jetzt in Discord einfügen"; setTimeout(() => { b.lastChild.textContent = "Einladung teilen"; }, 2500); }
+          try { await navigator.clipboard.writeText(`${text}\n${url}`); b.lastChild.textContent = "Kopiert"; setTimeout(() => { b.lastChild.textContent = "Teilen"; }, 2000); }
           catch (err) { say("Teilen geht hier nicht. Kopier den Link von Hand."); }
           break;
         }
