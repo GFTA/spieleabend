@@ -601,7 +601,7 @@
   }
 
   function newGame(players, goal, level, opts) {
-    const meadows = !!(opts && opts.meadows); // Etappe 1: aus; Etappe 2 schaltet an
+    const meadows = !opts || opts.meadows !== false; // Etappe 2: Wiesen an (Tests können abschalten)
     const { start, deck } = buildDeck();
     const S = {
       players: players.slice(0, MAX_PLAYERS).map((p, i) => ({

@@ -344,3 +344,56 @@ test("round end exposes winners; next starts a new round", () => {
   assert.strictEqual(S.phase, "place");
   assert.strictEqual(S.round, 2);
 });
+
+test("meadows: farmer scores 3 per completed city touching the field", () => {
+  const S = Game.newGame([{ name: "A" }, { name: "B" }], 1, 2, { meadows: true });
+  S.stack = Array(15).fill("U");
+  // Complete start city with E north, place farmer on field of E that touches city
+  S.current = "E"; S.phase = "place"; S.cur = 0;
+  assert.ok(Game.act(S, 0, { t: "place", x: Game.START, y: Game.START - 1, r: 2 }).ok);
+  // E feats: city fi0, field fi1 (touches city)
+  const legal = Game.legalMeeples(S);
+  assert.ok(legal.includes(1), "field should be placeable with meadows on");
+  // Put farmer on field instead of city — city already completes; score city first if we put on city.
+  // Put on field: city completes with no knight, then field scores at end.
+  assert.ok(Game.act(S, 0, { t: "meeple", feature: 1 }).ok);
+  // City should have scored for nobody (no knight). Farmer still on field.
+  assert.strictEqual(S.players[0].meeples, 6);
+  // Empty stack to force end scoring
+  S.stack = [];
+  S.current = null;
+  S.phase = "place";
+  S.cur = 0;
+  const res = Game.act(S, 0, { t: "skip" });
+  assert.strictEqual(S.phase, "roundEnd");
+  const meadowScore = res.events.filter((e) => e.t === "score" && e.kind === "F");
+  assert.ok(meadowScore.length >= 1, "expected meadow score event");
+  assert.strictEqual(meadowScore[0].points, 3); // one completed city
+  assert.ok(S.players[0].score >= 3);
+});
+
+test("meadows: without meadows flag farmers are rejected", () => {
+  const S = Game.newGame([{ name: "A" }, { name: "B" }], 1, 2, { meadows: false });
+  S.stack = Array(5).fill("E");
+  S.current = "E"; S.phase = "place"; S.cur = 0;
+  Game.act(S, 0, { t: "place", x: Game.START, y: Game.START - 1, r: 2 });
+  const legal = Game.legalMeeples(S);
+  assert.ok(!legal.includes(1), "field not legal without meadows");
+  assert.ok(legal.includes(0)); // city still ok
+});
+
+test("meadows: bots finish a full game with meadows on", () => {
+  const S = Game.newGame(
+    [{ name: "R1", bot: true }, { name: "R2", bot: true }],
+    1, 2, { meadows: true }
+  );
+  let guard = 0;
+  while (S.phase !== "roundEnd" && guard++ < 5000) {
+    const a = Game.botMove(S, S.cur);
+    assert.ok(a);
+    assert.ok(Game.act(S, S.cur, a).ok);
+  }
+  assert.strictEqual(S.phase, "roundEnd");
+  assert.strictEqual(Object.keys(S.board).length, 72);
+  S.players.forEach((p) => assert.ok(p.score >= 0));
+});

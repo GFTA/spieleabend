@@ -543,7 +543,7 @@
   $("#startLocal").addEventListener("click", () => {
     const { names, bots } = HOME.roster($("#myName").value);
     const list = names.map((name, i) => ({ name, bot: bots[i], avatar: bots[i] ? G.BOT_AVATAR : myAvatar }));
-    startLocal(G.newGame(list, goalLocal, levelLocal, { meadows: false }));
+    startLocal(G.newGame(list, goalLocal, levelLocal, { meadows: true }));
   });
   $("#resumeBtn").addEventListener("click", () => {
     const s = store.get(K.local); if (!s) return render();

@@ -21,7 +21,7 @@ module.exports = require("../shared/room-server.js")({
   },
   newGame: (room, players) => Game.newGame(
     players.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })),
-    room.goal, room.level, { meadows: false }
+    room.goal, room.level, { meadows: true }
   ),
 
   botPlan(room, ctx) {
