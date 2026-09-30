@@ -1,4 +1,4 @@
-run: if [ -f package-lock.json ]; then npm ci; finame: Tests
+name: Tests
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: find
         # every top-level folder with a test/ directory: the nine games and the start page
-        run: echo "dirs=$(ls -d */test | cut -d/ -f1 | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+        run: echo "dirs=$(find . -maxdepth 2 -type d -name test -not -path "./node_modules/*" | cut -d/ -f2 | sort | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
 
   test:
     needs: discover
@@ -32,5 +32,5 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: test -f package-lock.json && npm ci || true
+        run: if [ -f package-lock.json ]; then npm ci; fi
       - run: npm test
