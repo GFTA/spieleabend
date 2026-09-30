@@ -4,7 +4,7 @@ Dieses Dokument beschreibt, was alle Spiele in diesem Repo gemeinsam haben —
 designtechnisch und servertechnisch. Es ist der Bauplan für jedes neue Spiel:
 wer sich daran hält, fühlt sich sofort wie die anderen an und lässt sich mit
 demselben Handgriff deployen. Stand heute (uno, schiffe, wuerfelpoker,
-viergewinnt, maedn, hangman, phase10, kniffel, poker) sind alle sieben Punkte für Punkt danach gebaut — das hier ist die
+viergewinnt, maedn, hangman, phase10, kniffel, poker) sind alle neun Punkt für Punkt danach gebaut — das hier ist die
 Doku dieser bereits gelebten Konvention, nicht ein Wunschzettel.
 
 Wird eine neue gemeinsame Konvention eingeführt (z. B. der `?table=`-Handoff
@@ -173,8 +173,10 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
   die alte Bilanz eines Browsers wird einmal per `importLegacy()` (nach Name) übernommen. Die Spielstartseite verlinkt
   nur noch auf `profile.html` der Startseite (`data-start-link="profile.html"`).
 - **Startseite:** `start/public/profile.html` (Bearbeiten, Summen, Statistik je Spiel, Zurücksetzen mit Doppel-Tipp).
-  Der `start`-Container hat kein `shared/`: `start/public/avatars.js` und `profile.js` sind **Kopien** — nach jeder Änderung
-  `cp shared/avatars.js shared/profile.js start/public/` (ein Test in `start/test/profile.test.js` prüft die Gleichheit).
+  Es gibt nur eine Quelle: `shared/`. Der Startseiten-Server liefert `/avatars.js` und `/profile.js` direkt daraus aus
+  (`SHARED_DIR`, sonst `start/shared`, sonst `../shared`). Das Image baut deshalb wie die Spiele aus dem Repo-Root
+  (`start/Dockerfile` kopiert die beiden Dateien nach `/app/shared`, `docker-compose.yml` mountet `../shared` live).
+  `start/test/profile.test.js` und `server.test.js` stellen sicher, dass es keine Kopie in `start/public/` gibt.
 - App-Vertrag für `RoomUI`: `avatars: G.AVATARS` und `setAvatar(a)` (statt früher `cycleAvatar`).
 
 `#myName` hat überall `maxlength="18"`.

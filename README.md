@@ -2,7 +2,7 @@
 
 Browser-Spiele für Android, iOS und Desktop. Jedes Spiel geht auf zwei Arten:
 
-- **Jeder sein Handy**: Einer erstellt einen Raum, die anderen scannen den QR-Code.
+- **Jeder sein Handy**: Einer erstellt eine Party, die anderen scannen den QR-Code oder öffnen den Link; der Host startet das Spiel.
   Dafür läuft ein kleiner Node.js-Server, z. B. auf einem eigenen Server.
 - **Einzelspieler**: allein gegen Computer-Gegner, geht auch ganz ohne Server.
 
@@ -44,6 +44,14 @@ docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
 
 Update: `git pull` im Repo, dann denselben `docker compose … up -d --build` im Spiel-Ordner.
 Alles Weitere steht in der README des jeweiligen Spiels.
+
+## Lizenz
+
+[MIT](LICENSE). Enthalten ist eine Kopie von `qrcode-generator` (ebenfalls MIT, Kazuhiko Arase) unter
+`start/public/vendor/qrcode.js`. Die Schriften Bowlby One und Figtree lädt der Browser von Google Fonts.
+
+Die Tests aller Spiele und der Startseite laufen bei jedem Push über GitHub Actions
+(`.github/workflows/test.yml`); lokal: `npm test` im jeweiligen Ordner.
 
 „Uno“ ist eine Marke von Mattel. Dieses Projekt ist eine inoffizielle Umsetzung für
 den privaten Spieleabend.
