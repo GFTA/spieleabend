@@ -283,6 +283,8 @@ button.cell{cursor:crosshair}
 }
 .keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
 .keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+.fleet i.flag{outline:2px solid #f5b301;outline-offset:1px}
+#reStep{text-align:center;min-height:1.4em}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
@@ -409,6 +411,7 @@ button.cell{cursor:crosshair}
         <div class="shots" id="shots" hidden></div>
         <div class="clock" id="clock" hidden><span class="track"><i id="clockBar"></i></span><span id="clockSec"></span></div>
         <div class="acts">
+          <button class="btn" id="hintBtn" type="button" hidden>Tipp</button>
           <button class="btn btn-primary" id="fireBtn" type="button" hidden>Feuer!</button>
           <button class="btn btn-primary" id="fleetBtn" type="button" hidden>Fertig, Flotte steht</button>
           <button class="btn" id="editBtn" type="button" hidden>Flotte ändern</button>
@@ -427,6 +430,8 @@ button.cell{cursor:crosshair}
     <p class="hint" id="reText"></p>
     <div class="fleets" id="reFleets"></div>
     <div class="legend"><span><i class="cell s"></i>nicht gefunden</span><span><i class="cell s x"></i>getroffen</span><span><i class="cell k s"></i>versenkt</span><span><i class="cell o"></i>Wasser</span></div>
+    <button class="btn btn-block" id="reReplay" type="button" hidden>▶ Wiederholung ansehen</button>
+    <p class="hint" id="reStep" hidden></p>
     <ol class="scores" id="reScores"></ol>
     <ul class="awards" id="reAwards"></ul>
     <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>

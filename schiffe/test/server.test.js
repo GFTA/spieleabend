@@ -66,7 +66,7 @@ test("create, join, place and play over WebSockets, with a computer player", asy
   b.send({ t: "bot" });
   a.send({ t: "settings", size: 10, goal: 1, level: 3, rules: { again: true, sonar: true } });
   const set = await b.next((m) => m.t === "room" && m.size === 10);
-  assert.deepStrictEqual(set.rules, { again: true, salvo: false, touch: false, weapons: false, sonar: true, clock: false, teams: false });
+  assert.deepStrictEqual(set.rules, { again: true, salvo: false, touch: false, weapons: false, sonar: true, flagship: false, clock: false, teams: false });
   assert.strictEqual(set.members.length, 2);
   assert.strictEqual(set.level, 3);
 

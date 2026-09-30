@@ -48,6 +48,7 @@
     { k: "touch", name: "Schiffe dürfen sich berühren", desc: "Aus: zwischen zwei Schiffen muss mindestens ein Feld Wasser sein, auch diagonal. Rund um versenkte Schiffe wird das Wasser dann automatisch aufgedeckt." },
     { k: "weapons", name: "Spezialwaffen", desc: "Jeder hat pro Runde eine Bombe (trifft ein Kreuz aus 5 Feldern) und einen Torpedo (läuft von links durch eine Reihe, bis er auf ein Schiff trifft)." },
     { k: "sonar", name: "Sonar", desc: "Einmal pro Runde statt eines Schusses: zeigt, wie viele Schiffsteile in einem 3×3-Feld liegen. Nur du siehst das Ergebnis." },
+    { k: "flagship", name: "Flaggschiff", desc: "Wird das größte Schiff einer Flotte versenkt, gibt der Besitzer sofort auf, auch wenn noch Schiffe schwimmen. Im Spiel mit ★ markiert." },
     { k: "clock", name: "Schussuhr", desc: "15 Sekunden pro Schuss, sonst schießt das Spiel zufällig für dich. Im 5×5-Swiftplay immer an, dort mit 8 Sekunden." },
     { k: "teams", name: "Teams 2 gegen 2", desc: "Nur zu viert: Platz 1 und 3 gegen Platz 2 und 4. Ihr seht die Flotte eures Partners und gewinnt zusammen.", four: true }
   ];
@@ -61,6 +62,10 @@
   const normLevel = (n) => (n != null && n !== "" && LEVELS[+n] ? +n : 2);
   // level 0 = random: every computer player got its own strength when the game started
   const lvOf = (S, pi) => S.level || (S.players[pi] && S.players[pi].lvl) || 2;
+
+  // the biggest ship of a fleet (most cells); the "flagship" house rule ends a fleet when it sinks
+  const cellsOf = (key) => SHAPES[key].len * (SHAPES[key].kind === "wide" ? 2 : 1);
+  const flagKey = (size) => FLEETS[size].reduce((a, k) => (cellsOf(k) > cellsOf(a) ? k : a));
 
   const cellName = (size, i) => COLS[i % size] + (Math.floor(i / size) + 1);
   const shipName = (key) => (SHAPES[key] ? SHAPES[key].name : key);
@@ -203,6 +208,7 @@
     S.deadline = 0;
     S.sonars = [];
     S.lastShot = null;
+    S.shotLog = [];
     S.last = null;
     S.log = [];
     S.starter = S.starter % n;
@@ -282,11 +288,11 @@
     nextTurn(S, events);
   }
 
-  function knockOut(S, ti, events, by) {
+  function knockOut(S, ti, events, by, flag) {
     const T = S.players[ti];
     T.out = true;
-    log(S, by == null ? `${T.name} gibt auf.` : `Die Flotte von ${T.name} ist komplett versenkt!`);
-    events.push({ t: "out", pi: ti, by });
+    log(S, by == null ? `${T.name} gibt auf.` : flag ? `Das Flaggschiff von ${T.name} ist gesunken, die Flotte ergibt sich!` : `Die Flotte von ${T.name} ist komplett versenkt!`);
+    events.push({ t: "out", pi: ti, by, flag: !!flag });
   }
 
   // one cell hit by player pi on player ti's board; returns "miss", "hit" or "sunk"
@@ -315,7 +321,11 @@
     }
     S.lastShot = { pi, target: ti, cell, res, turn: S.turn, n: P.shots };
     events.push({ t: "shot", pi, target: ti, cell, res, key: res === "sunk" ? ship.key : null, len: res === "sunk" ? ship.len : 0 });
-    if (res === "sunk" && T.fleet.every((s) => s.sunk)) knockOut(S, ti, events, pi);
+    (S.shotLog || (S.shotLog = [])).push([pi, ti, cell, res === "miss" ? 0 : res === "hit" ? 1 : 2]);
+    if (res === "sunk" && !T.out) {
+      if (T.fleet.every((s) => s.sunk)) knockOut(S, ti, events, pi);
+      else if (S.rules.flagship && ship.key === flagKey(S.size)) knockOut(S, ti, events, pi, true);
+    }
     return res;
   }
 
@@ -478,19 +488,9 @@
     return { t: "shoot", target: ti, cell };
   }
 
-  function aim(S, T, level) {
-    const size = S.size, m = T.marks, N = size * size;
-    const free = [], hits = [];
-    for (let c = 0; c < N; c++) { if (m[c] === UNKNOWN) free.push(c); else if (m[c] === HIT) hits.push(c); }
-    if (!free.length) return 0;
-    const keys = T.fleet.filter((s) => !s.sunk).map((s) => s.key);
-    const diag = keys.some((k) => SHAPES[k].kind === "diag");
-    if (level === 1) { // easy: shoots next to a hit now and then, otherwise at random
-      const near = [...new Set(hits.flatMap((h) => around(size, h, diag)))].filter((c) => m[c] === UNKNOWN);
-      return near.length && Math.random() < 0.6 ? pick(near) : pick(free);
-    }
-    // count how many ways the remaining ships could lie over each cell; ways through known hits count a lot
-    const heat = new Array(N).fill(0);
+  // count how many ways the remaining ships could lie over each cell; ways through known hits count a lot
+  function heatmap(size, m, keys) {
+    const heat = new Array(size * size).fill(0), anyHit = m.includes(HIT);
     for (const key of new Set(keys)) for (const o of [0, 1]) {
       const off = offsets(key, o);
       const h = Math.max(...off.map((x) => x[0])) + 1, w = Math.max(...off.map((x) => x[1])) + 1;
@@ -500,10 +500,33 @@
           const x = m[(r + a) * size + c + b];
           if (x === HIT) cover++; else if (x !== UNKNOWN) { okk = false; break; }
         }
-        if (!okk || (hits.length && !cover)) continue;
+        if (!okk || (anyHit && !cover)) continue;
         const wgt = 1 + cover * 40;
         for (const [a, b] of off) { const x = (r + a) * size + c + b; if (m[x] === UNKNOWN) heat[x] += wgt; }
       }
+    }
+    return heat;
+  }
+
+  // The tip button: the cell where most of the remaining ships could still lie (-1 = nothing left to shoot)
+  function hint(size, marks, keys) {
+    const heat = heatmap(size, marks, keys);
+    let best = -1;
+    for (let c = 0; c < heat.length; c++) if (marks[c] === UNKNOWN && (best < 0 || heat[c] > heat[best])) best = c;
+    return best;
+  }
+
+  function aim(S, T, level) {
+    const size = S.size, m = T.marks, N = size * size;
+    const free = [], hits = [];
+    for (let c = 0; c < N; c++) { if (m[c] === UNKNOWN) free.push(c); else if (m[c] === HIT) hits.push(c); }
+    if (!free.length) return 0;
+    const keys = T.fleet.filter((s) => !s.sunk).map((s) => s.key);
+    const diag = keys.some((k) => SHAPES[k].kind === "diag");
+    const heat = heatmap(size, m, keys);
+    if (level === 1) { // easy: shoots next to a hit now and then, otherwise at random
+      const near = [...new Set(hits.flatMap((h) => around(size, h, diag)))].filter((c) => m[c] === UNKNOWN);
+      return near.length && Math.random() < 0.6 ? pick(near) : pick(free);
     }
     if (level === 2 && Math.random() < (hits.length ? 0.25 : 0.5)) { // not a perfect machine
       const near = [...new Set(hits.flatMap((h) => around(size, h, true)))].filter((c) => m[c] === UNKNOWN);
@@ -548,13 +571,14 @@
         };
       }),
       sonars: S.sonars.filter((s) => s.by === me),
-      lastShot: S.lastShot, log: S.log.slice(), last: S.last
+      lastShot: S.lastShot, log: S.log.slice(), last: S.last,
+      flagKey: flagKey(S.size), replay: reveal && S.shotLog ? S.shotLog.map((x) => x.slice()) : null
     };
   }
 
   return {
     SHAPES, FLEETS, COLS, MAX_PLAYERS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, RULES, normRules, normSize, normGoal, normLevel, cellName, shipName,
-    around, offsets, place, matchKey, possible, orientOf, canon, placeError, fleetError, randomFleet,
+    around, offsets, place, matchKey, possible, hint, flagKey, orientOf, canon, placeError, fleetError, randomFleet,
     newGame, startRound, act, tick, nextDeadline, resetClock, botMove, view
   };
 });

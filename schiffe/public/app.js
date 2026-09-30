@@ -121,7 +121,8 @@
         }
       }
       if (ev.t === "out" && !events.some((e) => e.t === "end")) {
-        setTimeout(() => flash(ev.pi === me ? "Du bist raus!" : "Ausgeschieden!", ev.pi === me ? "Deine Flotte liegt am Meeresgrund." : v.players[ev.pi].name, "blue"), 950);
+        setTimeout(() => (ev.flag ? flash("Flaggschiff versenkt!", ev.pi === me ? "Deine Flotte ergibt sich." : `${v.players[ev.pi].name} ergibt sich`, "blue")
+          : flash(ev.pi === me ? "Du bist raus!" : "Ausgeschieden!", ev.pi === me ? "Deine Flotte liegt am Meeresgrund." : v.players[ev.pi].name, "blue")), 950);
         if (ev.pi === me) sfx("bad");
       }
       if (ev.t === "sonar") {
@@ -398,7 +399,7 @@
     UI.update();
   }
 
-  const pieceHTML = (key, gone) => `<i class="${G.SHAPES[key].kind}${gone ? " gone" : ""}" style="--l:${G.SHAPES[key].len}" title="${G.shipName(key)}"></i>`;
+  const pieceHTML = (key, gone) => `<i class="${G.SHAPES[key].kind}${gone ? " gone" : ""}${V && V.rules.flagship && key === G.flagKey(V.size) ? " flag" : ""}" style="--l:${G.SHAPES[key].len}" title="${G.shipName(key)}"></i>`;
   function fleetHTML(spec, left) {
     const rest = left.slice();
     return spec.map((key) => {
@@ -577,7 +578,7 @@
     const members = mode === "online" && R ? R.members : null;
     if (V.phase !== "place") pickFocus();
     if (duo() && focus === me) focus = (me + 1) % n; // your own fleet has its own board below
-    if (V.phase !== "roundEnd") peek = false;
+    if (V.phase !== "roundEnd") { peek = false; stopReplay(); }
 
     // opponents in seating order, starting with the player after me
     let opps = "";
@@ -681,7 +682,7 @@
     anim = null;
 
     // dock: status and buttons
-    const show = { fireBtn: false, weapons: false, fleetBtn: false, editBtn: false, resultBtn: false };
+    const show = { hintBtn: false, fireBtn: false, weapons: false, fleetBtn: false, editBtn: false, resultBtn: false };
     let who = "", hint = "";
     const curName = V.cur >= 0 ? V.players[V.cur].name : "";
     if (V.phase === "place") {
@@ -705,6 +706,7 @@
       else if (aimCell != null && aimAt === focus) hint = `${WEAPON[weapon].aimed(aimCell)}. Nochmal antippen zum Feuern.`;
       else hint = WEAPON[weapon].hint(V.players[focus].name);
       show.fireBtn = true;
+      show.hintBtn = canShoot(focus) && weapon === "shot";
       const avail = weapons();
       if (!avail.includes(weapon)) weapon = "shot";
       show.weapons = avail.length > 1;
@@ -828,6 +830,14 @@
     focus = V.me; renderGame();
   });
   $("#fireBtn").addEventListener("click", fire);
+  $("#hintBtn").addEventListener("click", () => {
+    if (!V || !myTurn() || !canShoot(focus)) return;
+    const F = V.players[focus], c = G.hint(V.size, F.marks, F.left);
+    if (c < 0) return;
+    weapon = "shot"; aimCell = c; aimAt = focus;
+    toast(`Tipp: ${cname(c)}. Hier passen am meisten der übrigen Schiffe hin.`);
+    renderGame();
+  });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
   // ---------- house rules ----------
@@ -915,13 +925,48 @@
     $("#reText").textContent = (last.over ? "" : `Gespielt wird bis ${V.goal} Siege. `) + "So lagen alle Flotten:";
     scoreList($("#reScores"), ws);
     $("#reAwards").innerHTML = awards().map((x) => `<li>${x}</li>`).join("");
-    $("#reFleets").innerHTML = V.players.map((p, i) =>
+    if (!replay) $("#reFleets").innerHTML = V.players.map((p, i) =>
       `<figure class="${ws.includes(i) ? "win" : ""}"><div class="board bare" style="--n:${V.size}">${boardHTML({ size: V.size, marks: p.marks, ships: p.ships })}</div>` +
       `<figcaption>${avi(p.avatar)}${esc(p.name)}${i === V.me && mode === "online" ? " (du)" : ""}</figcaption></figure>`).join("");
     const box = $("#reFleets"), w = box.clientWidth || 300, cols = V.players.length > 2 ? 2 : V.players.length;
     box.style.setProperty("--fbs", Math.floor(Math.min(240, (w - (cols - 1) * 12) / cols)) + "px");
+    $("#reReplay").hidden = !(V.replay && V.replay.length);
+    $("#reReplay").textContent = replay ? "■ Wiederholung beenden" : "▶ Wiederholung ansehen";
+    if (!replay) $("#reStep").hidden = true;
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
   }
+
+  // replay of the round: every shot again on the revealed boards, in the order it was fired
+  let replay = null;
+  function stopReplay() { if (replay) { clearInterval(replay.timer); replay = null; } }
+  $("#reReplay").addEventListener("click", () => {
+    if (replay) { stopReplay(); if (V) renderRoundEnd(); return; }
+    if (!V || !V.replay || !V.replay.length) return;
+    const log = V.replay, boards = [...document.querySelectorAll("#reFleets .board")], step = $("#reStep");
+    V.players.forEach((p, i) => { if (boards[i]) boards[i].innerHTML = boardHTML({ size: V.size, marks: ".".repeat(V.size * V.size), ships: p.ships }); });
+    let k = 0;
+    const tick = () => {
+      if (!replay || !V) return;
+      if (k >= log.length) { step.textContent = `Ende der Runde nach ${log.length} Schüssen.`; stopReplay(); $("#reReplay").textContent = "▶ Nochmal ansehen"; return; }
+      const [pi, ti, cell, code] = log[k++], board = boards[ti];
+      const el = board && board.querySelector(`[data-c="${cell}"]`);
+      if (el) {
+        if (code === 0) el.classList.add("o", "splash");
+        else if (code === 1) el.classList.add("x", "boom");
+        else {
+          const ship = (V.players[ti].ships || []).find((s) => s.cells.includes(cell));
+          for (const c of ship ? ship.cells : [cell]) { const e = board.querySelector(`[data-c="${c}"]`); if (e) { e.classList.remove("x"); e.classList.add("k"); } }
+          el.classList.add("boom");
+        }
+        sfx(code === 0 ? "splash" : code === 1 ? "boom" : "sunk");
+      }
+      step.hidden = false;
+      step.textContent = `Schuss ${k} von ${log.length}: ${V.players[pi].name} auf ${V.players[ti].name}, ${cname(cell)} · ${["Wasser", "Treffer", "Versenkt"][code]}`;
+    };
+    replay = { timer: setInterval(tick, Math.max(150, Math.min(550, Math.floor(28000 / log.length)))) };
+    $("#reReplay").textContent = "■ Wiederholung beenden";
+    tick();
+  });
 
   // Statistik lebt im Profil (shared/profile.js, gilt für alle Spiele); die alte Bilanz dieses Browsers wird einmal übernommen
   const profile = Spieleabend.profile;

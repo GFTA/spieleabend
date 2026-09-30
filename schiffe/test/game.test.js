@@ -12,7 +12,7 @@ function ready(S, fleets) {
 const shoot = (S, pi, target, cell) => G.act(S, pi, { t: "shoot", target, cell });
 
 test("rules, sizes and goals are normalised", () => {
-  const off = { again: true, salvo: false, touch: false, weapons: false, sonar: false, clock: false, teams: false };
+  const off = { again: true, salvo: false, touch: false, weapons: false, sonar: false, flagship: false, clock: false, teams: false };
   assert.deepStrictEqual(G.normRules(), off);
   assert.deepStrictEqual(G.normRules({ again: false, salvo: true, bogus: 1, touch: "yes" }), { ...off, again: false, salvo: true });
   assert.strictEqual(G.normSize(5), 5);
@@ -329,4 +329,50 @@ test("computer players place, aim sensibly and finish games", () => {
   // a line of hits gets extended along the line
   S.players[0].marks = S.players[0].marks.slice(0, 45) + "x" + S.players[0].marks.slice(46);
   assert.ok([43, 46].includes(G.botMove(S, 1).cell));
+});
+
+test("flagship rule: sinking the biggest ship ends that fleet", () => {
+  const S = G.newGame(two(), 1, 10, { flagship: true });
+  ready(S, null);
+  S.cur = 0; S.starter = 0;
+  let r;
+  for (const c of [0, 1, 2, 3, 4]) r = shoot(S, 0, 1, c);
+  assert.ok(r.ok);
+  assert.ok(r.events.some((e) => e.t === "out" && e.pi === 1 && e.flag === true));
+  assert.strictEqual(S.phase, "roundEnd");
+  assert.deepStrictEqual(S.last.winners, [0]);
+  assert.strictEqual(G.flagKey(10), "L5");
+  assert.strictEqual(G.flagKey(14), "W3");
+});
+
+test("without the flagship rule the smaller ships keep the fleet alive", () => {
+  const S = G.newGame(two(), 1, 10, {});
+  ready(S, null);
+  const a = S.cur;
+  for (const c of [0, 1, 2, 3, 4]) shoot(S, a, 1 - a, c); // hits give another shot
+  assert.strictEqual(S.phase, "play");
+  assert.strictEqual(S.players[1].out, false);
+});
+
+test("shot log: replay only shows after the round", () => {
+  const S = G.newGame(two(), 1, 10, { flagship: true });
+  ready(S, null);
+  const a = S.cur, b = 1 - a;
+  shoot(S, a, b, 99); // water, turn passes
+  assert.strictEqual(G.view(S, a).replay, null);
+  assert.deepStrictEqual(S.shotLog, [[a, b, 99, 0]]);
+  for (const c of [0, 1, 2, 3, 4]) { S.cur = a; shoot(S, a, b, c); }
+  const v = G.view(S, b);
+  assert.strictEqual(v.phase, "roundEnd");
+  assert.strictEqual(v.replay.length, 6);
+  assert.deepStrictEqual(v.replay[5], [a, b, 4, 2]);
+});
+
+test("tip: best cell for the remaining ships, next to a hit when there is one", () => {
+  const empty = ".".repeat(100);
+  const c = G.hint(10, empty, G.FLEETS[10]);
+  assert.ok(c >= 0 && c < 100);
+  const marks = empty.slice(0, 44) + "x" + empty.slice(45);
+  assert.ok([34, 43, 45, 54].includes(G.hint(10, marks, G.FLEETS[10])));
+  assert.strictEqual(G.hint(2, "oooo", ["L2"]), -1);
 });

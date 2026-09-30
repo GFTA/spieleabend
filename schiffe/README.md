@@ -55,12 +55,19 @@ Treffer = nochmal (Standard an) · Salve (so viele Schüsse, wie man noch Schiff
 Schiffe dürfen sich berühren (sonst wird das Wasser rund um versenkte Schiffe
 automatisch aufgedeckt) · Spezialwaffen (pro Runde eine Bombe, die ein Kreuz aus
 5 Feldern trifft, und ein Torpedo, der von links durch eine Reihe läuft, bis er auf
-ein Schiff stößt) · Sonar (einmal pro Runde ein 3×3-Feld abhorchen) · Schussuhr
+ein Schiff stößt) · Sonar (einmal pro Runde ein 3×3-Feld abhorchen) · Flaggschiff
+(das größte Schiff einer Flotte, mit ★ markiert: geht es unter, ergibt sich die ganze
+Flotte) · Schussuhr
 (15 Sekunden pro Schuss, sonst Zufallsschuss) · Teams 2 gegen 2.
 
 **Am Rundenende** gibt es neben allen aufgedeckten Flotten kleine Auszeichnungen:
 Scharfschütze (beste Trefferquote), Versenker (meiste Schiffe), Aasgeier (Schiffe
 fertig versenkt, die andere angeschossen hatten), Trefferserie und Pechvogel.
+Mit **▶ Wiederholung ansehen** laufen alle Schüsse der Runde in der gefeuerten
+Reihenfolge noch einmal über die aufgedeckten Flotten.
+
+**Tipp**: Der Button neben „Feuer!“ zielt auf das Feld, auf dem die meisten der noch
+schwimmenden Schiffe liegen könnten (bei Treffern: rund um den Treffer).
 
 **Am Computer** (Desktop-Modus ab 900 px Breite): breites Layout mit großem Zielfeld
 und der eigenen Flotte groß daneben, Hover-Effekte, beim Aufstellen folgt das Schiff
