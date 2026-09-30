@@ -15,15 +15,14 @@
   // difficulty = puzzle hardness and how fast computer opponents fill cells
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Schwer" };
   const CLUES = { 1: 42, 2: 32, 3: 26 }; // how many given digits (more = easier)
-  const BOT_DELAY = { 1: 1600, 2: 900, 3: 500 }; // ms between computer cell fills
+  // a computer opponent needs about this long for the whole puzzle (a person needs minutes, not seconds)
+  const BOT_TOTAL_MS = { 1: 8 * 60000, 2: 12 * 60000, 3: 18 * 60000 };
 
   const normGoal = (n) => ([1, 2, 3].includes(+n) ? +n : 1);
   const normLevel = (n) => (LEVELS[+n] ? +n : 2);
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const rc = (i) => [i / N | 0, i % N];
-  const idx = (r, c) => r * N + c;
   const bit = (n) => 1 << (n - 1);
   const filledCount = (grid, givens) => {
     let n = 0;
@@ -44,69 +43,54 @@
   }
 
   // ---------- generator: full valid board, then dig holes keeping a unique solution ----------
-  function canPlace(board, i, n) {
-    const [r, c] = rc(i);
-    for (let k = 0; k < N; k++) {
-      if (board[idx(r, k)] === n || board[idx(k, c)] === n) return false;
-    }
-    const br = (r / 3 | 0) * 3, bc = (c / 3 | 0) * 3;
-    for (let rr = br; rr < br + 3; rr++) for (let cc = bc; cc < bc + 3; cc++) if (board[idx(rr, cc)] === n) return false;
-    return true;
-  }
+  const ROW = [], COL = [], BOX = [], POP = [0];
+  for (let i = 0; i < CELLS; i++) { ROW[i] = i / N | 0; COL[i] = i % N; BOX[i] = (ROW[i] / 3 | 0) * 3 + (COL[i] / 3 | 0); }
+  for (let m = 1; m < 512; m++) POP[m] = POP[m >> 1] + (m & 1);
 
-  function fillBoard(board, from) {
-    for (let i = from; i < CELLS; i++) {
-      if (board[i]) continue;
-      for (const n of shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-        if (!canPlace(board, i, n)) continue;
-        board[i] = n;
-        if (fillBoard(board, i + 1)) return true;
-        board[i] = 0;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  // count solutions up to `limit` (2 is enough to prove uniqueness)
-  function countSolutions(board, limit) {
+  // Backtracking with row/column/box bitmasks, always continuing at the cell with the fewest candidates.
+  // Counts solutions up to `limit` (2 proves uniqueness). With `randomize` digits are tried in random
+  // order and the first solution is left on the board (used to draw a full grid). Without it the board is
+  // scratch space: pass a copy.
+  function solve(board, limit, randomize) {
+    const row = new Array(N).fill(0), col = new Array(N).fill(0), box = new Array(N).fill(0);
+    for (let i = 0; i < CELLS; i++) if (board[i]) { const b = bit(board[i]); row[ROW[i]] |= b; col[COL[i]] |= b; box[BOX[i]] |= b; }
     let found = 0;
-    function dfs(from) {
-      if (found >= limit) return;
-      let i = from;
-      while (i < CELLS && board[i]) i++;
-      if (i === CELLS) { found++; return; }
-      for (let n = 1; n <= 9; n++) {
-        if (!canPlace(board, i, n)) continue;
-        board[i] = n;
-        dfs(i + 1);
-        board[i] = 0;
+    function dfs() {
+      let best = -1, bestMask = 0, bestN = 10;
+      for (let i = 0; i < CELLS; i++) {
+        if (board[i]) continue;
+        const m = ~(row[ROW[i]] | col[COL[i]] | box[BOX[i]]) & 511, n = POP[m];
+        if (n < bestN) { best = i; bestMask = m; bestN = n; if (n <= 1) break; }
+      }
+      if (best < 0) { found++; return; }
+      if (!bestN) return;
+      const digits = [];
+      for (let d = 1; d <= N; d++) if (bestMask & bit(d)) digits.push(d);
+      if (randomize) shuffle(digits);
+      for (const d of digits) {
+        const b = bit(d);
+        board[best] = d; row[ROW[best]] |= b; col[COL[best]] |= b; box[BOX[best]] |= b;
+        dfs();
         if (found >= limit) return;
+        board[best] = 0; row[ROW[best]] &= ~b; col[COL[best]] &= ~b; box[BOX[best]] &= ~b;
       }
     }
-    dfs(0);
+    dfs();
     return found;
   }
+  const countSolutions = (board, limit) => solve(board.slice(), limit, false);
 
   function generate(level) {
     const solution = new Array(CELLS).fill(0);
-    // seed the three diagonal boxes first (independent), then fill the rest
-    for (let b = 0; b < 3; b++) {
-      const nums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-      let k = 0;
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) solution[idx(b * 3 + r, b * 3 + c)] = nums[k++];
-    }
-    fillBoard(solution, 0);
+    solve(solution, 1, true);
     const puzzle = solution.slice();
-    const order = shuffle([...Array(CELLS).keys()]);
     const target = CLUES[level] || CLUES[2];
     let left = CELLS;
-    for (const i of order) {
+    for (const i of shuffle([...Array(CELLS).keys()])) {
       if (left <= target) break;
       const keep = puzzle[i];
       puzzle[i] = 0;
-      const probe = puzzle.slice();
-      if (countSolutions(probe, 2) !== 1) puzzle[i] = keep;
+      if (countSolutions(puzzle, 2) !== 1) puzzle[i] = keep;
       else left--;
     }
     return { puzzle, solution };
@@ -289,8 +273,18 @@
     return { t: "set", i, n: S.solution[i] };
   }
 
-  function botDelayMs(level) {
-    return BOT_DELAY[normLevel(level)] || BOT_DELAY[2];
+  // Which computer opponent moves next and after how long. Shared by the server (online) and the browser
+  // (single player), so both pace the computers the same way. The slowest one moves first, and the pause is
+  // split between the active computers so each of them needs about BOT_TOTAL_MS for the whole puzzle.
+  function botPlan(S) {
+    if (!S || S.phase !== "play") return null;
+    const bots = [];
+    S.players.forEach((p, i) => { if (p.bot && !p.done && !p.out) bots.push(i); });
+    if (!bots.length) return null;
+    bots.sort((a, b) => S.players[a].filled - S.players[b].filled || a - b);
+    const empty = Math.max(1, S.puzzle.filter((n) => !n).length);
+    const perCell = BOT_TOTAL_MS[S.level] / empty / bots.length;
+    return { pi: bots[0], delay: Math.round(perCell * (0.6 + Math.random() * 0.8)), key: `bot:${bots[0]}:${S.players[bots[0]].filled}:${S.round}` };
   }
 
   // Privacy: each player sees only their own grid/notes; others show progress only.
@@ -321,8 +315,8 @@
   }
 
   return {
-    MAX_PLAYERS, N, CELLS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, CLUES, BOT_DELAY,
-    normGoal, normLevel, generate, fmtTime, botDelayMs,
-    newGame, startRound, act, botMove, view
+    MAX_PLAYERS, N, CELLS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, CLUES, BOT_TOTAL_MS,
+    normGoal, normLevel, generate, countSolutions, fmtTime,
+    newGame, startRound, act, botMove, botPlan, view
   };
 });

@@ -35,7 +35,7 @@
   let noteMode = false;
   let confettiFor = null;
   const webHost = /^https?:$/.test(location.protocol);
-  const HOME = window.HomeUI({ key: "sudoku.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, onChange: () => renderHome() });
+  const HOME = window.HomeUI({ key: "sudoku.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, min: 0, onChange: () => renderHome() });
   let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
   let goalLocal = G.normGoal(store.get(K.goal) || 1);
   let levelLocal = G.normLevel(store.get(K.level) || 2);
@@ -72,13 +72,16 @@
     }
   }
 
+  // the local game survives a reload; its clock only runs while the game is open
+  function saveLocal() { L.savedAt = Date.now(); store.set(K.local, L); }
+
   function doAct(a, asPi) {
     if (mode === "local") {
       const pi = asPi != null ? asPi : 0;
       const res = G.act(L, pi, a);
       if (!res.ok) { toast(res.error); sfx("bad"); return false; }
       handleEvents(res.events, G.view(L, 0));
-      store.set(K.local, L);
+      saveLocal();
       render();
       scheduleBot();
       return true;
@@ -90,47 +93,49 @@
     return false;
   }
 
+  // Filling in is many quick taps, so nothing waits for the server: the tap shows at once and the
+  // next room message from the server replaces it with the real state (messages stay in order).
+  function fillCell(a) {
+    if (!doAct(a) || mode !== "online") return;
+    const me = V.players[V.me];
+    if (a.t === "set") { me.grid[a.i] = a.n; me.notes[a.i] = 0; }
+    else if (a.t === "clear") { me.grid[a.i] = 0; me.notes[a.i] = 0; }
+    else if (a.t === "note") me.notes[a.i] ^= 1 << (a.n - 1);
+    renderGrid();
+  }
+
   function playSet(n) {
     if (!canPlay()) { toast(V && V.me < 0 ? "Du schaust zu." : "Du bist fertig oder raus."); return; }
     if (sel < 0) { toast("Tippe zuerst ein Feld an."); return; }
     if (V.puzzle[sel]) { toast("Diese Zahl ist vorgegeben."); sfx("bad"); return; }
-    if (inflight) return;
-    if (mode === "online") { inflight = true; setTimeout(() => { inflight = false; }, 2500); }
     buzz(8);
-    if (noteMode) doAct({ t: "note", i: sel, n });
-    else doAct({ t: "set", i: sel, n });
+    fillCell({ t: noteMode ? "note" : "set", i: sel, n });
   }
   function playClear() {
-    if (!canPlay() || sel < 0) return;
-    if (V.puzzle[sel]) return;
-    if (inflight) return;
-    if (mode === "online") { inflight = true; setTimeout(() => { inflight = false; }, 2500); }
-    doAct({ t: "clear", i: sel });
+    if (!canPlay() || sel < 0 || V.puzzle[sel]) return;
+    fillCell({ t: "clear", i: sel });
   }
   function playSubmit() {
-    if (!canPlay()) return;
-    if (inflight) return;
+    if (!canPlay() || inflight) return;
     if (mode === "online") { inflight = true; setTimeout(() => { inflight = false; }, 2500); }
     buzz(12);
     doAct({ t: "submit" });
   }
 
+  // the computers in single player (online the server moves them); the engine decides who and when
   let botT = null;
   function scheduleBot() {
     clearTimeout(botT);
-    if (mode !== "local" || !L || L.phase !== "play") return;
-    const bots = L.players.map((p, i) => i).filter((i) => L.players[i].bot && !L.players[i].done && !L.players[i].out);
-    if (!bots.length) return;
-    bots.sort((a, b) => L.players[a].filled - L.players[b].filled || a - b);
-    const pi = bots[0];
+    const plan = mode === "local" && L ? G.botPlan(L) : null;
+    if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || L.phase !== "play") return;
-      if (!$("#menu").hidden) { scheduleBot(); return; }
-      const a = G.botMove(L, pi);
-      const res = a ? G.act(L, pi, a) : null;
-      if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); store.set(K.local, L); render(); }
+      if (!$("#menu").hidden) { scheduleBot(); return; } // paused while the menu is open
+      const a = G.botMove(L, plan.pi);
+      const res = a ? G.act(L, plan.pi, a) : null;
+      if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); saveLocal(); render(); }
       scheduleBot();
-    }, G.botDelayMs(L.level));
+    }, plan.delay);
   }
 
   function bubble(pi, text, name) {
@@ -143,14 +148,18 @@
     return `${m}:${String(r).padStart(2, "0")}`;
   }
 
+  // The server's clock and the phone's clock differ, so the timer counts from the elapsed time the view
+  // carries (`V.elapsed`, measured by whoever owns the game) and not from `V.startedAt`.
+  let clockBase = 0;
   let tickT = null;
   function armTimer() {
     clearInterval(tickT);
     if (!V || V.phase !== "play") return;
+    clockBase = Date.now() - V.elapsed;
     tickT = setInterval(() => {
       if (!V || V.phase !== "play") { clearInterval(tickT); return; }
       const el = $("#timer");
-      if (el) el.textContent = fmt(Date.now() - V.startedAt);
+      if (el) el.textContent = fmt(Date.now() - clockBase);
     }, 250);
   }
 
@@ -240,7 +249,7 @@
     $("#diffLabel").textContent = G.LEVELS[V.level] || "";
     const me = V.me >= 0 ? V.players[V.me] : null;
     $("#mistakesLabel").textContent = me ? (me.mistakes ? `${me.mistakes} Fehler` : "") : "";
-    $("#timer").textContent = fmt(V.phase === "play" ? Date.now() - V.startedAt : (V.last && V.last.timeMs) || V.elapsed || 0);
+    $("#timer").textContent = fmt(V.elapsed);
     armTimer();
 
     $("#plates").innerHTML = V.players.map((p, i) => {
@@ -318,11 +327,7 @@
       $("#reText").textContent = `Zeit: ${fmt(V.last.timeMs)}${over ? " — Spiel gewonnen." : ""}`;
     }
     scoreList($("#reScores"), w);
-    $("#reBtn").textContent = over ? (mode === "online" ? "Revanche" : "Nochmal") : "Nächste Runde";
-    $("#reBack").textContent = mode === "local" ? "Zum Start" : "Zurück in den Warteraum";
-    const votes = UI.rematchStatus();
-    $("#reVotes").hidden = !votes;
-    if (votes) $("#reVotes").textContent = votes;
+    UI.roundEndFooter({ over, next: "Nächste Runde" });
 
     if (over && w.includes(V.me) && confettiFor !== V.round) {
       confettiFor = V.round;
@@ -381,7 +386,7 @@
       },
       local(box) {
         box.append(
-          UI.armed("Runde neu starten", () => { L.round--; G.startRound(L); peek = false; sel = -1; store.set(K.local, L); render(); scheduleBot(); }),
+          UI.armed("Runde neu starten", () => { L.round--; G.startRound(L); peek = false; sel = -1; saveLocal(); render(); scheduleBot(); }),
           UI.armed("Spiel beenden", () => { store.del(K.local); L = null; mode = null; clearTimeout(botT); clearInterval(tickT); render(); })
         );
       },
@@ -413,7 +418,8 @@
 
   function startLocal(state) {
     L = state; mode = "local"; peek = false; sel = -1; noteMode = false;
-    store.set(K.local, L); render(); wake(); scheduleBot();
+    if (L.phase === "play" && L.savedAt) L.startedAt += Date.now() - L.savedAt; // the clock stood still while the game was closed
+    saveLocal(); render(); wake(); scheduleBot();
   }
   $("#startLocal").addEventListener("click", () => {
     const { names, bots } = HOME.roster($("#myName").value);

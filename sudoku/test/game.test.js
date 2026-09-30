@@ -114,3 +114,53 @@ test("giving up with nobody left ends the round without a winner", () => {
   assert.strictEqual(S.phase, "roundEnd");
   assert.deepStrictEqual(S.last.winners, []);
 });
+
+test("every generated puzzle has exactly one solution, and drawing one is fast", () => {
+  const t0 = Date.now();
+  for (const level of [1, 2, 3]) {
+    for (let k = 0; k < 10; k++) {
+      const { puzzle, solution } = Game.generate(level);
+      assert.strictEqual(Game.countSolutions(puzzle, 2), 1);
+      // the clue count is a target: a puzzle that cannot lose another digit and stay unique stops a little above it
+      const clues = puzzle.filter(Boolean).length;
+      assert.ok(clues >= Game.CLUES[level] && clues <= Game.CLUES[level] + 4, `level ${level} gave ${clues} clues`);
+      // the stored solution is a valid grid: every row, column and box holds 1-9 once
+      for (let g = 0; g < 9; g++) {
+        const row = new Set(), col = new Set(), box = new Set();
+        for (let k2 = 0; k2 < 9; k2++) {
+          row.add(solution[g * 9 + k2]); col.add(solution[k2 * 9 + g]);
+          box.add(solution[((g / 3 | 0) * 3 + (k2 / 3 | 0)) * 9 + (g % 3) * 3 + (k2 % 3)]);
+        }
+        assert.ok(row.size === 9 && col.size === 9 && box.size === 9);
+      }
+    }
+  }
+  // the generator runs on the server's only thread: 30 puzzles must not take seconds
+  assert.ok(Date.now() - t0 < 4000, `30 puzzles took ${Date.now() - t0} ms`);
+});
+
+test("a computer needs minutes for a puzzle, and each one keeps its own pace", () => {
+  const solo = Game.newGame([{ name: "Me" }, { name: "R1", bot: true }], 1, 2);
+  const duo = Game.newGame([{ name: "Me" }, { name: "R1", bot: true }, { name: "R2", bot: true }], 1, 2);
+  const mean = (S) => { let sum = 0; for (let k = 0; k < 400; k++) sum += Game.botPlan(S).delay; return sum / 400; };
+  const empty = solo.puzzle.filter((n) => !n).length;
+  const total = mean(solo) * empty;
+  assert.ok(total > 8 * 60000 && total < 16 * 60000, `one computer would need ${Math.round(total / 1000)} s`);
+  assert.ok(Math.abs(mean(duo) * 2 - mean(solo)) < mean(solo) * 0.15, "two computers share the pause");
+  const plan = Game.botPlan(duo);
+  assert.ok(duo.players[plan.pi].bot);
+  Game.act(duo, plan.pi, Game.botMove(duo, plan.pi));
+  assert.notStrictEqual(Game.botPlan(duo).pi, plan.pi, "the slower computer moves next");
+  assert.strictEqual(Game.botPlan(Game.newGame([{ name: "Me" }], 1, 1)), null, "nobody to plan when playing alone");
+});
+
+test("playing alone without any computer works start to finish", () => {
+  const S = Game.newGame([{ name: "Solo" }], 2, 1);
+  for (let round = 1; round <= 2; round++) {
+    assert.strictEqual(S.phase, "play");
+    S.puzzle.forEach((n, i) => { if (!n) Game.act(S, 0, { t: "set", i, n: S.solution[i] }); });
+    assert.strictEqual(S.phase, "roundEnd");
+    assert.strictEqual(Game.view(S, 0).last.over, round === 2);
+    if (round === 1) assert.ok(Game.act(S, 0, { t: "next" }).ok);
+  }
+});

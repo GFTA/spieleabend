@@ -22,17 +22,10 @@ module.exports = require("../shared/room-server.js")({
   },
   newGame: (room, players) => Game.newGame(players.map((m) => ({ name: m.name, bot: m.bot, avatar: m.avatar })), room.goal, room.level),
 
-  // everybody plays at once: keep scheduling the slowest unfinished computer opponent
+  // everybody plays at once, so the engine picks which computer moves next (tests shorten the pause with BOT_MS)
   botPlan(room, ctx) {
-    const S = room.state;
-    if (!S || S.phase !== "play" || !Game.botMove) return null;
-    const bots = S.players.map((p, i) => i).filter((i) => S.players[i].bot && !S.players[i].done && !S.players[i].out);
-    if (!bots.length) return null;
-    bots.sort((a, b) => S.players[a].filled - S.players[b].filled || a - b);
-    const pi = bots[0];
-    const base = Game.botDelayMs(S.level);
-    // tests set BOT_MS very low; production keeps level-based pacing around the shared default
-    const delay = ctx && ctx.BOT_MS ? Math.max(30, Math.round(ctx.BOT_MS * (base / 900))) : base;
-    return { key: `bot:${pi}:${S.players[pi].filled}:${S.round}`, delay, pi };
+    const plan = Game.botPlan(room.state);
+    if (plan && process.env.BOT_MS) plan.delay = ctx.BOT_MS;
+    return plan;
   },
 });
