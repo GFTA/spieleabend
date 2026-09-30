@@ -22,6 +22,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Ein neues Spiel legt
 | Kniffel | [`kniffel/`](kniffel/) | 2–8 Spieler plus Zuschauer, 13 Felder mit Bonus, optionaler Joker, Computer-Gegner, Avatare, Tisch-Designs · Port 8087 |
 | Poker (Texas Hold’em) | [`poker/`](poker/) | 2–8 Spieler plus Zuschauer, No-Limit-Turnier mit Blinds und Side Pots, private Karten (Übergabe-Bildschirm bei einem Handy), Computer-Gegner, Avatare, Tisch-Designs · Port 8088 |
 | Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–8 Spieler plus Zuschauer (ab 5 auf dem Sechser- oder Achter-Brett), elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
+| Sudoku | [`sudoku/`](sudoku/) | 1–8 Spieler plus Zuschauer, gleiches Rätsel für alle, Wettrennen gegen die Uhr, drei Schwierigkeiten, Computer-Gegner, Avatare, Tisch-Designs · Port 8089 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 

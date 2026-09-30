@@ -88,5 +88,15 @@
     "url": "https://phase10.cool-kidz.net/",
     "max": 6,
     "status": "http://phase10:8080/info"
+  },
+  {
+    "id": "sudoku",
+    "name": "Sudoku",
+    "title": "Sudoku",
+    "desc": "Klassisches Sudoku allein oder im Wettrennen: alle bekommen dasselbe Rätsel, wer zuerst richtig fertig ist, gewinnt. Drei Schwierigkeitsstufen und Computer-Gegner.",
+    "players": "1–8 Spieler + Zuschauer",
+    "url": "https://sudoku.cool-kidz.net/",
+    "max": 8,
+    "status": "http://sudoku:8080/info"
   }
 ]
