@@ -354,12 +354,9 @@
   $("#board").addEventListener("click", (e) => { const b = e.target.closest("[data-col]"); if (b && !b.disabled) playCol(+b.dataset.col); });
   // desktop: a see-through disc shows where it would land
   function hoverGhost(c) {
-    for (const g of $("#board").querySelectorAll(".disc.ghost")) g.remove();
-    if (c == null || !canPlay() || popMode) return;
-    const top = height(c);
-    if (top >= V.rows) return;
-    const hole = $(`#board [data-col="${c}"]`).children[top];
-    if (hole) hole.insertAdjacentHTML("beforeend", `<span class="disc ghost p${V.cur}"></span>`);
+    const want = c != null && canPlay() && !popMode && height(c) < V.rows ? $(`#board [data-col="${c}"]`).children[height(c)] : null;
+    for (const g of $("#board").querySelectorAll(".disc.ghost")) if (g.parentNode !== want) g.remove();
+    if (want && !want.querySelector(".disc")) want.insertAdjacentHTML("beforeend", `<span class="disc ghost p${V.cur}"></span>`);
   }
   $("#board").addEventListener("mouseover", (e) => { const b = e.target.closest("[data-col]"); hoverGhost(b ? +b.dataset.col : null); });
   $("#board").addEventListener("mouseleave", () => hoverGhost(null));
