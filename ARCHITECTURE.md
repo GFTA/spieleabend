@@ -44,6 +44,18 @@ sie in allen Spielen gleich ist **und** keine Spielregel sie durch die neue Reih
 Spiel verschieden ist). Die Abschnitte unten beschreiben die Konventionen; die Code-Beispiele
 stehen so in `shared/kit.*`.
 
+**Einheitliche Startbildschirme (`#home`):** Titel (`h1`), Hero, Breite (`#home>*`, max. 560 px)
+und Abstände kommen aus `kit.css`; ein Spiel setzt nur Hero-Größe (`.hero .board{--cell:…}`)
+und bei langen Titeln `:root{--h1:…px;--h1d:…px}` (mobil/Desktop). Der Hero wird nicht per
+JS-Inline-Style skaliert (überschreibt sonst das CSS). Hinweistexte kurz halten.
+
+**Warteraum:** Raum-Code und QR stehen nebeneinander im `.invite`-Grid (`room-ui.css`), damit die
+Spielerliste ohne Scrollen sichtbar bleibt; die Einstellungen-Schaltfläche (`.setfab`) belegt
+oben rechts die erste Grid-Zeile (Label-Zeile).
+
+**Startseite (`start/public/index.html`):** eigenständig (kein `shared/`), kompakte Spielkarten
+mit `--tint` je Spiel, „Du“-Karte mit Design-Auswahl, Party-Einladung als eine Zeile.
+
 ### Farben & Schrift (`public/index.html`, `<style>`-Block oben)
 
 Jedes Spiel definiert dieselbe Basis-Palette in `:root{}` und ergänzt nur
