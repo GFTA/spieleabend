@@ -46,7 +46,7 @@
 .hero-dice .die:nth-child(odd){transform:rotate(-12deg) translateY(6px)}
 .hero-dice .die:nth-child(even){transform:rotate(9deg) translateY(-6px)}
 .hero-dice .die.held{transform:translateY(-14px);box-shadow:0 0 0 3px var(--accent),0 10px 18px rgba(0,0,0,.5)}
-h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01em;margin:6px 0 0;line-height:1;text-align:center}
+
 
 /* ---------- lobby ---------- */
 /* ---------- table ---------- */
@@ -171,7 +171,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
     <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
     <div class="hero">
       <div class="hero-dice" id="heroDice" aria-hidden="true"></div>
-      <h1>Kniffel</h1>
+      <h1><span>Kniffel</span></h1>
       
       <p class="tagline">Fünf Würfel, drei Würfe, 13 Felder. Wer am Ende die meisten Punkte hat, gewinnt. Jeder mit dem eigenen Handy, oder allein gegen den Computer.</p>
     </div>
@@ -193,7 +193,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
     <div class="panel" id="onlinePanel">
       <p class="hint" id="serverHint" hidden></p>
       <div class="label">Mehrspieler</div>
-      <p class="hint">Mehrspieler läuft über eine Party: Alle treten derselben Party bei, der Host wählt das Spiel, und ihr landet automatisch im selben Raum.</p>
+      <p class="hint">Mehrspieler läuft über eine Party: Der Host wählt das Spiel, alle landen im selben Raum.</p>
       <a class="btn btn-primary btn-block" href="https://games.cool-kidz.net/" data-start-link>Zur Party</a>
     </div>
     <div class="panel" id="onlineOff" hidden>
