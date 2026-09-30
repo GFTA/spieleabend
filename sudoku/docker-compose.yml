@@ -1,0 +1,19 @@
+services:
+  sudoku:
+    build:
+      context: ..
+      dockerfile: sudoku/Dockerfile
+      args:
+        GAME: sudoku
+    image: sudoku:latest
+    container_name: sudoku
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${SUDOKU_PORT:-8089}:8080"
+    volumes:
+      - sudoku-data:/data
+
+volumes:
+  sudoku-data:
