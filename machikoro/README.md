@@ -25,3 +25,8 @@ Auf dem Server, vom Repo-Ordner aus (der Build braucht `../shared`):
 
 Läuft dann auf Port 8091 (`MACHIKORO_PORT` in `.env` ändert das) und im Tunnel als
 `http://machikoro:8080`. Die `.env` mit `TUNNEL_NETWORK` und `PARTY_SECRET` liegt nicht im Repo.
+
+## Abweichungen vom Originalspiel
+
+- **Freizeitpark:** kein zweiter Extra-Zug in Folge nach einem Pasch. Ein Pasch mit fertigem Freizeitpark gibt einen Extra-Zug; aus diesem Extra-Zug heraus gibt es bei erneutem Pasch keinen weiteren Extra-Zug (kein Ketten-Pasch).
+

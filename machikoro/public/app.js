@@ -62,15 +62,34 @@
 
   function handleEvents(events, v) {
     if (!v) return;
+    const flashes = {};
+    let coinSfx = false;
     for (const ev of events || []) {
       if (ev.t === "roll") { animDice = true; sfx("roll"); }
-      if (ev.t === "income" && ev.lines && ev.lines.length) { coinFlash = { all: true }; sfx("coin"); }
-      if (ev.t === "pay" || ev.t === "bank") { coinFlash = { pi: ev.pi != null ? ev.pi : ev.to }; }
+      if (ev.t === "income" && ev.lines && ev.lines.length) coinSfx = true;
+      if (ev.t === "bank") { flashes[ev.pi] = flashes[ev.pi] || "in"; coinSfx = true; }
+      if (ev.t === "pay") {
+        flashes[ev.from] = "out";
+        if (flashes[ev.to] !== "out") flashes[ev.to] = "in";
+        coinSfx = true;
+      }
       if (ev.t === "buy") { pulse = { pi: ev.pi, id: ev.id }; sfx("buy"); }
       if (ev.t === "landmark") { pulse = { pi: ev.pi, id: ev.id }; sfx("landmark"); }
+      if (ev.t === "trade") {
+        const a = v.players[ev.pi], b = v.players[ev.with];
+        const fromN = (G.CARDS[ev.from] && G.CARDS[ev.from].name) || ev.from;
+        const theirN = (G.CARDS[ev.their] && G.CARDS[ev.their].name) || ev.their;
+        pulse = { trade: true, pi: ev.pi, with: ev.with, from: ev.from, their: ev.their, ids: [ev.from, ev.their] };
+        toast(`${a.name} tauscht ${fromN} gegen ${theirN} von ${b.name}`);
+        sfx("pop");
+      }
+      if (ev.t === "pass") { /* sichtbar im Zug-Log */ }
       if (ev.t === "giveup") toast(ev.pi === v.me ? "Du hast aufgegeben." : `${v.players[ev.pi].name} gibt auf.`);
       if (ev.t === "end") setTimeout(() => sfx("win"), 500);
     }
+    if (Object.keys(flashes).length) coinFlash = { map: flashes };
+    else if (coinSfx) coinFlash = { all: true };
+    if (coinSfx) sfx("coin");
   }
 
   function doAct(a) {
@@ -151,8 +170,10 @@
   function plateHTML(i) {
     const p = V.players[i], members = mode === "online" && R ? R.members : null;
     const away = members && members[i] && !members[i].online;
-    const flash = coinFlash && (coinFlash.all || coinFlash.pi === i);
-    const cls = ["plate", V.phase === "play" && V.cur === i ? "active" : "", away ? "away" : "", pulse && pulse.pi === i ? "pulse" : "", flash ? "coinflash" : ""].join(" ");
+    const flashKind = coinFlash && (coinFlash.all ? "in" : (coinFlash.map && coinFlash.map[i]));
+    const flashCls = flashKind === "out" ? "coinloss" : flashKind ? "coinflash" : "";
+    const pulsed = pulse && (pulse.pi === i || (pulse.trade && pulse.with === i));
+    const cls = ["plate", V.phase === "play" && V.cur === i ? "active" : "", away ? "away" : "", pulsed ? "pulse" : "", flashCls].join(" ");
     const tag = p.bot ? "Computer" : away ? "offline" : i === V.me ? "du" : "";
     const lm = `${p.landmarks}/4`;
     return `<div class="${cls}" data-seat="${i}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
@@ -192,8 +213,8 @@
     // Market
     const canBuild = canPlay() && V.step === "build";
     const affC = new Set((V.affordable && V.affordable.cards) || []);
-    $("#market").innerHTML = V.cardOrder.map((id) => {
-      const c = V.cards[id], qty = V.market[id] || 0;
+    $("#market").innerHTML = G.CARD_ORDER.map((id) => {
+      const c = G.CARDS[id], qty = V.market[id] || 0;
       if (!qty) return "";
       return cardHTML(c, {
         qty, buyable: canBuild && affC.has(id),
@@ -203,14 +224,16 @@
     }).join("") || "<p class=\"hint\">Markt leer.</p>";
 
     // Cities
-    const LM = V.landmarks, LO = V.landmarkOrder;
+    const LM = G.LANDMARKS, LO = G.LANDMARK_ORDER;
     const affL = new Set((V.affordable && V.affordable.landmarks) || []);
+    const tradePop = (i, id) => pulse && pulse.trade && pulse.ids && pulse.ids.includes(id) && (i === pulse.pi || i === pulse.with);
     $("#cities").innerHTML = V.players.map((p, i) => {
       const mine = i === V.me;
       const head = `<div class="city-head">${p.avatar} ${esc(mine ? "Deine Stadt" : p.name)} · ${p.coins}💰 · ${p.landmarks}/4</div>`;
       const est = Object.keys(p.cards).map((id) => {
-        const c = V.cards[id];
-        return cardHTML(c, { qty: p.cards[id] > 1 ? p.cards[id] : null, tag: "", pop: pulse && pulse.pi === i && pulse.id === id });
+        const c = G.CARDS[id];
+        if (!c) return "";
+        return cardHTML(c, { qty: p.cards[id] > 1 ? p.cards[id] : null, tag: "", pop: (pulse && pulse.pi === i && pulse.id === id) || tradePop(i, id) });
       }).join("");
       const lms = LO.map((id) => {
         const Lmk = LM[id], on = !!p.lm[id];

@@ -200,7 +200,11 @@ test("view marks who is me and exposes the market", () => {
   assert.strictEqual(Game.view(S, -1).me, -1);
   assert.strictEqual(v.players.length, 2);
   assert.ok(v.market.wheat > 0);
-  assert.ok(v.cardOrder.length >= 15);
+  assert.strictEqual(v.cards, undefined);
+  assert.strictEqual(v.landmarks, undefined);
+  assert.strictEqual(v.cardOrder, undefined);
+  assert.strictEqual(v.landmarkOrder, undefined);
+  assert.ok(Game.CARD_ORDER.length >= 15);
 });
 
 test("giving up hands the round to the best of the others", () => {
@@ -224,4 +228,71 @@ test("solo with one human finishes when all landmarks are built", () => {
   }
   assert.strictEqual(S.phase, "roundEnd");
   assert.strictEqual(S.last.winners[0], 0);
+});
+
+// Every message from a browser reaches Game.act unchecked: nothing hostile may change the state or throw.
+// Table lookups by a client value need hasOwnProperty, else "constructor" / "__proto__" slip through.
+test("hostile messages are rejected and leave the state untouched", () => {
+  const phases = [
+    { step: "build", setup: (S) => { S.step = "build"; S.players[S.cur].coins = 20; } },
+    { step: "trade", setup: (S) => { S.step = "trade"; S.pendingTrade = true; S.players[S.cur].cards.wheat = 1; S.players[1 - S.cur].cards.ranch = 1; } },
+    { step: "tv", setup: (S) => { S.step = "tv"; S.pendingTv = true; S.players[1 - S.cur].coins = 5; } },
+    { step: "reroll", setup: (S) => { S.step = "reroll"; S.dice = [1]; S.diceN = 1; S.players[S.cur].lm.tower = true; } },
+    { step: "roll", setup: (S) => { S.step = "roll"; } }
+  ];
+  const hostile = [
+    null, undefined, 5, "roll", [], {},
+    { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" },
+    { t: "buy", id: "constructor" }, { t: "buy", id: "__proto__" }, { t: "buy", id: "toString" },
+    { t: "buy", id: null }, { t: "buy", id: 1 }, { t: "buy", id: ["wheat"] },
+    { t: "landmark", id: "constructor" }, { t: "landmark", id: "__proto__" },
+    { t: "trade", from: "constructor", their: "wheat", with: 1 },
+    { t: "trade", from: "wheat", their: "constructor", with: 1 },
+    { t: "trade", from: "wheat", their: "ranch", with: "constructor" },
+    { t: "trade", from: "__proto__", their: "toString", with: 0 },
+    { t: "tv", target: "constructor" }, { t: "tv", target: null }, { t: "tv", target: 1.5 },
+    { t: "tv", target: -1 }, { t: "tv", target: 99 },
+    { t: "roll", dice: "constructor" }, { t: "roll", dice: null }, { t: "roll", dice: 1.5 },
+    { t: "roll", dice: 0 }, { t: "roll", dice: 3 }, { t: "roll", dice: Infinity },
+    { t: "buy", id: "wheat", extra: { __proto__: { polluted: true } } }
+  ];
+  for (const phase of phases) {
+    const S = two();
+    phase.setup(S);
+    for (let pi = -1; pi <= 2; pi++) {
+      for (const a of hostile) {
+        const before = JSON.stringify(S);
+        let res;
+        assert.doesNotThrow(() => { res = Game.act(S, pi, a); });
+        if (!res.ok) assert.strictEqual(JSON.stringify(S), before, `rejected action must not change state (${phase.step}): ` + JSON.stringify(a));
+        Object.assign(S, JSON.parse(before));
+      }
+    }
+  }
+  // Specific: buy constructor must not NaN coins; trade constructor must not write a function into cards
+  {
+    const S = two();
+    S.step = "build";
+    S.players[S.cur].coins = 20;
+    const beforeCoins = S.players[S.cur].coins;
+    const beforeCards = JSON.stringify(S.players[S.cur].cards);
+    const res = Game.act(S, S.cur, { t: "buy", id: "constructor" });
+    assert.strictEqual(res.ok, false);
+    assert.strictEqual(S.players[S.cur].coins, beforeCoins);
+    assert.strictEqual(JSON.stringify(S.players[S.cur].cards), beforeCards);
+    assert.ok(typeof S.players[S.cur].coins === "number" && !Number.isNaN(S.players[S.cur].coins));
+  }
+  {
+    const S = two();
+    const pi = S.cur, other = 1 - pi;
+    S.step = "trade";
+    S.pendingTrade = true;
+    S.players[pi].cards.wheat = 1;
+    S.players[other].cards.ranch = 1;
+    const before = JSON.stringify(S.players.map((p) => p.cards));
+    assert.strictEqual(Game.act(S, pi, { t: "trade", from: "constructor", their: "ranch", with: other }).ok, false);
+    assert.strictEqual(Game.act(S, pi, { t: "trade", from: "wheat", their: "constructor", with: other }).ok, false);
+    assert.strictEqual(JSON.stringify(S.players.map((p) => p.cards)), before);
+    for (const p of S.players) for (const id of Object.keys(p.cards)) assert.strictEqual(typeof p.cards[id], "number");
+  }
 });

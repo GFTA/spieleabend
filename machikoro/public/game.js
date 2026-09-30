@@ -50,16 +50,19 @@
   const avatarOf = (p, i) => (p.bot ? BOT_AVATAR : AVATARS.includes(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length]);
   const rand = (n) => Math.floor(Math.random() * n);
   const rollDie = () => 1 + rand(6);
-  const has = (p, id) => !!(p.lm && p.lm[id]);
+  // Client-supplied keys must never hit Object.prototype (constructor / __proto__ / toString).
+  const own = (obj, key) => typeof key === "string" && Object.prototype.hasOwnProperty.call(obj, key);
+  const ACTIONS = new Set(["next", "skip", "giveup", "roll", "keep", "reroll", "tv", "trade", "pass", "buy", "landmark"]);
+  const has = (p, id) => !!(p.lm && own(p.lm, id) && p.lm[id]);
   const countIcon = (p, icon) => {
     let n = 0;
     for (const id of Object.keys(p.cards || {})) {
-      const c = CARDS[id];
+      const c = own(CARDS, id) ? CARDS[id] : null;
       if (c && c.icon === icon) n += p.cards[id];
     }
     return n;
   };
-  const cardCount = (p, id) => (p.cards && p.cards[id]) || 0;
+  const cardCount = (p, id) => (p.cards && own(p.cards, id) ? p.cards[id] : 0) || 0;
   const landmarksDone = (p) => LANDMARK_ORDER.filter((id) => has(p, id)).length;
   const canRollTwo = (p) => has(p, "station");
   const mallBonus = (p, icon) => (has(p, "mall") && (icon === "bread" || icon === "cup") ? 1 : 0);
@@ -298,7 +301,7 @@
   function tradeableCards(p) {
     const ids = [];
     for (const id of Object.keys(p.cards || {})) {
-      if (CARDS[id] && CARDS[id].color !== "purple" && p.cards[id] > 0) ids.push(id);
+      if (own(CARDS, id) && CARDS[id].color !== "purple" && p.cards[id] > 0) ids.push(id);
     }
     return ids;
   }
@@ -310,7 +313,7 @@
     const ok = () => ({ ok: true, events });
     const P = S.players[pi];
     if (!P) return fail("Unbekannter Spieler.");
-    if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
+    if (!a || typeof a !== "object" || typeof a.t !== "string" || !ACTIONS.has(a.t)) return fail("Unbekannte Aktion.");
 
     if (a.t === "next") {
       if (S.phase !== "roundEnd") return fail("Die Runde läuft noch.");
@@ -339,8 +342,8 @@
     // ---- roll ----
     if (a.t === "roll") {
       if (S.step !== "roll" && S.step !== "reroll") return fail("Jetzt wird nicht gewürfelt.");
-      const n = +a.dice || 1;
-      if (n !== 1 && n !== 2) return fail("1 oder 2 Würfel.");
+      const n = a.dice;
+      if (!Number.isInteger(n) || (n !== 1 && n !== 2)) return fail("1 oder 2 Würfel.");
       if (n === 2 && !canRollTwo(P)) return fail("Dafür brauchst du den Bahnhof.");
       doRoll(S, n, events);
       if (S.step === "roll" && has(P, "tower")) {
@@ -372,7 +375,7 @@
     // ---- TV target ----
     if (a.t === "tv") {
       if (S.step !== "tv") return fail("Kein Fernsehsender aktiv.");
-      const ti = +a.target;
+      const ti = a.target;
       if (!Number.isInteger(ti) || ti < 0 || ti >= S.players.length || ti === pi) return fail("Wen willst du anzapfen?");
       S.players.forEach((p, i) => { p._i = i; });
       const got = pay(S.players[ti], P, 5, events, "tv");
@@ -392,9 +395,9 @@
         afterIncome(S, events);
         return ok();
       }
-      const mine = a.from, theirs = a.their, oi = +a.with;
-      if (!CARDS[mine] || CARDS[mine].color === "purple") return fail("Ungültiges eigenes Gebäude.");
-      if (!CARDS[theirs] || CARDS[theirs].color === "purple") return fail("Ungültiges fremdes Gebäude.");
+      const mine = a.from, theirs = a.their, oi = a.with;
+      if (!own(CARDS, mine) || CARDS[mine].color === "purple") return fail("Ungültiges eigenes Gebäude.");
+      if (!own(CARDS, theirs) || CARDS[theirs].color === "purple") return fail("Ungültiges fremdes Gebäude.");
       if (!Number.isInteger(oi) || oi < 0 || oi >= S.players.length || oi === pi) return fail("Mit wem tauschen?");
       if (!cardCount(P, mine) || !cardCount(S.players[oi], theirs)) return fail("Gebäude nicht vorhanden.");
       P.cards[mine]--;
@@ -422,8 +425,8 @@
     if (a.t === "buy") {
       if (S.step !== "build") return fail("Jetzt kannst du nicht kaufen.");
       const id = a.id;
+      if (!own(CARDS, id) || !own(S.market, id)) return fail("Unbekanntes Gebäude.");
       const c = CARDS[id];
-      if (!c) return fail("Unbekanntes Gebäude.");
       if (!S.market[id]) return fail("Ausverkauft.");
       if (c.color === "purple" && cardCount(P, id)) return fail("Davon hast du schon eins.");
       if (P.coins < c.cost) return fail("Zu wenig Münzen.");
@@ -439,8 +442,8 @@
     if (a.t === "landmark") {
       if (S.step !== "build") return fail("Jetzt kannst du kein Wahrzeichen bauen.");
       const id = a.id;
+      if (!own(LANDMARKS, id)) return fail("Unbekanntes Wahrzeichen.");
       const L = LANDMARKS[id];
-      if (!L) return fail("Unbekanntes Wahrzeichen.");
       if (has(P, id)) return fail("Schon gebaut.");
       if (P.coins < L.cost) return fail("Zu wenig Münzen.");
       P.coins -= L.cost;
@@ -593,8 +596,7 @@
         cards: Object.assign({}, p.cards), lm: Object.assign({}, p.lm),
         landmarks: landmarksDone(p), moves: p.moves || 0
       })),
-      log: S.log.slice(), last: S.last, nextStarter: S.starter % S.players.length,
-      cards: CARDS, landmarks: LANDMARKS, cardOrder: CARD_ORDER, landmarkOrder: LANDMARK_ORDER
+      log: S.log.slice(), last: S.last, nextStarter: S.starter % S.players.length
     };
   }
 
