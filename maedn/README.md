@@ -33,7 +33,7 @@ den Farben Rot, Blau, Grün, Gelb, Lila, Türkis, Orange und Rosa.
   ins Ziel ziehen, und ab „Normal“ auch, wie gefährdet eine Figur danach steht.
 - **Online**: Wer mitten im Spiel den Raum verlässt, wird vom Computer ersetzt, das Spiel
   läuft weiter. Wer aufgibt, landet auf dem letzten Platz.
-- **Wie bei den anderen Spielen**: Raum-Code mit QR, Zuschauer mit „Mitspielen“,
+- **Wie bei den anderen Spielen**: Party-Einladung mit QR, Zuschauer mit „Mitspielen“,
   Emoji-Reaktionen und Schnellnachrichten, Avatare, Tisch-Designs (Nacht, Filz, Ozean,
   Hell) und Brettgröße, Bilanz auf dem Startbildschirm, Spielverlauf im Menü, Töne,
   Vibration und Konfetti. Figuren laufen Feld für Feld, geschlagene fliegen zurück ins Haus.
