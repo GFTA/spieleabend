@@ -1,7 +1,7 @@
 # Würfelpoker
 
 Würfelpoker im Browser für Android, iOS und Desktop, im Stil von Uno und Schiffe
-versenken. Online mit eigenen Handys (Raum-Code und QR-Code) oder mit einem Handy für alle.
+versenken. Online mit eigenen Handys (Party-Einladung und QR-Code) oder mit einem Handy für alle.
 Nichts ist geheim: Alle sehen jeden Wurf mit und live, welche Würfel behalten werden.
 
 ## Regeln
