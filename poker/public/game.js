@@ -437,6 +437,21 @@
   const SAMPLES = { easy: 50, normal: 160, hard: 320 };
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
+  // rough preflop chart strength 0..1: pairs and broadway high, low offsuit junk low
+  function preflopStrength(hole) {
+    const a = rankOf(hole[0]), b = rankOf(hole[1]);
+    const hi = Math.max(a, b), lo = Math.min(a, b);
+    const suited = suitOf(hole[0]) === suitOf(hole[1]);
+    if (a === b) return 0.52 + (hi - 2) * 0.032; // 22≈0.52 … AA≈0.90
+    if (hi === 14 && lo >= 10) return suited ? 0.74 : 0.66; // AK–AT
+    if (hi === 14 && lo >= 7) return suited ? 0.56 : 0.44;
+    if (hi >= 12 && lo >= 10) return suited ? 0.60 : 0.50; // KQ KJ QJ
+    if (hi - lo <= 2 && hi >= 9) return suited ? 0.50 : 0.38;
+    if (suited && hi >= 12 && lo >= 7) return 0.46;
+    if (suited && hi - lo === 1 && lo >= 5) return 0.40;
+    return (hi + lo) / 42 + (suited ? 0.05 : 0); // 72o≈0.21
+  }
+
   function suggest(v, level) {
     if (!v || v.phase !== "play" || v.cur !== v.me || !v.opts || !v.hole || v.hole.length < 2) return null;
     level = SAMPLES[level] ? level : "normal";
@@ -458,14 +473,40 @@
       return to >= o.maxTo ? { t: "allin" } : { t: "raise", to };
     };
     const frac = 0.5 + Math.random() * 0.5;
+
+    // preflop: chart + pot odds; easy stays call-happy, normal/hard fold trash to big raises
+    if (v.street === "pre") {
+      const hand = preflopStrength(v.hole);
+      const bb = Math.max(1, v.blinds.bb || 1);
+      const toCallBB = facing ? o.call / bb : 0;
+      const bigRaise = facing && (o.call > v.pot * (level === "hard" ? 0.45 : 0.6) || toCallBB >= (level === "hard" ? 4 : 7));
+      const foldBar = level === "easy" ? 0.20 : level === "hard" ? 0.40 : 0.30;
+      const callBar = level === "easy" ? 0.24 : level === "hard" ? 0.44 : 0.34;
+      const raiseBar = level === "easy" ? 0.58 : level === "hard" ? 0.50 : 0.54;
+      if (!facing) {
+        if (canRaise && hand >= raiseBar) return raiseBy(frac);
+        return { t: "check" };
+      }
+      if (canRaise && hand >= raiseBar + 0.08 && Math.random() < 0.75) return raiseBy(frac + 0.15);
+      if (hand < foldBar && bigRaise) return { t: "fold" };
+      if (hand < foldBar && hand < odds + (level === "hard" ? 0.06 : level === "normal" ? 0.02 : -0.06)) return { t: "fold" };
+      if (hand >= callBar || hand > odds + (level === "easy" ? -0.08 : 0)) return { t: "call" };
+      if (level === "easy") return { t: "call" }; // easy almost never folds pre
+      return { t: "fold" };
+    }
+
     if (!facing) {
-      if (canRaise && (e >= strong || (e > fair * 1.15 + 0.05 && Math.random() < 0.45) || (v.street !== "pre" && Math.random() < bluff))) return raiseBy(frac);
+      if (canRaise && (e >= strong || (e > fair * 1.15 + 0.05 && Math.random() < 0.45) || Math.random() < bluff)) return raiseBy(frac);
       return { t: "check" };
+    }
+    // hard: stack-to-pot and facing size — call when pot-committed, fold more to huge bets with weak equity
+    if (level === "hard") {
+      const spr = me.chips / Math.max(1, v.pot);
+      if (spr <= 2.5 && e > odds - 0.03) return { t: "call" };
+      if (o.call > Math.max(v.pot * 0.7, me.chips * 0.35) && e < strong - 0.05) return { t: "fold" };
     }
     if (canRaise && e > Math.min(0.85, strong + 0.12) && Math.random() < 0.8) return raiseBy(frac + 0.2);
     if (canRaise && Math.random() < bluff * 0.5 && e > odds * 0.6) return raiseBy(0.75);
-    // computer players never fold before the flop
-    if (v.street === "pre") return { t: "call" };
     if (e > odds + (level === "easy" ? -0.04 : 0.02)) return { t: "call" };
     if (level === "hard" && Math.random() < bluff && o.call <= v.pot * 0.35) return { t: "call" };
     return { t: "fold" };
@@ -554,6 +595,6 @@
   return {
     MAX_PLAYERS, TURN_MS, RUNOUT_MS, HAND_MS, BLIND_HANDS, CHIPS, AVATARS, BOT_NAMES, BOT_LEVELS, botLevel, RULES, HANDS, SUITS,
     normRules, normChips, potOdds, rankOf, suitOf, best, cmpKey, label, handName, cardText, money, equity, equities, handInfo,
-    newGame, act, tick, nextDeadline, suggest, view, options
+    newGame, act, tick, nextDeadline, suggest, preflopStrength, view, options
   };
 });
