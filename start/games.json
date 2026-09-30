@@ -98,5 +98,15 @@
     "url": "https://sudoku.cool-kidz.net/",
     "max": 8,
     "status": "http://sudoku:8080/info"
+  },
+  {
+    "id": "machikoro",
+    "name": "Machi Koro",
+    "title": "Machi Koro",
+    "desc": "Bau deine Stadt mit Würfeln und Gebäuden — wer zuerst alle Wahrzeichen fertig hat, gewinnt. Allein gegen den Computer oder online mit Freunden.",
+    "players": "2–4 Spieler + Zuschauer",
+    "url": "https://machikoro.cool-kidz.net/",
+    "max": 4,
+    "status": "http://machikoro:8080/info"
   }
 ]
