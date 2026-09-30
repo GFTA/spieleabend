@@ -28,11 +28,7 @@
    otherwise slide the whole page and pull its toolbar over the cards. Only inner
    areas (start screen, hand) scroll. */
 /* ---------- buttons & fields ---------- */
-.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
-  box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
-.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
-.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+
 /* ---------- cards ---------- */
 .card{--cw:64px;--cc:var(--wild);display:block;position:relative;flex:none;width:var(--cw);aspect-ratio:2/3;padding:0;
   border-radius:calc(var(--cw)*.13);background:var(--cc);border:calc(var(--cw)*.055) solid #fff;overflow:hidden;
@@ -62,13 +58,11 @@
 .fan .card:nth-child(1){transform:rotate(-27deg)} .fan .card:nth-child(2){transform:rotate(-9deg)}
 .fan .card:nth-child(3){transform:rotate(9deg)} .fan .card:nth-child(4){transform:rotate(27deg)}
 h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01em;margin:6px 0 0;line-height:1}
-.tagline{margin:0;color:var(--muted);text-align:center;max-width:34ch;text-wrap:balance}
-.row .btn{flex:1}
-.prow .seat{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface);color:var(--muted);font-variant-numeric:tabular-nums}
+
 /* ---------- lobby ---------- */
 /* the lobby buttons stay reachable at the bottom on an opaque bar, never over the rules */
 /* ---------- game ---------- */
-.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+
 .roundinfo{flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* opponents sit around the table: left, across, right, then the corners */
 .seat{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 8px 6px;border-radius:14px;transition:background .2s,box-shadow .2s,opacity .2s}
@@ -134,7 +128,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .dot{width:12px;height:12px;border-radius:50%;background:var(--ring)}
 .dock{background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 12px;display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,background .2s}
 .dock.drop{box-shadow:0 -2px 0 #fff,0 -20px 40px -10px rgba(255,255,255,.18);background:var(--surface)}
-.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+
 .status{display:flex;align-items:center;gap:10px;min-height:48px}
 .status .who{flex:1;min-width:0}
 .status .who b{display:block;font-size:17px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -153,26 +147,15 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 @keyframes throb{to{transform:scale(1.05)}}
 #unoCall .sec{font-family:var(--display);font-size:28px;color:var(--accent);font-variant-numeric:tabular-nums}
 .seat .ouno.wait{background:var(--accent);color:#231a05;animation:blink .5s steps(2) infinite}
-.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
-.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
-.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
-.toggle span{display:flex;flex-direction:column;font-weight:800}
-.toggle small{font-weight:400;color:var(--muted);font-size:13px}
-.rules-list .toggle{align-items:flex-start}
-.rules-list .toggle input{margin-top:2px}
-.toggle:has(input:disabled){cursor:default;opacity:.9}
+
 .swap-list{display:flex;flex-direction:column;gap:8px}
 .swap-list button{display:flex;justify-content:space-between;align-items:center;border:0;border-radius:14px;padding:14px 16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:800;font-size:16px}
 .swap-list b{font-variant-numeric:tabular-nums;color:var(--accent)}
 .hand .card.jump{box-shadow:0 0 0 3px var(--green),0 0 18px var(--green);transform:translateY(-8px)}
-.btn.small{flex:none;padding:8px 11px;font-size:13px;border-radius:11px}
-.turnbar{height:4px;margin:-6px 0 2px;border-radius:2px;background:var(--line);overflow:hidden}
-.turnbar i{display:block;height:100%;width:100%;background:var(--accent);transform-origin:0 50%}
-.turnbar.low i{background:var(--red)}
+
 .hand .card.hint{animation:hintpulse .9s ease-in-out 3;transform:translateY(-16px)}
 @keyframes hintpulse{50%{box-shadow:0 0 0 4px var(--accent),0 0 30px var(--accent)}}
-.prow .botbtn{flex:none;width:42px;height:42px;border-radius:12px;border:0;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:20px;filter:grayscale(1);opacity:.55}
-.prow .botbtn[aria-pressed="true"]{filter:none;opacity:1;box-shadow:inset 0 0 0 2px var(--accent)}
+
 .chaos-tag{font-family:var(--display);font-size:11px;letter-spacing:.06em;color:#fff;background:var(--red);padding:2px 7px;border-radius:6px}
 .hand{--cw:calc(clamp(66px,20vw,92px) * var(--cs));--step:calc(var(--cw) + 6px);display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;padding:20px 4px 6px;scrollbar-width:none;min-height:calc(var(--cw)*1.5 + 26px)}
 .hand::-webkit-scrollbar{display:none}
@@ -188,7 +171,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .hand .card:active{cursor:grabbing}
   #drawPile.can{cursor:pointer}
   #drawPile.can:hover .card:nth-child(3){transform:translateY(-6px);animation:none}
-  .btn:not(:disabled):hover{filter:brightness(1.08)}
+  
 }
 @media (min-width:900px) and (min-height:700px){
   .hand{--cw:calc(clamp(80px,9vw,104px) * var(--cs))}
@@ -206,36 +189,14 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
 .shake{animation:shake .32s}
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
 /* ---------- overlays ---------- */
-.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
-.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;width:100%;max-width:440px}
-.log li{background:var(--bg2);border-radius:12px;padding:9px 12px;font-size:14px;box-shadow:inset 0 0 0 1px var(--line)}
-.log li:last-child{box-shadow:inset 0 0 0 1.5px var(--accent)}
+
 .picker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .picker button{border:0;border-radius:18px;aspect-ratio:1.4;font-weight:800;font-size:18px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
-.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.scores li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
-.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
-.scores b{font-weight:800}
-#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
-  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
-#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
-.lastmove{max-width:min(92%,420px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
-.lastmove.fresh{animation:pop .35s ease-out}
-.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+
 @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
 .pending-tag{font-family:var(--display);font-size:12px;color:#231a05;background:var(--accent);padding:2px 8px;border-radius:6px}
 #reactBtn[hidden]{display:none}
-#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
-#reactBar button:active{background:var(--bg2)}
-.bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
-#reactBar{flex-wrap:wrap;max-width:300px;justify-content:center}
-#reactBar .phrase{width:auto;height:36px;padding:0 10px;font-size:13px;font-weight:800;border-radius:10px;background:var(--bg2);color:var(--text)}
-.avrow{display:flex;gap:8px}
-.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
-.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
-.look .seg{grid-template-columns:repeat(4,1fr)}
-.look .seg.three{grid-template-columns:repeat(3,1fr)}
-.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(128,128,128,.5)}
+
 .hist{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .hist th,.hist td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
 .hist th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -262,9 +223,7 @@ h1{font-family:var(--display);font-weight:400;font-size:44px;letter-spacing:.01e
   .dock{width:100%;max-width:1400px;align-self:center}
   .dock .status b{font-size:20px}.dock .status small{font-size:15px}
 }
-@media (prefers-reduced-motion: reduce){
-  *,*::before,*::after{animation:none!important;transition:none!important}
-}
+
 /* back to the Spieleabend start page, and the game rules in the waiting room */
 /* waiting room: ready up, watch a running game, rematch status */
 /* waiting room actions in one row: main buttons, then small icon buttons */
