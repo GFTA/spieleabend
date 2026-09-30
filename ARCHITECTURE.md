@@ -557,6 +557,16 @@ im Einzelspielermodus (`G.botPlan(L)`). Der Server startet den Timer nur neu, we
 Computer-Gegner spielen in **Menschen-Tempo** und werden nicht schneller, wenn mehr Bots mitspielen
 (Sudoku: feste Gesamtzeit pro Stufe, geteilt durch leere Felder und Bots).
 
+**Eingaben sind nicht vertrauenswürdig.** `room-server.js` reicht `msg.a` unverändert an `Game.act` weiter, die Engine ist die einzige
+Prüfstelle. Deshalb: `a.t` gegen eine feste Liste prüfen, Zahlen mit `Number.isInteger` und Bereich, Ids nur mit
+`Object.prototype.hasOwnProperty.call(TABELLE, id)` nachschlagen (`TABELLE[id]` akzeptiert auch `"constructor"`, `"__proto__"`,
+`"toString"`: `P.coins < undefined` ist `false`, die Prüfung läuft durch und der Spielstand wird `NaN`). Jede Engine braucht einen Test
+„feindliche Nachrichten ändern den Zustand nicht“ (Vorlage: `test/game.test.js`). Der Test vergleicht `JSON.stringify(S)` vor und nach der Aktion.
+
+**Events und Anzeige.** Jedes `events.push({ t: … })` der Engine braucht im Client eine sichtbare Reaktion in `handleEvents`, auch die der anderen
+Spieler und der Bots: bei Zahlungen blitzt/animiert *beides*, Zahler und Empfänger; ein Tausch bewegt die Karten; ein Zug hat einen Anfang und ein Ende.
+Gibt es ein Event ohne Anzeige, ist es ein Bug, nicht nur ein Log-Eintrag. `view()` bleibt klein: nur Zustand, keine statischen Texte.
+
 **Rechenintensive Engines** (Generatoren, Löser) laufen auf dem einzigen Thread des Servers. Ein Rätsel darf nie
 Sekunden brauchen, und die Engine braucht einen Test, der eine Reihe Generierungen zeitlich begrenzt. Wo etwas
 eindeutig sein soll (Sudoku-Lösung), prüft ein Test die Eindeutigkeit wirklich und nicht nur die Form.

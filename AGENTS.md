@@ -4,7 +4,7 @@ Kurzfassung für Menschen und KI-Agenten. Die Details stehen in [`ARCHITECTURE.m
 Vorlage in `scripts/game-template/`. Dieses Repo ist öffentlich: keine Heimnetz-Angaben, IPs oder Secrets
 (`.env` bleibt lokal und ist ignoriert).
 
-## Die zehn wichtigsten Regeln (Rest unten zum Nachschlagen)
+## Die wichtigsten Regeln (Rest unten zum Nachschlagen)
 
 1. Starte **immer** mit `scripts/new-game <id> "<Titel>"`. Nie einen Ordner von Hand anlegen oder ein Spiel kopieren.
 2. Lies ein ähnliches bestehendes Spiel, bevor du Regeln schreibst. Kopiere dessen Muster, erfinde keine eigenen.
@@ -15,7 +15,10 @@ Vorlage in `scripts/game-template/`. Dieses Repo ist öffentlich: keine Heimnetz
 7. Alles, was sich bewegt, ist sichtbar animiert, auch Bot-Züge und Züge der anderen.
 8. Die Engine muss schnell sein (keine Sekunden-Generatoren) und Computer-Gegner spielen in Menschen-Tempo. Beides braucht einen Test.
 9. Eingaben zeigen sofort Wirkung (optimistisch), Uhren laufen vom Server-Wert aus.
-10. Fertig ist ein Spiel erst, wenn `npm test` und `scripts/check-games <id>` grün sind **und** du es im Browser bis zum Rundenende gespielt hast (Einzel- und Mehrspieler, Handy- und Desktop-Breite). Jede Warnung des Checkers beheben, auch wenn sie nicht abbricht.
+10. **Jede Aktion vom Client ist feindlich**: Die Engine prüft in `act` alles. Nachschlagen in Tabellen nur mit `Object.prototype.hasOwnProperty.call(TABELLE, key)` oder über `Map`/`Object.create(null)`, nie mit `TABELLE[a.id]`: `"constructor"`, `"__proto__"` oder `"toString"` sind sonst gültige Schlüssel. Zahlen mit `Number.isInteger` und Bereich prüfen, Strings auf Typ. Dazu gehört ein Test mit solchen Nachrichten.
+11. **Jedes Engine-Event hat eine sichtbare Reaktion im Client** (Zahlung: Zahler *und* Empfänger, Tausch, Zug, Wurf, Kauf). Liste vor dem Commit alle `events.push({ t: … })` der Engine und prüfe, dass `handleEvents` jeden davon anzeigt.
+12. `view()` schickt nur, was sich ändert. Statische Daten (Kartentexte, Namen, Regeln) stehen einmal im Client (`game.js` ist dort ohnehin geladen), nicht in jedem Update. Bewusste Abweichungen von den Originalregeln stehen in der `README.md` des Spiels.
+13. Fertig ist ein Spiel erst, wenn `npm test` und `scripts/check-games <id>` grün sind **und** du es im Browser bis zum Rundenende gespielt hast (Einzel- und Mehrspieler, Handy- und Desktop-Breite). Jede Warnung des Checkers beheben, auch wenn sie nicht abbricht.
 
 Privat bleibt privat: keine IPs, Hostnamen des eigenen Servers oder Secrets im Repo. Ein Commit pro Spielordner.
 
@@ -70,6 +73,9 @@ Privat bleibt privat: keine IPs, Hostnamen des eigenen Servers oder Secrets im R
 | Fortgesetztes lokales Spiel läuft im Hintergrund weiter. | `savedAt` speichern, Startzeit beim Fortsetzen verschieben |
 | Solo ohne Gegner geht nicht, obwohl das Spiel allein Spaß macht. | `HomeUI({ min: 0 })` |
 | Schrift für Notizen oder Hinweise winzig. | Mindestens `clamp(9px, 2.6vw, 12px)` für Notizen, sonst 14px aufwärts |
+| `CARDS[a.id]` / `market[a.id]` mit Client-Wert. `"constructor"` wird akzeptiert, die Münzen werden `NaN`, Funktionen landen im Spielstand. | `own(tabelle, key)` (hasOwnProperty) vor jedem Nachschlagen, Test mit `constructor`/`__proto__`/`toString`/`null`/Zahlen |
+| Engine erzeugt Events (`pay`, `trade`), der Client zeigt nur einen Teil. Ein Tausch ist nur im Log zu sehen, der Zahler blitzt nicht. | Jedes Event in `handleEvents` behandeln: bewegen, blitzen oder einblenden |
+| `view()` schickt bei jedem Zug alle Kartentexte (mehrere KB) mit. | Statisches einmal im Client, im View nur Zustand |
 | Nur die Form der Daten getestet. | Tests für Regeln, Bots, Rundenende, Server-Runde über echten WebSocket |
 
 ## Testen
