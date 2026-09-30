@@ -194,6 +194,23 @@
     return bad;
   }
 
+  function cellHTML(i, grid, notes, bad, selVal, sr, sc) {
+    const given = !!V.puzzle[i], n = grid[i], r = i / 9 | 0, c = i % 9;
+    const cls = [
+      given ? "given" : "",
+      i === sel ? "sel" : "",
+      sel >= 0 && (r === sr || c === sc || ((r / 3 | 0) === (sr / 3 | 0) && (c / 3 | 0) === (sc / 3 | 0))) ? "hl" : "",
+      selVal && n === selVal ? "same" : "",
+      bad.has(i) && !given ? "bad" : ""
+    ].filter(Boolean).join(" ");
+    let inner = n ? String(n) : "";
+    if (!n && notes && notes[i]) {
+      const bits = notes[i];
+      inner = `<span class="notes">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<span>${bits & (1 << (d - 1)) ? d : ""}</span>`).join("")}</span>`;
+    }
+    return `<button type="button" role="gridcell" data-i="${i}" class="${cls}" aria-label="Feld ${r + 1},${c + 1}${n ? ": " + n : ""}">${inner}</button>`;
+  }
+
   function renderGrid() {
     const box = $("#grid");
     if (!V) { box.innerHTML = ""; return; }
@@ -204,21 +221,14 @@
     const selVal = sel >= 0 && grid[sel] ? grid[sel] : 0;
     const [sr, sc] = sel >= 0 ? [sel / 9 | 0, sel % 9] : [-1, -1];
     let html = "";
-    for (let i = 0; i < 81; i++) {
-      const given = !!V.puzzle[i], n = grid[i], r = i / 9 | 0, c = i % 9;
-      const cls = [
-        given ? "given" : "",
-        i === sel ? "sel" : "",
-        sel >= 0 && (r === sr || c === sc || ((r / 3 | 0) === (sr / 3 | 0) && (c / 3 | 0) === (sc / 3 | 0))) ? "hl" : "",
-        selVal && n === selVal ? "same" : "",
-        bad.has(i) && !given ? "bad" : ""
-      ].filter(Boolean).join(" ");
-      let inner = n ? String(n) : "";
-      if (!n && notes && notes[i]) {
-        const bits = notes[i];
-        inner = `<span class="notes">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<span>${bits & (1 << (d - 1)) ? d : ""}</span>`).join("")}</span>`;
+    for (let br = 0; br < 3; br++) {
+      for (let bc = 0; bc < 3; bc++) {
+        let cells = "";
+        for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+          cells += cellHTML((br * 3 + r) * 9 + bc * 3 + c, grid, notes, bad, selVal, sr, sc);
+        }
+        html += `<div class="block" role="rowgroup">${cells}</div>`;
       }
-      html += `<button type="button" role="gridcell" data-i="${i}" class="${cls}" aria-label="Feld ${r + 1},${c + 1}${n ? ": " + n : ""}"${given || !canPlay() ? "" : ""}>${inner}</button>`;
     }
     box.innerHTML = html;
   }
@@ -242,7 +252,7 @@
     renderGrid();
 
     const play = canPlay();
-    $("#dock").classList.toggle("racing", play);
+    $("#dock").classList.toggle("myturn", play);
     $("#whoAv").textContent = me ? me.avatar : "👀";
     if (end) {
       const w = V.last && V.last.winners && V.last.winners[0];
@@ -262,15 +272,16 @@
       $("#whoHint").textContent = "Du siehst nur den Fortschritt der anderen.";
     }
 
-    for (const b of $("#pad").querySelectorAll("[data-n], #clearBtn, #noteBtn, #submitBtn")) {
-      if (b.id === "resultBtn") continue;
-      b.disabled = !play;
+    for (const b of $("#pad").querySelectorAll("[data-n]")) b.disabled = !play;
+    for (const id of ["clearBtn", "noteBtn", "submitBtn"]) {
+      const b = $("#" + id); if (b) b.disabled = !play;
     }
     $("#reactBtn").hidden = mode !== "online";
     $("#noteBtn").setAttribute("aria-pressed", noteMode ? "true" : "false");
-    $("#noteBtn").classList.toggle("btn-primary", noteMode);
     $("#resultBtn").hidden = !(end && peek);
     $("#submitBtn").hidden = end && peek;
+    $("#clearBtn").hidden = end && peek;
+    $("#noteBtn").hidden = end && peek;
     renderRoundEnd();
   }
 
@@ -394,26 +405,11 @@
 
   $("#myName").value = store.get(K.me) || "";
   $("#myName").addEventListener("input", (e) => store.set(K.me, e.target.value));
-  $("#joinCode").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ""); });
   const myName = () => {
     const n = $("#myName").value.trim();
     if (!n) { toast("Bitte gib zuerst deinen Namen ein."); $("#myName").focus(); }
     return n;
   };
-  function join() {
-    const n = myName(); if (!n) return;
-    const code = $("#joinCode").value.trim();
-    if (code.length !== 4) { toast("Der Raum-Code hat 4 Buchstaben."); $("#joinCode").focus(); return; }
-    store.del(K.online);
-    wsSend({ t: "join", code, name: n, avatar: myAvatar });
-  }
-  $("#joinBtn").addEventListener("click", join);
-  $("#joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
-  $("#createBtn").addEventListener("click", () => {
-    const n = myName(); if (!n) return;
-    store.del(K.online);
-    wsSend({ t: "create", name: n, goal: goalLocal, level: levelLocal, avatar: myAvatar });
-  });
 
   function startLocal(state) {
     L = state; mode = "local"; peek = false; sel = -1; noteMode = false;
@@ -436,7 +432,9 @@
   });
   $("#pad").addEventListener("click", (e) => {
     const n = e.target.closest("[data-n]");
-    if (n) return playSet(+n.dataset.n);
+    if (n) playSet(+n.dataset.n);
+  });
+  $("#acts").addEventListener("click", (e) => {
     if (e.target.closest("#clearBtn")) return playClear();
     if (e.target.closest("#noteBtn")) { noteMode = !noteMode; renderGame(); return; }
     if (e.target.closest("#submitBtn")) return playSubmit();
