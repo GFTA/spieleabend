@@ -177,3 +177,41 @@ test("a bot chooser picks a random word right away; giving up skips a player", (
   assert.strictEqual(S.last.solver, -1);
   assert.ok(!S.last.hanged);
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = picked("ABBAZ");
+  const guesser = S.cur;
+  const snap = () => JSON.stringify(S);
+  const before = snap();
+  for (const a of [null, undefined, 5, "letter", [], {}, { t: 7 }, { t: "constructor" }, { t: "__proto__" }, { t: "letter" }, { t: "solve" }, { t: "word", word: "HAUS" }]) {
+    assert.strictEqual(G.act(S, guesser, a).ok, false, JSON.stringify(a));
+  }
+  for (const l of [undefined, null, 5, "", "AB", "1", "-", " ", ["A"], ["Q"], {}, { toString: () => "Q" }, "constructor", true, "😀", "ǅ"]) {
+    assert.strictEqual(G.act(S, guesser, { t: "letter", l }).ok, false, `letter ${JSON.stringify(l)}`);
+  }
+  for (const word of [undefined, null, 5, "", "   ", ["ABBAZ"], {}, { toString: () => "ABBAZ" }, true, "x".repeat(100000)]) {
+    assert.strictEqual(G.act(S, guesser, { t: "solve", word }).ok, false, `solve ${String(word).slice(0, 10)}`);
+  }
+  assert.strictEqual(G.act(S, 0, { t: "letter", l: "Q" }).ok, false, "the chooser does not guess");
+  for (const pi of [-1, 2, 1.5, NaN, null, undefined, "1", "constructor", "__proto__"]) {
+    assert.strictEqual(G.act(S, pi, { t: "letter", l: "Q" }).ok, false, String(pi));
+  }
+  assert.strictEqual(snap(), before);
+});
+
+test("hostile words are refused when choosing", () => {
+  for (;;) {
+    const S = G.newGame(two, 3, "player", {}, 2);
+    if (S.chooser !== 0) continue;
+    const before = JSON.stringify(S);
+    for (const word of [undefined, null, 5, "", "AB", "A B", "A1B", ["HAUS"], {}, { toString: () => "HAUS" }, true, "x".repeat(100000), "constructor!"]) {
+      assert.strictEqual(G.act(S, 0, { t: "word", word }).ok, false, `word ${String(word).slice(0, 10)}`);
+    }
+    assert.strictEqual(G.act(S, 1, { t: "word", word: "HAUS" }).ok, false, "only the chooser");
+    assert.strictEqual(JSON.stringify(S), before);
+    const r = G.act(S, 0, { t: "word", word: "HAUS", hint: { x: 1 } });
+    assert.ok(r.ok);
+    assert.ok(typeof S.hint === "string" && S.hint.length <= 40);
+    return;
+  }
+});
