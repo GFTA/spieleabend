@@ -257,7 +257,7 @@
     if (a.t === "score") {
       if (!S.rolls) return fail("Du musst mindestens einmal würfeln.");
       const opts = options(S);
-      if (!CAT[a.c]) return fail("Welches Feld?");
+      if (typeof a.c !== "string" || !Object.prototype.hasOwnProperty.call(CAT, a.c)) return fail("Welches Feld?");
       if (S.players[pi].sheet[a.c] != null) return fail("Dieses Feld ist schon belegt.");
       if (opts[a.c] == null) return fail("Mit dem Joker musst du ein anderes Feld nehmen.");
       score(S, pi, a.c, events);

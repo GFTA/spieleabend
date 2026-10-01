@@ -306,3 +306,29 @@ test("the computer prefers hitting and coming out; games between computers alway
     assert.strictEqual(B.phase, "roundEnd");
   }
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = game(3);
+  const snap = () => JSON.stringify(S);
+  const cur = S.cur;
+  let before = snap();
+  for (const a of [null, undefined, 5, "roll", [], {}, { t: 7 }, { t: "constructor" }, { t: "__proto__" }, { t: "move", k: 0 }, { t: "next" }]) {
+    assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  }
+  assert.strictEqual(G.act(S, (cur + 1) % 3, { t: "roll" }).ok, false, "out of turn");
+  for (const pi of [-1, 3, 1.5, NaN, null, undefined, "0", "constructor", "__proto__"]) {
+    assert.strictEqual(G.act(S, pi, { t: "roll" }).ok, false, String(pi));
+  }
+  assert.strictEqual(snap(), before);
+
+  assert.ok(roll(S, 6).ok);
+  assert.strictEqual(S.need, "move");
+  before = snap();
+  for (const k of [-1, 4, 99, 0.5, "0", null, undefined, [0], [], {}, NaN, Infinity, "constructor", true, false]) {
+    assert.strictEqual(G.act(S, cur, { t: "move", k }).ok, false, `k ${String(k)}`);
+  }
+  assert.strictEqual(G.act(S, cur, { t: "roll" }).ok, false, "rolling twice");
+  assert.strictEqual(G.act(S, (cur + 1) % 3, { t: "move", k: 0 }).ok, false, "out of turn");
+  assert.strictEqual(snap(), before);
+  assert.ok(move(S, 0).ok);
+});

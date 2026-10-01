@@ -264,3 +264,69 @@ test("suggest preflop: a strong pair does not fold to a min-raise", () => {
     }
   } finally { Math.random = rnd; }
 });
+
+const pokerTable = (n = 3) => G.newGame(Array.from({ length: n }, (_, i) => ({ name: `P${i}` })), 1000, {}, false);
+const pokerChips = (S) => S.players.reduce((a, p) => a + p.chips + p.bet, 0) + (S.pot || 0);
+
+test("hostile input is refused without touching the game", () => {
+  const S = pokerTable();
+  const cur = S.cur;
+  const before = JSON.stringify(S);
+  const bad = [
+    null, undefined, 5, "fold", [], {}, { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" }, { t: "buy", id: "constructor" },
+    { t: "check" }, { t: "raise" }, { t: "raise", to: NaN }, { t: "raise", to: Infinity }, { t: "raise", to: -50 }, { t: "raise", to: "x" }, { t: "raise", to: {} },
+    { t: "raise", to: 0 }, { t: "raise", to: S.cbet }, { t: "raise", to: S.cbet + 1 }, { t: "show" }
+  ];
+  for (const a of bad) {
+    const r = G.act(S, cur, a);
+    assert.strictEqual(r.ok, false, JSON.stringify(a));
+  }
+  for (const pi of [null, undefined, -1, 3, 99, "0", "constructor", "__proto__", 0.5, NaN, (cur + 1) % 3]) {
+    assert.strictEqual(G.act(S, pi, { t: "call" }).ok, false, String(pi));
+    assert.strictEqual(G.act(S, pi, { t: "fold" }).ok, false, String(pi));
+    assert.strictEqual(G.act(S, pi, { t: "show" }).ok, false, String(pi));
+  }
+  assert.strictEqual(JSON.stringify(S), before);
+  const chips = pokerChips(S);
+  assert.strictEqual(G.act(S, cur, { t: "raise", to: 1e12 }).ok, true, "a huge raise is capped at the stack");
+  assert.ok(S.players.every((p) => p.chips >= 0 && Number.isFinite(p.chips)));
+  assert.strictEqual(pokerChips(S), chips);
+});
+
+test("computer players play whole hands legally at every level and keep the chips", () => {
+  for (const level of ["easy", "normal", "hard", "random"]) {
+    const S = pokerTable(4);
+    S.players.forEach((p) => { p.bot = true; });
+    const chips = pokerChips(S);
+    let slowest = 0, steps = 0, hands = 0;
+    while (hands < 6 && steps++ < 3000) {
+      if (S.phase === "roundEnd") { if (S.last && S.last.over) break; hands++; assert.ok(G.act(S, 0, { t: "next" }).ok); continue; }
+      if (S.phase === "runout") { S.nextAt = Date.now() - 1; G.tick(S); continue; }
+      const pi = S.cur;
+      const t0 = Date.now();
+      const a = G.suggest(G.view(S, pi), G.botLevel(S, pi, level));
+      slowest = Math.max(slowest, Date.now() - t0);
+      let r = a && G.act(S, pi, a);
+      if (!r || !r.ok) { // the server falls back to check/call/fold, so the fallback must work
+        const o = G.options(S);
+        r = G.act(S, pi, { t: o.canCheck ? "check" : "call" });
+        if (!r.ok) r = G.act(S, pi, { t: "fold" });
+      }
+      assert.ok(r.ok, `${level}: ${JSON.stringify(a)} -> ${r.error}`);
+      assert.ok(S.players.every((p) => p.chips >= 0 && Number.isFinite(p.chips)), `${level}: no negative chips`);
+    }
+    assert.ok(hands > 0 || S.phase !== "play", `${level}: a hand finishes`);
+    assert.ok(slowest < 400, `${level}: one computer move takes ${slowest} ms`);
+    assert.ok(S.players.reduce((a, p) => a + p.chips, 0) <= chips, `${level}: chips are never created`);
+  }
+});
+
+test("showing cards after a fold needs a real seat", () => {
+  const S = pokerTable();
+  assert.ok(G.act(S, S.cur, { t: "fold" }).ok);
+  assert.ok(G.act(S, S.cur, { t: "fold" }).ok);
+  assert.strictEqual(S.phase, "roundEnd");
+  for (const pi of [null, undefined, -1, 3, 99, "constructor", "__proto__", NaN]) assert.strictEqual(G.act(S, pi, { t: "show" }).ok, false, String(pi));
+  const winner = S.players.findIndex((p) => !p.folded);
+  assert.strictEqual(G.act(S, winner, { t: "show" }).ok, true);
+});

@@ -61,7 +61,7 @@
   const rand = (n) => Math.floor(Math.random() * n);
 
   // "Straße" -> "STRAßE": upper case, but ß stays one letter (toUpperCase would make it SS)
-  const normWord = (w) => [...String(w || "").trim()].map((c) => (c === "ß" || c === "ẞ" ? "ß" : c.toLocaleUpperCase("de-DE"))).join("");
+  const normWord = (w) => [...(typeof w === "string" ? w.trim() : "")].map((c) => (c === "ß" || c === "ẞ" ? "ß" : c.toLocaleUpperCase("de-DE"))).join("");
   function wordError(w) {
     if (!w) return "Bitte gib ein Wort ein.";
     if (/\s/.test(w)) return "Nur ein einzelnes Wort, ohne Leerzeichen.";
@@ -176,7 +176,7 @@
     const events = [];
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
-    const P = S.players[pi];
+    const P = Number.isInteger(pi) ? S.players[pi] : null;
     if (!P) return fail("Unbekannter Spieler.");
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
 
@@ -220,7 +220,7 @@
       if (pi !== S.chooser) return fail(`${S.players[S.chooser].name} sucht das Wort aus.`);
       const w = normWord(a.word), e = wordError(w);
       if (e) return fail(e);
-      const hint = String(a.hint || "").replace(/\s+/g, " ").trim().slice(0, 40);
+      const hint = String(typeof a.hint === "string" ? a.hint : "").replace(/\s+/g, " ").trim().slice(0, 40);
       setWord(S, w, "", hint);
       log(S, `${P.name} hat sich ein Wort mit ${w.length} Buchstaben ausgedacht.`);
       events.push({ t: "chosen", pi, n: w.length });
@@ -232,7 +232,7 @@
     if (S.cur !== pi) return fail(`${S.players[S.cur].name} ist dran.`);
 
     if (a.t === "letter") {
-      const l = a.l === "ẞ" ? "ß" : a.l === "ß" ? "ß" : String(a.l || "").toLocaleUpperCase("de-DE");
+      const l = a.l === "ẞ" || a.l === "ß" ? "ß" : typeof a.l === "string" ? a.l.toLocaleUpperCase("de-DE") : "";
       if (!ALPHABET.includes(l)) return fail("Diesen Buchstaben gibt es nicht.");
       if (S.guessed.includes(l) || S.wrong.includes(l)) return fail(`${l} wurde schon geraten.`);
       const n = [...S.word].filter((c) => c === l).length;
@@ -262,6 +262,7 @@
     if (a.t === "solve") {
       const w = normWord(a.word);
       if (!w) return fail("Bitte gib ein Wort ein.");
+      if (w.length > 20) return fail("Höchstens 20 Buchstaben.");
       if (w === S.word) {
         const hidden = [...S.word].filter((c) => !S.guessed.includes(c)).length;
         for (const c of S.word) if (!S.guessed.includes(c)) S.guessed.push(c);

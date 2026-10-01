@@ -376,3 +376,32 @@ test("tip: best cell for the remaining ships, next to a hit when there is one", 
   assert.ok([34, 43, 45, 54].includes(G.hint(10, marks, G.FLEETS[10])));
   assert.strictEqual(G.hint(2, "oooo", ["L2"]), -1);
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = G.newGame(two(), 1, 10);
+  const snap = () => JSON.stringify(S);
+  let before = snap();
+  const ship = (last) => [[0, 1, 2, 3, 4], [20, 21, 22, 23], [40, 41, 42], [60, 61, 62], last];
+  for (const a of [null, undefined, 5, "shoot", [], {}, { t: 7 }, { t: "constructor" }, { t: "__proto__" }, { t: "place" }, { t: "place", ships: "x" },
+    { t: "place", ships: { length: 5 } }, { t: "place", ships: ship([80, "81"]) }, { t: "place", ships: ship([80, 80]) }, { t: "place", ships: ship([-1, 0]) }]) {
+    assert.strictEqual(G.act(S, 0, a).ok, false, JSON.stringify(a));
+  }
+  for (const pi of [-1, 2, 1.5, NaN, null, undefined, "0", "constructor", "__proto__"]) {
+    assert.strictEqual(G.act(S, pi, { t: "place", ships: FLEET }).ok, false, String(pi));
+  }
+  assert.strictEqual(snap(), before);
+
+  ready(S);
+  const cur = S.cur, other = 1 - cur;
+  before = snap();
+  for (const t of ["shoot", "sonar", "bomb", "torpedo"]) {
+    for (const target of [-1, 2, cur, 0.5, "1", null, undefined, [1], {}, NaN, "constructor", "__proto__", true]) {
+      assert.strictEqual(G.act(S, cur, { t, target, cell: 50 }).ok, false, `${t} target ${String(target)}`);
+    }
+    for (const cell of [-1, 100, 1e9, 0.5, "50", null, undefined, [50], [], {}, NaN, Infinity, "constructor", true, false]) {
+      assert.strictEqual(G.act(S, cur, { t, target: other, cell }).ok, false, `${t} cell ${String(cell)}`);
+    }
+    assert.strictEqual(G.act(S, other, { t, target: cur, cell: 50 }).ok, false, `${t} out of turn`);
+  }
+  assert.strictEqual(snap(), before);
+});

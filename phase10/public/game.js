@@ -240,8 +240,8 @@
     S.deck = shuffle(S.discard);
     S.discard = [top];
   }
-  const cardOf = (P, id) => P.hand.find((c) => c.id === +id);
-  const take = (P, id) => { const i = P.hand.findIndex((c) => c.id === +id); return i < 0 ? null : P.hand.splice(i, 1)[0]; };
+  const cardOf = (P, id) => P.hand.find((c) => c.id === id);
+  const take = (P, id) => { const i = P.hand.findIndex((c) => c.id === id); return i < 0 ? null : P.hand.splice(i, 1)[0]; };
 
   function endRound(S, outPi, events) {
     const res = S.players.map((p, i) => {
@@ -286,7 +286,7 @@
     const events = [];
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
-    const P = S.players[pi];
+    const P = Number.isInteger(pi) ? S.players[pi] : null;
     if (!P) return fail("Unbekannter Spieler.");
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
 
@@ -329,9 +329,9 @@
 
     if (a.t === "lay") {
       if (P.laid) return fail("Deine Phase liegt schon.");
-      const gs = PHASES[P.phase], groups = Array.isArray(a.groups) ? a.groups : [];
+      const gs = PHASES[P.phase], groups = Array.isArray(a.groups) && a.groups.every(Array.isArray) ? a.groups : [];
       if (groups.length !== gs.length) return fail(`Phase ${P.phase} hat ${gs.length === 1 ? "eine Gruppe" : "zwei Gruppen"}: ${phaseName(P.phase)}.`);
-      const all = groups.flat().map((x) => +x);
+      const all = groups.flat();
       if (new Set(all).size !== all.length || all.some((id) => !cardOf(P, id))) return fail("Diese Karten hast du nicht.");
       if (all.length > P.hand.length - 1) return fail("Eine Karte musst du noch abwerfen können.");
       // the groups may come in any order
@@ -354,15 +354,15 @@
 
     if (a.t === "hit") {
       if (!P.laid) return fail("Anlegen geht erst, wenn deine eigene Phase liegt.");
-      const c = cardOf(P, a.id), m = S.melds[+a.meld];
+      const c = cardOf(P, a.id), m = Number.isInteger(a.meld) ? S.melds[a.meld] : null;
       if (!c || !m) return fail("Das geht nicht.");
       const nm = fitOnto(m, c);
       if (!nm) return fail(`${cardName(c)} passt da nicht.`);
       take(P, c.id);
-      S.melds[+a.meld] = nm;
-      S.lastMove = { pi, t: "hit", meld: +a.meld, card: c, turn: S.turn };
+      S.melds[a.meld] = nm;
+      S.lastMove = { pi, t: "hit", meld: a.meld, card: c, turn: S.turn };
       log(S, `${P.name} legt ${cardName(c)} bei ${S.players[m.owner].name} an.`);
-      events.push({ t: "hit", pi, id: c.id, meld: +a.meld });
+      events.push({ t: "hit", pi, id: c.id, meld: a.meld });
       checkOut(S, pi, events);
       return ok();
     }
@@ -374,7 +374,7 @@
       if (isSkip(c)) {
         const others = S.players.map((_, i) => i).filter((i) => i !== pi);
         const choose = S.rules.skipChoose && S.players.length > 2;
-        target = choose && a.target != null ? +a.target : (pi + 1) % S.players.length;
+        target = choose && a.target != null ? a.target : (pi + 1) % S.players.length;
         if (!others.includes(target)) return fail("Wen soll es treffen?");
         if (S.players[target].skipped) return fail(`${S.players[target].name} setzt schon aus.`);
       }

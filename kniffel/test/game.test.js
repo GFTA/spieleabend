@@ -177,3 +177,46 @@ test("computer players finish games at every level", () => {
     assert.strictEqual(S.phase, "roundEnd", lvl);
   }
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = G.newGame(["A", "B", "C"], {});
+  const cur = S.cur;
+  const before = JSON.stringify(S);
+  const bad = [
+    null, undefined, 5, "roll", [], {}, { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" }, { t: "buy", id: "constructor" },
+    { t: "hold", i: 0 }, { t: "score" }, { t: "score", c: "ones" }, { t: "score", c: "constructor" }, { t: "next" }
+  ];
+  for (const a of bad) assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  for (const pi of [null, undefined, -1, 3, 99, "0", "constructor", "__proto__", 0.5, NaN, (cur + 1) % 3]) {
+    assert.strictEqual(G.act(S, pi, { t: "roll" }).ok, false, String(pi));
+  }
+  assert.strictEqual(JSON.stringify(S), before);
+  assert.strictEqual(G.act(S, cur, { t: "roll" }).ok, true);
+  const rolled = JSON.stringify(S);
+  const badBoxes = ["constructor", "__proto__", "toString", "hasOwnProperty", "", "zz", null, undefined, 7, {}, ["ones"]];
+  for (const c of badBoxes) assert.strictEqual(G.act(S, cur, { t: "score", c }).ok, false, String(c));
+  for (const a of [{ t: "hold", i: -1 }, { t: "hold", i: 5 }, { t: "hold", i: 1.5 }, { t: "hold", i: "0" }, { t: "hold", i: [0] }, { t: "hold", i: NaN }, { t: "hold" }]) {
+    assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  }
+  assert.strictEqual(JSON.stringify(S), rolled);
+});
+
+test("computer players play a whole game legally at every level", () => {
+  for (const level of ["easy", "normal", "hard", "random"]) {
+    const S = G.newGame(["A", "B", "C", "D"], {});
+    S.players.forEach((p) => { p.bot = true; });
+    let slowest = 0, steps = 0;
+    while (S.phase === "play" && steps++ < 4000) {
+      const pi = S.cur;
+      const t0 = Date.now();
+      const a = G.suggest(G.view(S, pi), G.botLevel(S, pi, level));
+      slowest = Math.max(slowest, Date.now() - t0);
+      assert.ok(a, `${level}: the computer has an action`);
+      const r = G.act(S, pi, a);
+      assert.ok(r.ok, `${level}: ${JSON.stringify(a)} -> ${r.error}`);
+    }
+    assert.notStrictEqual(S.phase, "play", `${level}: the game ends`);
+    assert.ok(S.players.every((p) => Object.values(p.sheet).every((v) => v != null)), `${level}: every box is filled`);
+    assert.ok(slowest < 300, `${level}: one computer move takes ${slowest} ms`);
+  }
+});
