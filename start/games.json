@@ -138,5 +138,15 @@
     "url": "https://schach.cool-kidz.net/",
     "max": 2,
     "status": "http://schach:8080/info"
+  },
+  {
+    "id": "monopoly",
+    "name": "Monopoly",
+    "title": "Monopoly",
+    "desc": "Würfeln, kaufen, bauen, pleite machen: der Brettspiel-Klassiker mit Hausregeln und Computer-Gegnern.",
+    "players": "2–6 Spieler + Zuschauer",
+    "url": "https://monopoly.cool-kidz.net/",
+    "max": 6,
+    "status": "http://monopoly:8080/info"
   }
 ]
