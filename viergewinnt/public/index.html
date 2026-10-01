@@ -96,6 +96,8 @@
 /* ---------- overlays ---------- */
 
 #roundEnd .sheet{max-width:560px}
+/* "4 in einer Reihe!" is long: keep the flash inside the screen on phones */
+#flash span{font-size:min(11vw,96px);max-width:92vw}
 .fleets .board{--bs:var(--fbs,140px)}
 .fleets{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
 .fleets figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}

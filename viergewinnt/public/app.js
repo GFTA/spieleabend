@@ -90,8 +90,14 @@
   });
 
   // ---------- events → feedback ----------
+  // the final disc falls and the winning four light up before the result sheet covers the board
+  let endHold = 0, endHoldT = null;
   function handleEvents(events, v) {
     if (!v) return;
+    if ((events || []).some((e) => e.t === "end") && (events || []).some((e) => e.t === "drop" || e.t === "pop")) {
+      endHold = Date.now() + 1700; clearTimeout(endHoldT);
+      endHoldT = setTimeout(() => { if (V && V.phase === "roundEnd") render(); }, 1750);
+    }
     for (const ev of events || []) {
       if (ev.t === "drop") { const fall = v.rows - ev.row; anim = { idx: ev.col + ev.row * v.cols, fall }; sfx("drop", fall); }
       if (ev.t === "pop") sfx("pull");
@@ -341,13 +347,14 @@
     if (play && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = key;
 
-    $("#roundEnd").hidden = V.phase !== "roundEnd" || peek;
+    $("#roundEnd").hidden = V.phase !== "roundEnd" || peek || Date.now() < endHold;
     if (V.phase === "roundEnd") {
       if (!peek) renderRoundEnd();
       const k = `${V.round}:${V.last.winners.join(",")}:${V.players.map((p) => p.wins).join(",")}:${V.draws}`;
       if (confettiFor !== k) {
         confettiFor = k; record(k);
-        if (V.last.winners.length) setTimeout(() => { confetti(); sfx("win"); }, 700);
+        const me = mode === "online" ? V.me : localMe();
+        if (V.last.winners.length && (me < 0 ? mode === "local" : V.last.winners.includes(me))) setTimeout(() => { confetti(); sfx("win"); }, Math.max(700, endHold - Date.now() + 100));
       }
     }
   }
