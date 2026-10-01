@@ -5,10 +5,11 @@
     <rect width="310" height="310" rx="14" fill="#f0dcb6"/>
     <g fill="#b07a4f"><rect x="77.5" width="77.5" height="77.5"/><rect x="232.5" width="77.5" height="77.5"/><rect y="77.5" width="77.5" height="77.5"/><rect x="155" y="77.5" width="77.5" height="77.5"/><rect x="77.5" y="155" width="77.5" height="77.5"/><rect x="232.5" y="155" width="77.5" height="77.5"/><rect y="232.5" width="77.5" height="77.5"/><rect x="155" y="232.5" width="77.5" height="77.5"/></g>
   </g>
-  <g transform="translate(78 82) scale(7.8)" fill="#fffaf0" stroke="#2b2118" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M13.5 36c-.5-9.5 3-14.5 7-18.5 1.8-1.8 1.6-3.2.2-4.2-1.2 1.2-2.7 1.8-4.2 1.8.5-2 2-3.8 3.5-4.8l.5-4.2 3.5 2.500c9 .5 16.500 7 16.500 19.500 0 2.500-.3 5-.9 7.900z"/>
-    <path d="M14.5 25.800c1.800-.6 3.800-2.600 5-4.800" fill="none"/>
-    <circle cx="23.500" cy="14.200" r="1.250" fill="#2b2118" stroke="none"/>
-    <path d="M10.500 39.500c0-2.200 1.600-3.800 3.800-3.800h16.400c2.200 0 3.800 1.600 3.800 3.800z"/>
+  <g transform="translate(82 80) scale(7.8)" fill="#fffaf0" stroke="#2b2118" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M11.5 36C11.5 30 14 26.5 17.5 24C15 25.2 12.5 26.2 10.5 25.3C8.6 24.4 8 22.3 9 20.5C10.5 17.5 13.5 14.5 15.8 11.8L16.8 5.8L19.8 8.3L22.3 5L24.3 8.8C30 9.5 35.5 16 35 25C34.8 29 34 33 33.5 36Z"/>
+    <path d="M26 12.5C30 15 31 20 30.5 26.5M15 21C18 20 21 17 21.5 13.5" fill="none"/>
+    <circle cx="16.3" cy="15.8" r="1.4" fill="#2b2118" stroke="none"/>
+    <circle cx="9.7" cy="21.8" r=".8" fill="#2b2118" stroke="none"/>
+    <path d="M10.5 39.5c0-2.2 1.6-3.8 3.8-3.8h16.4c2.2 0 3.8 1.6 3.8 3.8z"/>
   </g>
 </svg>
