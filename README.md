@@ -24,6 +24,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Arbeitsanweisung für 
 | Mensch ärgere dich nicht | [`maedn/`](maedn/) | 2–8 Spieler plus Zuschauer (ab 5 auf dem Sechser- oder Achter-Brett), elf Hausregeln (Schlagpflicht, Teams, Schnellstart …), Computer-Gegner, Avatare, Tisch-Designs · Port 8084 |
 | Sudoku | [`sudoku/`](sudoku/) | 1–8 Spieler plus Zuschauer, gleiches Rätsel für alle, Wettrennen gegen die Uhr, drei Schwierigkeiten, Computer-Gegner, Avatare, Tisch-Designs · Port 8089 |
 | Machi Koro | [`machikoro/`](machikoro/) | Stadt bauen mit Würfeln, 2–4 Spieler plus Zuschauer, Computer-Gegner · Port 8091 |
+| Carcassonne | [`carcassonne/`](carcassonne/) | Landschaft legen, Gefolgsleute setzen · 2–5 Spieler plus Zuschauer, Computer-Gegner · Port 8093 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 

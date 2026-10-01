@@ -1,0 +1,19 @@
+services:
+  carcassonne:
+    build:
+      context: ..
+      dockerfile: carcassonne/Dockerfile
+      args:
+        GAME: carcassonne
+    image: carcassonne:latest
+    container_name: carcassonne
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${CARCASSONNE_PORT:-8093}:8080"
+    volumes:
+      - carcassonne-data:/data
+
+volumes:
+  carcassonne-data:
