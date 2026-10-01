@@ -1,0 +1,19 @@
+services:
+  monopoly:
+    build:
+      context: ..
+      dockerfile: monopoly/Dockerfile
+      args:
+        GAME: monopoly
+    image: monopoly:latest
+    container_name: monopoly
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${MONOPOLY_PORT:-8092}:8080"
+    volumes:
+      - monopoly-data:/data
+
+volumes:
+  monopoly-data:
