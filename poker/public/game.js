@@ -321,7 +321,7 @@
       return { ok: true, events };
     }
     if (a.t === "show") { // after a hand that ended by folding, anybody may turn their cards over
-      const q = P[pi];
+      const q = Number.isInteger(pi) ? P[pi] : null;
       if (S.phase !== "roundEnd" || !S.last || S.last.kind !== "fold") return fail("Jetzt kann niemand Karten zeigen.");
       if (!q || q.out || !q.hole.length) return fail("Du hast keine Karten.");
       if (q.shown) return fail("Deine Karten sind schon offen.");
