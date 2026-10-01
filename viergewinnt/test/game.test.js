@@ -224,3 +224,23 @@ test("tip: takes a win, blocks a threat, takes over a central opening with the p
   assert.deepStrictEqual(G.suggest(P, 1), { t: "swap" });
   assert.deepStrictEqual(G.suggest(G.view(S, 1), 1), { t: "drop", col: 3 }); // a view works as well
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = game({ popout: true });
+  const snap = () => JSON.stringify(S);
+  const before = snap();
+  const cur = S.cur;
+  for (const a of [null, undefined, 5, "drop", [], {}, { t: 7 }, { t: "constructor" }, { t: "__proto__" }, { t: "drop" }, { t: "pop" }, { t: "undo" }, { t: "swap" }]) {
+    assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  }
+  for (const t of ["drop", "pop"]) {
+    for (const col of [-1, 7, 1e9, 0.5, "3", null, undefined, [3], [], {}, NaN, Infinity, "constructor", true, false]) {
+      assert.strictEqual(G.act(S, cur, { t, col }).ok, false, `${t} col ${String(col)}`);
+    }
+    assert.strictEqual(G.act(S, 1 - cur, { t, col: 3 }).ok, false, `${t} out of turn`);
+  }
+  for (const pi of [-1, 2, 1.5, NaN, null, undefined, "0", "1", "constructor", "__proto__"]) {
+    assert.strictEqual(G.act(S, pi, { t: "drop", col: 3 }).ok, false, String(pi));
+  }
+  assert.strictEqual(snap(), before);
+});

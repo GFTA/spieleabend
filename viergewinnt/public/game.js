@@ -119,7 +119,7 @@
     const events = [];
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
-    const P = S.players[pi];
+    const P = Number.isInteger(pi) ? S.players[pi] : null;
     if (!P) return fail("Unbekannter Spieler.");
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
 
@@ -171,7 +171,7 @@
       beginTurn(S, pi);
       return ok();
     }
-    const col = +a.col;
+    const col = a.col;
     if (!Number.isInteger(col) || col < 0 || col >= S.cols) return fail("Diese Spalte gibt es nicht.");
 
     if (a.t === "drop") {
