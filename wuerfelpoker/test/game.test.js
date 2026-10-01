@@ -193,3 +193,33 @@ test("computer players play a legal round to the end at every level", () => {
     assert.ok(Date.now() - t0 < 2000, `${level}: a whole round is quick`);
   }
 });
+
+test("a shared win at the goal names every champion", () => {
+  let shared = 0;
+  for (let g = 0; g < 4000 && shared < 3; g++) {
+    const S = G.newGame(["a", "b", "c"], 1, {});
+    S.players.forEach((p) => { p.bot = true; });
+    for (let n = 0; S.phase === "play" && n < 200; n++) G.act(S, S.cur, G.suggest(G.view(S, S.cur), "easy"));
+    if (S.phase !== "roundEnd" || S.last.winners.length < 2) continue;
+    shared++;
+    assert.ok(S.last.over);
+    const line = S.log[S.log.length - 1].text || S.log[S.log.length - 1];
+    for (const i of S.last.winners) assert.ok(String(line).includes(S.players[i].name), "every champion is named");
+    assert.ok(/gewinnen das Spiel/.test(String(line)));
+  }
+  assert.ok(shared > 0, "a tie happened");
+});
+
+test("the easy computer rolls after it held, it does not pick holds forever", () => {
+  for (let g = 0; g < 200; g++) {
+    const S = G.newGame(["a", "b"], 3, {});
+    S.players.forEach((p) => { p.bot = true; });
+    let lastHold = false;
+    for (let n = 0; S.phase === "play" && n < 200; n++) {
+      const a = G.suggest(G.view(S, S.cur), "easy");
+      assert.ok(!(a.t === "hold" && lastHold), "no two holds in a row");
+      lastHold = a.t === "hold";
+      assert.ok(G.act(S, S.cur, a).ok);
+    }
+  }
+});
