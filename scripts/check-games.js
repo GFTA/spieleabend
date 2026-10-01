@@ -93,7 +93,7 @@ for (const id of ids) {
   const gt = read(id, "test", "game.test.js") || "";
   if ((gt.match(/\btest\(|\bit\(/g) || []).length < 5) bad(id, "test/game.test.js has fewer than 5 tests");
   const all = tests.map((f) => read(id, "test", f) || "").join("\n");
-  if (!/botMove|botPlan/.test(all)) warn(id, "no test lets the computer play (botMove/botPlan must make legal moves and finish a round)");
+  if (!/botMove|botPlan|botLevel/.test(all)) warn(id, "no test lets the computer play (botMove/botPlan/botLevel must make legal moves and finish a round)");
   if (!/Date\.now\(\)|performance\.now|hrtime/.test(all)) warn(id, "no timing test: the engine runs on the server's only thread, bound generation/bot time in a test");
   if (!/constructor|__proto__/.test(all)) warn(id, "no hostile-input test: act() must reject messages like {t:\"buy\", id:\"constructor\"} without changing the state");
   if (!/roundEnd|over/.test(all)) warn(id, "no test reaches the round end");
