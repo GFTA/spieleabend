@@ -20,6 +20,7 @@ schafft, gewinnt, bei Gleichstand mit den wenigsten Punkten.
 Die Phasen: 2 Drillinge · Drilling + 4er-Folge · Vierling + 4er-Folge · 7er-Folge ·
 8er-Folge · 9er-Folge · 2 Vierlinge · 7 einer Farbe · Fünfling + Zwilling · Fünfling + Drilling.
 
+- **Phasenleiter**: Links (am breiten Desktop) stehen alle Phasen untereinander, bei jeder die Avatare der Spieler, die gerade darauf sind, in der Farbe ihres Platzes (gleiche Farbe als Streifen an der Spielerkarte oben). Der Spieler am Zug leuchtet, ein Haken heißt: Phase liegt. Auf Handy und schmalem Fenster öffnet der Listen-Knopf oben die Leiter als Fenster.
 - **Spielbrett**: Stapel und Ablage in der Mitte (mit Kartenhaufen), darunter deine
   Phasen-Felder, darunter die Hand. Die Gruppen der anderen liegen offen auf dem Brett.
 - **Ziehen und Ablegen mit Maus oder Finger**: Karte vom Stapel oder der Ablage auf die

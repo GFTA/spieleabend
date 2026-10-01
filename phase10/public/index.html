@@ -51,6 +51,27 @@
 .card.c-s .num svg{width:calc(var(--cw)*.56);height:calc(var(--cw)*.56)}
 .card.back::before{background:repeating-linear-gradient(45deg,#2d2150 0 6px,#231a3d 6px 12px)}
 .card.back::after{content:"10";position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*.36);color:var(--accent)}
+
+/* ---------- phase ladder: every phase with the players who are on it ---------- */
+.ladder{display:none}
+.ladder.in-sheet{display:flex}
+.ladder{flex-direction:column;gap:6px;font-size:13px}
+.lrow{display:flex;flex-direction:column;gap:5px;padding:7px 10px;border-radius:12px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.lrow.mine{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.lrow.past{opacity:.5}
+.lrow.has{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28)}
+.lrow.mine.has{box-shadow:inset 0 0 0 2px var(--accent)}
+.lhead{display:flex;align-items:baseline;gap:8px;min-width:0}
+.lhead b{flex:none;font-family:var(--display);font-weight:400;font-size:17px;line-height:1;color:var(--accent);min-width:1.4em}
+.lhead span{font-weight:700;line-height:1.2}
+.lwho{display:flex;flex-wrap:wrap;gap:5px;padding-left:calc(1.4em + 8px)}
+.lwho:empty{display:none}
+.lav{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:17px;line-height:1;background:color-mix(in srgb,var(--pc) 32%,var(--bg));box-shadow:0 0 0 2.5px var(--pc)}
+.lav.cur{animation:tipglow .7s ease-in-out infinite alternate;box-shadow:0 0 0 2.5px var(--pc),0 0 12px 2px var(--pc)}
+.lav i{position:absolute;right:-5px;bottom:-5px;width:15px;height:15px;border-radius:50%;background:var(--green);color:#10200f;font-style:normal;font-size:10px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg2)}
+.lrow.fin{background:var(--surface)}
+.plate{border-left:5px solid var(--pc,var(--line))}
+.in-sheet .lrow{padding:8px 12px}
 /* ---------- game ---------- */
 
 .roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
@@ -195,6 +216,13 @@
 
 /* wide desktop: piles left, laid phases right, bigger cards */
 @media (min-width:1100px) and (min-height:700px){
+  #game{display:grid;grid-template-columns:minmax(190px,15vw) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:20px}
+  .ladder{display:flex;grid-column:1;grid-row:1/4;align-self:start;margin-top:14px;max-height:calc(100% - 14px);overflow-y:auto;scrollbar-width:none;padding-right:2px}
+  .ladder::-webkit-scrollbar{display:none}
+  .topbar{grid-column:2;grid-row:1}
+  .arena{grid-column:2;grid-row:2}
+  .dock{grid-column:2;grid-row:3;justify-self:center}
+  #ladderBtn{display:none}
   .topbar{max-width:none;padding-inline:0}
   .arena{padding:12px 0;gap:16px}
   .board{display:grid;grid-template-columns:auto minmax(0,auto);justify-content:center;align-items:center;justify-items:center;column-gap:clamp(32px,6vw,110px);row-gap:6px}
@@ -296,9 +324,13 @@
 
   <!-- ===== table ===== -->
   <section id="game" hidden aria-label="Spieltisch">
+    <aside class="ladder" id="ladder" aria-label="Phasen"></aside>
     <div class="topbar">
       <div class="roundinfo" id="roundInfo"></div>
       <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="ladderBtn" type="button" aria-label="Phasen anzeigen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3.4"/></svg>
+      </button>
       <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
       </button>
@@ -334,6 +366,14 @@
     <h2>Wer muss aussetzen?</h2>
     <div class="targets" id="targets"></div>
     <button class="btn btn-ghost btn-block" id="targetCancel" type="button">Doch nicht</button>
+  </div>
+</div>
+
+<div class="overlay" id="ladderPick" hidden>
+  <div class="sheet">
+    <h2>Phasen</h2>
+    <div class="ladder in-sheet" id="ladderSheet"></div>
+    <button class="btn btn-ghost btn-block" id="ladderClose" type="button">Schließen</button>
   </div>
 </div>
 

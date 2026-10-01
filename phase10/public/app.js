@@ -297,6 +297,9 @@
     discard(+$("#targets").dataset.id, +b.dataset.t);
   });
   $("#targetCancel").addEventListener("click", () => { $("#targetPick").hidden = true; });
+  $("#ladderBtn").addEventListener("click", () => { $("#ladderPick").hidden = false; });
+  $("#ladderClose").addEventListener("click", () => { $("#ladderPick").hidden = true; });
+  $("#ladderPick").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 
   // ---------- your spread: drop the phase into its slots, then lay it ----------
   // card id -> group (1|2); only on this screen until "Auslegen"
@@ -437,12 +440,29 @@
     UI.update();
   }
 
+  const SEAT_COLORS = ["#ff6b6b", "#4dabf7", "#69db7c", "#ffd43b", "#da77f2", "#ff9f43"];
+  const seatColor = (i) => SEAT_COLORS[i % SEAT_COLORS.length];
+
+  function ladderHTML() {
+    const goal = V.goal, rows = [];
+    for (let ph = 1; ph <= goal; ph++) {
+      const here = V.players.map((p, i) => i).filter((i) => V.players[i].phase === ph);
+      const cls = ["lrow", V.me >= 0 && V.players[V.me].phase === ph ? "mine" : "", here.length ? "has" : "", V.players.every((p) => p.phase > ph) ? "past" : ""].join(" ");
+      rows.push(`<div class="${cls}"><div class="lhead"><b>${ph}</b><span>${G.phaseName(ph)}</span></div><div class="lwho">` +
+        here.map((i) => { const p = V.players[i]; return `<span class="lav${V.phase === "play" && V.cur === i ? " cur" : ""}" style="--pc:${seatColor(i)}" title="${esc(p.name)}${p.laid ? " · Phase liegt" : ""}">${p.avatar}${p.laid ? "<i>✓</i>" : ""}</span>`; }).join("") + "</div></div>");
+    }
+    const fin = V.players.map((p, i) => i).filter((i) => V.players[i].phase > goal);
+    if (fin.length) rows.push(`<div class="lrow fin"><div class="lhead"><b>🏁</b><span>Alle Phasen geschafft</span></div><div class="lwho">` +
+      fin.map((i) => `<span class="lav" style="--pc:${seatColor(i)}" title="${esc(V.players[i].name)}">${V.players[i].avatar}</span>`).join("") + "</div></div>");
+    return rows.join("");
+  }
+
   function plateHTML(i) {
     const p = V.players[i], members = mode === "online" && R ? R.members : null;
     const away = members && members[i] && !members[i].online;
     const cls = ["plate", V.phase === "play" && V.cur === i ? "active" : "", away ? "away" : ""].join(" ");
     const tag = p.bot ? " · 🤖" : away ? " · offline" : "";
-    return `<div class="${cls}" data-seat="${i}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
+    return `<div class="${cls}" data-seat="${i}" style="--pc:${seatColor(i)}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
       `<span class="pinfo"><span class="pname">${esc(p.name)}${mode === "online" && i === V.me ? " (du)" : ""}</span>` +
       `<span class="pmeta">Phase ${p.phase}${p.laid ? ' <b class="ok">✓</b>' : ""} · ${p.count} 🂠${tag}</span></span>` +
       `<span class="pwins" title="Strafpunkte">${p.score}</span>${p.skipped ? '<span class="stamp">SETZT AUS</span>' : ""}</div>`;
@@ -520,6 +540,9 @@
     for (const id of [...staged.keys()]) if (!V.hand.some((c) => c.id === id)) staged.delete(id);
     if (P && P.laid) staged.clear();
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
+    const lad = ladderHTML();
+    $("#ladder").innerHTML = lad;
+    $("#ladderSheet").innerHTML = lad;
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · bis Phase ${V.goal}`;
 
     // piles
@@ -779,7 +802,7 @@
   // keys: D/A draw, arrows pick a card, Enter throws it, P lays the phase (or suggests), S sorts, Esc cancels
   document.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
-    const open = ["#menu", "#reactBar", "#targetPick"].find((s) => !$(s).hidden);
+    const open = ["#menu", "#reactBar", "#targetPick", "#ladderPick"].find((s) => !$(s).hidden);
     if (e.key === "Escape") {
       if (open) $(open).hidden = true;
       else if (sel != null) { sel = null; renderGame(); }
