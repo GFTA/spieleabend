@@ -38,11 +38,11 @@ test("two players: private hands, draw and discard over the wire, a computer tak
 
   const anna = client(port), ben = client(port);
   await Promise.all([anna.open, ben.open]);
-  anna.send({ t: "create", name: "Anna", goal: 5, rules: { skipChoose: true } });
+  anna.send({ t: "create", name: "Anna", goal: 5, rules: { outBonus: true } });
   const { code } = await anna.next((m) => m.t === "joined");
   const lobby = await anna.next((m) => m.t === "room");
   assert.strictEqual(lobby.goal, 5);
-  assert.ok(lobby.rules.skipChoose);
+  assert.ok(lobby.rules.outBonus);
   anna.send({ t: "settings", goal: 7 });
   assert.strictEqual((await anna.next((m) => m.t === "room" && m.goal !== 5)).goal, 10, "unknown lengths fall back to all 10 phases");
 

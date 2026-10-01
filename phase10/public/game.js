@@ -42,7 +42,6 @@
 
   // House rules. Shared with the UI, which renders one switch per entry.
   const RULES = [
-    { k: "skipChoose", name: "Aussetzen frei wählen", desc: "Ab drei Spielern suchst du aus, wer aussetzen muss, statt immer den Nächsten zu treffen." },
     { k: "outBonus", name: "Raus-Bonus", desc: "Wer die Runde beendet, bekommt 10 Strafpunkte abgezogen (nie unter 0)." },
     { k: "clock", name: "Zugzeit", desc: "45 Sekunden pro Zug, sonst zieht und wirft das Spiel für dich." }
   ];
@@ -119,6 +118,12 @@
     if (card.v === top && top <= 12) return Object.assign({}, m, { cards: m.cards.concat(card), len: m.len + 1 });
     if (card.v === m.start - 1 && m.start > 1) return Object.assign({}, m, { cards: [card].concat(m.cards), start: m.start - 1, len: m.len + 1 });
     return null;
+  }
+
+  // where a joker in meld m could be swapped for the real card: index into m.cards, or -1
+  function swapSpot(m, card) {
+    if (!card || isWild(card) || isSkip(card)) return -1;
+    return m.cards.findIndex((j, i) => isWild(j) && (m.k === "set" ? card.v === m.value : m.k === "color" ? card.c === m.color : card.v === m.start + i));
   }
 
   // ---------- finding a phase in a hand (the computer, and the "Vorschlag" button) ----------
@@ -281,7 +286,7 @@
 
   // Apply an action by player `pi`. Returns { ok, error?, events }.
   // Actions: {t:"draw", from:"deck"|"discard"} {t:"lay", groups:[[ids],[ids]]} {t:"hit", id, meld}
-  //          {t:"discard", id, target?} {t:"skip"} {t:"next"}
+  //          {t:"swap", id, meld, joker?} {t:"discard", id, target?} {t:"skip"} {t:"next"}
   function act(S, pi, a) {
     const events = [];
     const fail = (error) => ({ ok: false, error, events });
@@ -367,13 +372,29 @@
       return ok();
     }
 
+    if (a.t === "swap") {
+      if (!P.laid) return fail("Tauschen geht erst, wenn deine eigene Phase liegt.");
+      const c = cardOf(P, a.id), m = Number.isInteger(a.meld) ? S.melds[a.meld] : null;
+      if (!c || !m) return fail("Das geht nicht.");
+      const at = swapSpot(m, c);
+      if (at < 0) return fail(`${cardName(c)} ersetzt da keinen Joker.`);
+      const j = m.cards[at];
+      m.cards[at] = c;
+      take(P, c.id);
+      P.hand.push(j);
+      S.lastMove = { pi, t: "swap", meld: a.meld, card: c, joker: j, turn: S.turn };
+      log(S, `${P.name} tauscht bei ${S.players[m.owner].name} den Joker gegen ${cardName(c)}.`);
+      events.push({ t: "swap", pi, id: c.id, joker: j.id, meld: a.meld });
+      return ok();
+    }
+
     if (a.t === "discard") {
       const c = cardOf(P, a.id);
       if (!c) return fail("Diese Karte hast du nicht.");
       let target = null;
       if (isSkip(c)) {
         const others = S.players.map((_, i) => i).filter((i) => i !== pi);
-        const choose = S.rules.skipChoose && S.players.length > 2;
+        const choose = S.players.length > 2;
         target = choose && a.target != null ? a.target : (pi + 1) % S.players.length;
         if (!others.includes(target)) return fail("Wen soll es treffen?");
         if (S.players[target].skipped) return fail(`${S.players[target].name} setzt schon aus.`);
@@ -418,7 +439,7 @@
   function skipTarget(S, pi) {
     const others = S.players.map((_, i) => i).filter((i) => i !== pi && !S.players[i].skipped);
     if (!others.length) return (pi + 1) % S.players.length;
-    if (!(S.rules.skipChoose && S.players.length > 2)) return (pi + 1) % S.players.length;
+    if (S.players.length <= 2) return (pi + 1) % S.players.length;
     return others.sort((a, b) => S.players[b].phase - S.players[a].phase || (S.players[b].laid - S.players[a].laid) || S.players[a].hand.length - S.players[b].hand.length)[0];
   }
   const canHit = (S, c) => S.melds.some((m) => fitOnto(m, c));
@@ -460,6 +481,12 @@
       const f = findPhase(P.hand, P.phase);
       if (f && f.flat().length < P.hand.length) return { t: "lay", groups: f.map((g) => g.map((c) => c.id)) };
     } else {
+      if (level > 1) {
+        for (const c of P.hand) {
+          const mi = S.melds.findIndex((m) => swapSpot(m, c) >= 0);
+          if (mi >= 0) return { t: "swap", id: c.id, meld: mi };
+        }
+      }
       for (const c of P.hand) {
         if (P.hand.length === 1) break; // the last card is thrown, that ends the round too
         const mi = S.melds.findIndex((m) => fitOnto(m, c));
@@ -489,7 +516,7 @@
   return {
     MAX_PLAYERS, HAND, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, COLORS, CNAME, PHASES, RULES,
     normRules, normGoal, normLevel, phaseName, groupName, cardName, points, isWild, isSkip, buildDeck,
-    makeGroup, fitOnto, groupOptions, findPhase, missing, OUT_BONUS,
+    makeGroup, fitOnto, swapSpot, groupOptions, findPhase, missing, OUT_BONUS,
     newGame, startRound, act, tick, nextDeadline, resetClock, botMove, view
   };
 });

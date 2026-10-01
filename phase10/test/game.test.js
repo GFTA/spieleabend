@@ -155,7 +155,7 @@ test("view: a tip for the player on turn (the pro's move) and how many cards the
   assert.ok(["lay", "hit", "discard"].includes(G.view(S, 0).tip.t));
 });
 
-test("skip: the next player sits out; with free choice you pick who", () => {
+test("skip: with three or more players you pick who sits out", () => {
   const S = G.newGame([{ name: "A" }, { name: "B" }, { name: "C" }], 10, { skipChoose: true }, 2);
   S.cur = 0; S.step = "act";
   const sk = SK(); S.players[0].hand.push(sk);
@@ -164,6 +164,46 @@ test("skip: the next player sits out; with free choice you pick who", () => {
   S.step = "act";
   G.act(S, 1, { t: "discard", id: S.players[1].hand.find((c) => !G.isSkip(c)).id });
   assert.strictEqual(S.cur, 0, "C was skipped");
+});
+
+test("swap: a real card takes a joker's place, the joker goes to your hand", () => {
+  const S = G.newGame([{ name: "A" }, { name: "B" }], 10, {}, 2);
+  S.cur = 0; S.step = "act";
+  const me = S.players[0];
+  const j1 = W(), j2 = W();
+  S.melds = [
+    Object.assign(G.makeGroup([C("r", 5), C("b", 5), j1], { k: "set", n: 3 }), { owner: 1 }),
+    Object.assign(G.makeGroup([C("r", 4), j2, C("r", 6), C("r", 7)], { k: "run", n: 4 }), { owner: 1 }),
+    Object.assign(G.makeGroup([C("g", 1), C("g", 2), C("g", 3), C("g", 4), C("g", 6), C("g", 7), W()], { k: "color", n: 7 }), { owner: 1 })
+  ];
+  const cj = S.melds[2].cards.find(G.isWild);
+  const five = C("y", 5), wrong = C("y", 9), red5 = C("r", 5), green = C("g", 11);
+  me.hand = [five, wrong, red5, green, C("b", 2)];
+  assert.match(G.act(S, 0, { t: "swap", id: five.id, meld: 0 }).error, /eigene Phase/);
+  me.laid = true;
+  assert.match(G.act(S, 0, { t: "swap", id: wrong.id, meld: 0 }).error, /keinen Joker/);
+  assert.ok(!G.act(S, 0, { t: "swap", id: wrong.id, meld: 1 }).ok, "the run joker stands for the 5");
+  const n = me.hand.length;
+  const r = G.act(S, 0, { t: "swap", id: five.id, meld: 0 });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(me.hand.length, n, "one in, one out");
+  assert.ok(me.hand.includes(j1) && !me.hand.includes(five));
+  assert.ok(S.melds[0].cards.includes(five) && !S.melds[0].cards.includes(j1));
+  assert.strictEqual(S.cur, 0, "swapping is not a whole turn");
+  assert.deepStrictEqual(r.events.map((e) => e.t), ["swap"]);
+  // the run: the joker stands for the 5
+  me.hand.push(C("g", 5));
+  const g5 = me.hand[me.hand.length - 1];
+  assert.ok(G.act(S, 0, { t: "swap", id: g5.id, meld: 1 }).ok);
+  assert.deepStrictEqual(S.melds[1].cards.map((c) => c.v), [4, 5, 6, 7]);
+  assert.ok(me.hand.includes(j2));
+  // colour group: any card of the colour
+  assert.ok(G.act(S, 0, { t: "swap", id: green.id, meld: 2 }).ok);
+  assert.ok(S.melds[2].cards.includes(green) && me.hand.includes(cj));
+  // no joker left to take
+  assert.ok(!G.act(S, 0, { t: "swap", id: red5.id, meld: 0 }).ok);
+  for (const meld of [-1, 9, "0", null]) assert.ok(!G.act(S, 0, { t: "swap", id: red5.id, meld }).ok);
+  assert.ok(!G.act(S, 0, { t: "swap", id: 424242, meld: 0 }).ok);
 });
 
 test("computer players play whole games on their own", () => {

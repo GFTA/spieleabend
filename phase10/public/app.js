@@ -186,6 +186,12 @@
         if (v.top && v.top.id === ev.id && dest) fly(cardHTML(v.top), (mine && before.hand[ev.id]) || before.plates[ev.pi], dest, k * 90);
         k++;
         if (ev.target != null) setTimeout(() => { const s = document.querySelector(`#plates [data-seat="${ev.target}"] .stamp`); if (s) { s.classList.remove("hit"); void s.offsetWidth; s.classList.add("hit"); } }, 380 + k * 90);
+      } else if (ev.t === "swap") {
+        const dest = document.querySelector(`.meld .card[data-id="${ev.id}"]`), c = v.melds.flatMap((m) => m.cards).find((x) => x.id === ev.id);
+        if (dest && c) fly(cardHTML(c), (mine && before.hand[ev.id]) || before.plates[ev.pi], dest, k * 90, 380);
+        const jd = mine ? cardEl(ev.joker) : plateEl(ev.pi);
+        if (jd && before.meld[ev.joker]) fly(cardHTML({ id: ev.joker, c: "w", v: 0 }), before.meld[ev.joker], jd, k * 90 + 120, 420);
+        k++;
       } else if (ev.t === "lay" || ev.t === "hit") {
         // the cards that are new on the table fly there from the hand / spread (or the player's seat)
         const all = v.melds.flatMap((m) => m.cards);
@@ -219,6 +225,7 @@
       if (ev.t === "discard") { sfx("throw"); if (ev.target != null) { setTimeout(() => sfx("skip"), 300); toast(ev.target === v.me && mode === "online" ? "Du musst aussetzen!" : `${v.players[ev.target].name} muss aussetzen!`); } }
       if (ev.t === "lay") { sfx("lay"); setTimeout(() => flash(`Phase ${ev.phase}!`, mine && mode === "online" ? "Deine Phase liegt" : `${v.players[ev.pi].name} hat sie`, "blue"), 350); }
       if (ev.t === "hit") sfx("hit");
+      if (ev.t === "swap") { sfx("hit"); if (!mine) toast(`${pname(ev.pi)} tauscht einen Joker aus.`); }
       if (ev.t === "timeout") { toast(mine && mode === "online" ? "Zu langsam! Das Spiel hat für dich gezogen und abgeworfen." : `${v.players[ev.pi].name} war zu langsam.`); sfx("bad"); }
       if (ev.t === "end") setTimeout(() => flash(`${pname(ev.out)} ${mine && mode === "online" ? "bist" : "ist"} raus!`, ev.over ? "Spiel vorbei" : "Runde vorbei", "blue"), 500);
     }
@@ -263,13 +270,18 @@
     if (V.step !== "act") { toast("Zieh zuerst eine Karte."); sfx("bad"); return; }
     const c = V.hand.find((x) => x.id === id);
     if (!c) { toast("Tippe zuerst die Karte an, die du abwerfen willst."); return; }
-    if (G.isSkip(c) && target == null && V.rules.skipChoose && V.players.length > 2) return openTargets(id);
+    if (G.isSkip(c) && target == null && V.players.length > 2) return openTargets(id);
     sel = null; staged.delete(id);
     doAct({ t: "discard", id, target });
   }
   function hit(meld) {
     if (!myTurn() || sel == null) return;
     doAct({ t: "hit", id: sel, meld });
+    sel = null;
+  }
+  function swap(meld) {
+    if (!myTurn() || sel == null) return;
+    doAct({ t: "swap", id: sel, meld });
     sel = null;
   }
   function openTargets(id) {
@@ -437,7 +449,10 @@
   }
 
   const meldLabel = (m) => m.k === "set" ? `${m.cards.length}× ${m.value}` : m.k === "run" ? `${m.start}–${m.start + m.len - 1}` : G.CNAME[m.color];
-  const meldHTML = (m, mi, fits, tp) => `<button type="button" class="meld${fits ? " fits" : ""}${tp ? " tip" : ""}" data-meld="${mi}" aria-label="${G.groupName(m)}">${m.cards.map((c) => cardHTML(c)).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
+  // swapAt: index of the joker the selected card could replace (or -1)
+  const meldHTML = (m, mi, fits, tp, swapAt = -1) => `<button type="button" class="meld${fits ? " fits" : ""}${tp ? " tip" : ""}" data-meld="${mi}" aria-label="${G.groupName(m)}">${m.cards.map((c, i) => cardHTML(c, i === swapAt ? "swap" : "")).join("")}<span class="mlabel">${meldLabel(m)}</span></button>`;
+  const swapIdx = (m, can, sc) => (can && sc ? G.swapSpot(m, sc) : -1);
+  const swapTip = (mi) => tipNow() && tipNow().t === "swap" && tipNow().meld === mi;
   // the tip is only valid for the moment it was asked for: the same turn, step and hand
   let tipAsked = null;
   const tipKey = () => `${V.round}:${V.turn}:${V.step}:${V.hand.length}:${me() && me().laid}`;
@@ -451,7 +466,7 @@
       const ms = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === i);
       if (!ms.length) return "";
       return `<div class="mrow"><div class="who">${p.avatar} ${esc(p.name)} <small>Phase ${p.phase} · ${G.phaseName(p.phase)}</small></div><div class="mgroups">` +
-        ms.map(([m, mi]) => meldHTML(m, mi, canHit && sc && G.fitOnto(m, sc), tipNow() && tipNow().t === "hit" && tipNow().meld === mi)).join("") + "</div></div>";
+        ms.map(([m, mi]) => meldHTML(m, mi, canHit && sc && G.fitOnto(m, sc), tipNow() && (tipNow().t === "hit" || tipNow().t === "swap") && tipNow().meld === mi, swapIdx(m, canHit, sc))).join("") + "</div></div>";
     }).join("");
     $("#melds").innerHTML = rows;
   }
@@ -471,7 +486,7 @@
       const sc = selCard();
       const mine = V.melds.map((m, mi) => [m, mi]).filter(([m]) => m.owner === V.me);
       z.innerHTML = `<div class="zhead"><span class="tag done">Phase ${P.phase} ✓</span><span>${G.phaseName(P.phase)}</span><small>${V.phase === "play" ? "liegt. Jetzt anlegen, bei dir und bei den anderen." : ""}</small></div>` +
-        `<div class="mgroups">${mine.map(([m, mi]) => meldHTML(m, mi, can && sc && G.fitOnto(m, sc), tipNow() && tipNow().t === "hit" && tipNow().meld === mi)).join("")}</div>`;
+        `<div class="mgroups">${mine.map(([m, mi]) => meldHTML(m, mi, can && sc && G.fitOnto(m, sc), tipNow() && (tipNow().t === "hit" || tipNow().t === "swap") && tipNow().meld === mi, swapIdx(m, can, sc))).join("")}</div>`;
       return;
     }
     const gs = phaseGroups(), ready = spreadReady();
@@ -565,7 +580,7 @@
     // hand: everything that is not in the spread
     const hand = $("#hand");
     hand.innerHTML = sorted(V.hand.filter((c) => !staged.has(c.id)))
-      .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : "", tp && (tp.t === "discard" || tp.t === "hit") && tp.id === c.id ? "tip" : ""].join(" "), "button")).join("");
+      .map((c) => cardHTML(c, [c.id === sel ? "sel" : "", c.id === freshId ? "fresh" : "", tp && (tp.t === "discard" || tp.t === "hit" || tp.t === "swap") && tp.id === c.id ? "tip" : ""].join(" "), "button")).join("");
     freshId = null;
     layoutHand();
     $("#reactBtn").hidden = mode !== "online";
@@ -583,7 +598,7 @@
       const k = `${V.round}:${V.players.map((p) => p.score).join(",")}`;
       if (confettiFor !== k) {
         confettiFor = k; if (V.last.over) record(k);
-        const good = mode === "online" ? V.last.out === V.me || (V.last.over && V.last.winners.includes(V.me)) : true;
+        const good = mode === "online" ? V.last.out === V.me || (V.last.over && V.last.winners.includes(V.me)) : !V.players[V.last.out] || !V.players[V.last.out].bot;
         if (good) setTimeout(() => { confetti(); sfx("win"); }, 700);
       }
     }
@@ -606,7 +621,7 @@
     const z = e.target.closest("[data-z]");
     if (z) { if (z.dataset.z === "suggest") suggest(); else if (z.dataset.z === "clear") unstageAll(); else layNow(); return; }
     const m = e.target.closest("[data-meld]");
-    if (m) return tapMeld(m);
+    if (m) return tapMeld(m, e);
     const c = e.target.closest(".slots [data-id]");
     if (c) return stage(+c.dataset.id, 0); // a card in a slot goes back to the hand
     const g = e.target.closest(".slotgroup");
@@ -628,6 +643,7 @@
     if (t.t === "draw") toast(t.from === "discard" ? `Tipp: nimm ${G.cardName(V.top)} von der Ablage.` : "Tipp: zieh vom Stapel.");
     else if (t.t === "lay") { toast("Tipp: deine Phase lässt sich auslegen, tippe auf „Vorschlag“ und dann „Auslegen“."); }
     else if (t.t === "hit") toast(`Tipp: leg ${G.cardName(V.hand.find((c) => c.id === t.id))} an.`);
+    else if (t.t === "swap") toast(`Tipp: tausche einen Joker gegen ${G.cardName(V.hand.find((c) => c.id === t.id))}, tippe auf den Joker.`);
     else toast(`Tipp: wirf ${G.cardName(V.hand.find((c) => c.id === t.id))} ab.`);
     sfx("pop");
     renderGame();
@@ -639,14 +655,15 @@
     if (myTurn() && V.step === "act") { if (sel != null) discard(sel); else toast("Tippe zuerst die Karte an, die du abwerfen willst, oder zieh sie hierher."); return; }
     draw("discard");
   });
-  function tapMeld(b) {
+  function tapMeld(b, e) {
     if (!myTurn() || V.step !== "act") return;
     if (!me().laid) { toast("Anlegen geht erst, wenn deine eigene Phase liegt."); return; }
-    if (sel == null) { toast("Tippe zuerst eine Karte an, dann die Gruppe, oder zieh sie drauf."); return; }
-    if (!b.classList.contains("fits")) { toast("Die Karte passt da nicht."); sfx("bad"); return; }
+    if (sel == null) { toast("Tippe zuerst eine Karte an, dann die Gruppe (anlegen) oder einen Joker darin (tauschen), oder zieh sie drauf."); return; }
+    if (e && e.target.closest(".card.swap")) return swap(+b.dataset.meld);
+    if (!b.classList.contains("fits")) { toast(b.querySelector(".card.swap") ? "Zum Tauschen tippe auf den Joker." : "Die Karte passt da nicht."); sfx("bad"); return; }
     hit(+b.dataset.meld);
   }
-  $("#melds").addEventListener("click", (e) => { const b = e.target.closest("[data-meld]"); if (b && !afterDrag()) tapMeld(b); });
+  $("#melds").addEventListener("click", (e) => { const b = e.target.closest("[data-meld]"); if (b && !afterDrag()) tapMeld(b, e); });
 
   // ---------- drag & drop: pick a card up, drop it where it should go; it snaps into place ----------
   let drag = null;
@@ -661,7 +678,13 @@
     }
     if (turn && V.step === "act") {
       t.push({ el: $("#discardPile"), kind: "discard", box: $("#discardBtn") });
-      if (P.laid) for (const m of document.querySelectorAll(".meld")) if (G.fitOnto(V.melds[+m.dataset.meld], c)) t.push({ el: m, kind: "hit", meld: +m.dataset.meld });
+      if (P.laid) {
+        for (const m of document.querySelectorAll(".meld")) if (G.fitOnto(V.melds[+m.dataset.meld], c)) t.push({ el: m, kind: "hit", meld: +m.dataset.meld });
+        for (const m of document.querySelectorAll(".meld")) { // a joker inside a group: swap (later in the list, so it wins over the group)
+          const at = G.swapSpot(V.melds[+m.dataset.meld], c);
+          if (at >= 0 && m.children[at]) t.push({ el: m.children[at], kind: "swap", meld: +m.dataset.meld });
+        }
+      }
     }
     return t;
   }
@@ -745,6 +768,7 @@
     else if (t.kind === "unstage") stage(d.id, 0, at);
     else if (t.kind === "discard") { dropFrom = { id: d.id, rect: at, at: Date.now() }; staged.delete(d.id); discard(d.id); }
     else if (t.kind === "hit") { dropFrom = { id: d.id, rect: at, at: Date.now() }; sel = d.id; hit(t.meld); }
+    else if (t.kind === "swap") { dropFrom = { id: d.id, rect: at, at: Date.now() }; sel = d.id; swap(t.meld); }
   });
   document.addEventListener("pointercancel", (e) => {
     if (!drag || e.pointerId !== drag.pid) return;
