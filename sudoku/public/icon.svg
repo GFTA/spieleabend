@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#1a1426"/>
-  <rect x="72" y="72" width="368" height="368" rx="40" fill="#3d3478"/>
-  <rect x="86" y="86" width="340" height="340" rx="28" fill="#f4effb"/>
-  <rect x="199.3" y="199.3" width="113.3" height="113.3" fill="#f2c230"/>
-  <path d="M199.3 86V426M86 199.3H426 M312.7 86V426M86 312.7H426" stroke="#3d3478" stroke-width="9" fill="none"/>
+  <rect x="72" y="72" width="368" height="368" rx="76" fill="#3d3478"/>
+  <rect x="86" y="86" width="340" height="340" rx="64" fill="#f4effb"/>
+  <rect x="203" y="203" width="106" height="106" rx="30" fill="#f2c230"/>
+  <path d="M199.3 116V396M116 199.3H396 M312.7 116V396M116 312.7H396" stroke="#3d3478" stroke-opacity=".55" stroke-width="9" stroke-linecap="round" fill="none"/>
   <g fill="none" stroke="#2a2350" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
-    <g transform="translate(142.7 142.7) scale(1.393)"><path d="M13 -28H-12L-15 -4C4 -12 18 0 16 14C14 30 -6 34 -16 22"/></g>
-    <g transform="translate(256.0 142.7) scale(1.393)"><path d="M-15 -28H12L-4 -4C16 -6 20 10 14 22C8 32 -8 32 -16 22"/></g>
-    <g transform="translate(256.0 256.0) scale(1.602)" stroke="#1a1426"><ellipse cx="0" cy="-12" rx="14" ry="15"/><path d="M14 -12C14 8 6 26 -12 30"/></g>
-    <g transform="translate(369.3 256.0) scale(1.393)"><path d="M-10 -14L5 -28V28"/></g>
-    <g transform="translate(142.7 369.3) scale(1.393)"><path d="M-15 -28H15L-6 28"/></g>
-    <g transform="translate(369.3 369.3) scale(1.393)"><ellipse cx="0" cy="-14" rx="12" ry="13"/><ellipse cx="0" cy="15" rx="15" ry="14"/></g>
+    <g transform="translate(142.7 142.7) scale(1.22)"><path d="M13 -28H-12L-15 -4C4 -12 18 0 16 14C14 30 -6 34 -16 22"/></g>
+    <g transform="translate(256.0 142.7) scale(1.22)"><path d="M-15 -28H12L-4 -4C16 -6 20 10 14 22C8 32 -8 32 -16 22"/></g>
+    <g transform="translate(256.0 256.0) scale(1.4)" stroke="#1a1426"><ellipse cx="0" cy="-12" rx="14" ry="15"/><path d="M14 -12C14 8 6 26 -12 30"/></g>
+    <g transform="translate(369.3 256.0) scale(1.22)"><path d="M-10 -14L5 -28V28"/></g>
+    <g transform="translate(142.7 369.3) scale(1.22)"><path d="M-15 -28H15L-6 28"/></g>
+    <g transform="translate(369.3 369.3) scale(1.22)"><ellipse cx="0" cy="-14" rx="12" ry="13"/><ellipse cx="0" cy="15" rx="15" ry="14"/></g>
   </g>
 </svg>
