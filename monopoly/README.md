@@ -1,32 +1,16 @@
 # Monopoly
 
-Würfeln, kaufen, bauen, pleite machen: das Brettspiel-Klassiker mit Hausregeln und Computer-Gegnern. Ein Spieleabend-Spiel: Warteraum, Raum-Code mit QR, Zuschauer, Chat,
-Computer-Gegner, Avatare und Tisch-Designs kommen aus `../shared/`, siehe
-[`ARCHITECTURE.md`](../ARCHITECTURE.md).
+Monopoly für 2–6 Spieler (Mensch oder Computer), lokal oder online im Raum. Die Regeln liegen in `public/game.js` (ohne DOM), `public/fx.js` steuert die Animationen.
 
-Erzeugt mit `scripts/new-game`. Das Beispielspiel ist „Pig“ (würfeln oder halten, eine 1
-löscht die Punkte dieser Runde); die Regeln stehen in `public/game.js`, die Oberfläche in
-`public/app.js` und `public/index.html`.
+## Hausregeln (in der Lobby einstellbar)
+- **Doppelt auf LOS:** Wer genau auf LOS landet, bekommt 400 statt 200 (Standard: an).
+- **Frei Parken:** Steuern und Gebühren landen im Topf, wer auf Frei Parken landet, bekommt ihn (Standard: aus).
+- **Versteigerung:** Wer nicht kauft, löst eine Versteigerung aus (Standard: an).
+- Startgeld und Zuglimit (Standard 40 Züge pro Spieler) sind wählbar. Bei Limit gewinnt das höchste Vermögen.
 
-## Was du ersetzt, um daraus dein Spiel zu machen
-
-- `public/game.js`: Regeln, `newGame`, `act`, `botMove`, `view` (reines JS, läuft im Browser und im Server)
-- `server.js`: welche Einstellungen ein Raum hat (`newRoom`, `roomFields`, `settings`, `newGame`)
-- `public/index.html`: Startbildschirm, Einstellungen im Warteraum, Spielregeln (`data-slot="rules"`), Tisch
-- `public/app.js`: Tisch zeichnen (`renderGame`), Aktionen senden (`doAct`), Sounds und Animationen
-- `public/icon.svg` plus `icon-180/192/512.png` (Platzhalter, ein Würfel) und `../start/public/monopoly.svg`
-- `test/`: Regeln und einen Durchlauf über WebSockets
-
-## Starten
-
-    cd monopoly
-    npm ci && npm start          # http://localhost:8080 (PORT ändert das)
-    npm test
-
-Auf dem Server, vom Repo-Ordner aus (der Build braucht `../shared`):
-
-    cd monopoly
-    docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
-
-Läuft dann auf Port 8092 (`MONOPOLY_PORT` in `.env` ändert das) und im Tunnel als
-`http://monopoly:8080`. Die `.env` mit `TUNNEL_NETWORK` und `PARTY_SECRET` liegt nicht im Repo.
+## Abweichungen vom Brettspiel
+- Pleite an die Bank: Grundstücke werden wieder frei. Pleite an einen Spieler: Häuser werden entfernt, Hypotheken bleiben.
+- Keine 10 % Gebühr beim Tausch hypothekarisch belasteter Grundstücke.
+- „Alle zahlen“-Karten: Wer nicht zahlen kann, gibt ab, was er hat.
+- Computer bieten nur Tausche an, die ihnen die letzte Straße einer Farbgruppe bringen. Gebäude in einer Gruppe blockieren Tausche.
+- Nur Computer mit „Ohne Limit“ können ewig weiterspielen, deshalb gilt standardmäßig das Zuglimit.
