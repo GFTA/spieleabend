@@ -117,6 +117,7 @@
 
   function startRound(S) {
     S.round++;
+    S.uid = S.uid == null ? Math.floor(Math.random() * 1e6) : S.uid + 1; // never repeats, not even after a rematch (the round counter does): key for confetti and statistics
     S.phase = "play";
     S.last = null;
     S.log = [];
@@ -188,7 +189,7 @@
     if (S.phase !== "play") return fail("Die Runde ist vorbei.");
 
     if (a.t === "skip") { // host marks an away player as out of this race
-      const ti = a.pi != null ? +a.pi : -1;
+      const ti = Number.isInteger(a.pi) ? a.pi : -1;
       const T = S.players[ti];
       if (!T || T.done || T.out) return fail("Den Spieler gibt es nicht oder er ist schon fertig.");
       T.out = true;
@@ -212,9 +213,9 @@
     if (P.done) return fail("Du bist schon fertig.");
 
     if (a.t === "set") {
-      const i = +a.i, n = +a.n;
-      if (!(i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
-      if (!(n >= 1 && n <= 9)) return fail("Nur Zahlen von 1 bis 9.");
+      const i = a.i, n = a.n;
+      if (!(Number.isInteger(i) && i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
+      if (!(Number.isInteger(n) && n >= 1 && n <= 9)) return fail("Nur Zahlen von 1 bis 9.");
       if (S.puzzle[i]) return fail("Diese Zahl ist vorgegeben.");
       P.grid[i] = n;
       P.notes[i] = 0;
@@ -228,8 +229,8 @@
     }
 
     if (a.t === "clear") {
-      const i = +a.i;
-      if (!(i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
+      const i = a.i;
+      if (!(Number.isInteger(i) && i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
       if (S.puzzle[i]) return fail("Diese Zahl ist vorgegeben.");
       P.grid[i] = 0;
       P.notes[i] = 0;
@@ -239,9 +240,9 @@
     }
 
     if (a.t === "note") {
-      const i = +a.i, n = +a.n;
-      if (!(i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
-      if (!(n >= 1 && n <= 9)) return fail("Nur Zahlen von 1 bis 9.");
+      const i = a.i, n = a.n;
+      if (!(Number.isInteger(i) && i >= 0 && i < CELLS)) return fail("Ungültiges Feld.");
+      if (!(Number.isInteger(n) && n >= 1 && n <= 9)) return fail("Nur Zahlen von 1 bis 9.");
       if (S.puzzle[i]) return fail("Diese Zahl ist vorgegeben.");
       if (P.grid[i]) return fail("Feld ist schon belegt.");
       P.notes[i] ^= bit(n);
@@ -294,7 +295,7 @@
     const now = elapsed(S);
     const total = CELLS - S.puzzle.filter(Boolean).length;
     return {
-      me, phase: S.phase, cur: S.cur, round: S.round, goal: S.goal, level: S.level || 2,
+      me, phase: S.phase, cur: S.cur, round: S.round, rid: S.uid, goal: S.goal, level: S.level || 2,
       puzzle: S.puzzle.slice(),
       solution: reveal ? S.solution.slice() : null,
       startedAt: S.startedAt, elapsed: S.phase === "play" ? now : (S.last && S.last.timeMs) || now,
