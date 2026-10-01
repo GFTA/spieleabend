@@ -225,7 +225,7 @@
     const events = [], HOME = trk(S);
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
-    const P = S.players[pi];
+    const P = Number.isInteger(pi) ? S.players[pi] : null;
     if (!P) return fail("Unbekannter Spieler.");
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
 
@@ -287,7 +287,7 @@
 
     if (a.t === "move") {
       if (S.need !== "move") return fail("Erst würfeln.");
-      const m = legalMoves(S, pi, S.dice).find((x) => x.k === +a.k);
+      const m = legalMoves(S, pi, S.dice).find((x) => x.k === a.k);
       if (!m) return fail("Diese Figur darf gerade nicht ziehen.");
       const o = owner(S, pi), O = S.players[o];
       if (m.hit) {
