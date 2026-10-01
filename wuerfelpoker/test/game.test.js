@@ -153,3 +153,43 @@ test("without the rule a tie shares the point", () => {
   assert.strictEqual(S.phase, "roundEnd");
   assert.deepStrictEqual(S.last.winners, [0, 1]);
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = G.newGame(["A", "B", "C"], 5, {});
+  const cur = S.cur;
+  const before = JSON.stringify(S);
+  const bad = [
+    null, undefined, 5, "roll", [], {}, { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" }, { t: "buy", id: "constructor" },
+    { t: "hold" }, { t: "hold", i: 0 }, { t: "hold", i: "constructor" }, { t: "hold", keep: [true, true, true, true, true] }, { t: "next" }, { t: "keep" }
+  ];
+  for (const a of bad) assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  for (const pi of [null, undefined, -1, 3, 99, "0", "constructor", "__proto__", 0.5, NaN, (cur + 1) % 3]) {
+    assert.strictEqual(G.act(S, pi, { t: "roll" }).ok, false, String(pi));
+    assert.strictEqual(G.act(S, pi, { t: "hold", i: 0 }).ok, false, String(pi));
+  }
+  assert.strictEqual(JSON.stringify(S), before);
+  assert.strictEqual(G.act(S, cur, { t: "roll" }).ok, true);
+  const rolled = JSON.stringify(S);
+  for (const a of [{ t: "hold", i: -1 }, { t: "hold", i: 5 }, { t: "hold", i: 1.5 }, { t: "hold", i: "0" }, { t: "hold", i: [0] }, { t: "hold", i: NaN }, { t: "hold", i: {} }, { t: "hold" }]) {
+    assert.strictEqual(G.act(S, cur, a).ok, false, JSON.stringify(a));
+  }
+  assert.strictEqual(JSON.stringify(S), rolled);
+});
+
+test("computer players play a legal round to the end at every level", () => {
+  for (const level of ["easy", "normal", "hard", "random"]) {
+    const S = G.newGame(["A", "B", "C", "D"], 5, {});
+    S.players.forEach((p) => { p.bot = true; });
+    const t0 = Date.now();
+    let steps = 0;
+    while (S.phase === "play" && steps++ < 500) {
+      const pi = S.cur;
+      const a = G.suggest(G.view(S, pi), G.botLevel(S, pi, level));
+      assert.ok(a, `${level}: the computer has an action`);
+      const r = G.act(S, pi, a);
+      assert.ok(r.ok, `${level}: ${JSON.stringify(a)} -> ${r.error}`);
+    }
+    assert.strictEqual(S.phase, "roundEnd", `${level}: the round ends`);
+    assert.ok(Date.now() - t0 < 2000, `${level}: a whole round is quick`);
+  }
+});
