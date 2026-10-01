@@ -13,7 +13,7 @@
   const ownable = (i) => ["prop", "station", "util"].includes(BOARD[i].k);
   const v = () => ctx.view();
 
-  function open(k, a) { kind = k; arg = a; if (k === "trade") T = { to: a == null ? -1 : a, give: { cash: 0, props: [], card: 0 }, take: { cash: 0, props: [], card: 0 } }; draw(); $("#sheet").hidden = false; }
+  function open(k, a) { kind = k; arg = a; if (k === "manage") selIdx = null; if (k === "trade") T = { to: a == null ? -1 : a, give: { cash: 0, props: [], card: 0 }, take: { cash: 0, props: [], card: 0 } }; draw(); $("#sheet").hidden = false; }
   function close() { kind = null; $("#sheet").hidden = true; }
   const isOpen = () => kind !== null && !$("#sheet").hidden;
   function refresh() { if (isOpen()) draw(); }
@@ -46,30 +46,60 @@
     return h + `<button class="btn btn-primary btn-block" data-close>Schließen</button>`;
   }
 
-  // ---------- my properties ----------
+  // ---------- my properties: title deeds, one stack per colour group ----------
+  let selIdx = null;
+  const ink = (c) => { const n = parseInt(c.slice(1), 16), l = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); return l > 150 ? "#1a1426" : "#fff"; };
   function canManage(V) { return V.me >= 0 && V.phase === "play" && V.cur === V.me && !V.auction && !V.trade; }
+  const groupName = (f) => (f.k === "prop" ? GROUPS[f.g].name : f.k === "station" ? "Bahnhöfe" : "Werke");
+  function deedHTML(i, V, mine) {
+    const f = BOARD[i], pr = V.props[i], c = colorOf(i), me = V.me;
+    let rows = [], hi = -1, foot = "";
+    if (f.k === "prop") {
+      const labels = ["Miete", "Komplett", "1 Haus", "2 Häuser", "3 Häuser", "4 Häuser", "Hotel"];
+      rows = [f.r[0], f.r[0] * 2, f.r[1], f.r[2], f.r[3], f.r[4], f.r[5]].map((r, k) => [labels[k], r]);
+      hi = pr.houses > 0 ? pr.houses + 1 : G.ownsSet(V, me, f.g) ? 1 : 0;
+      foot = `<span>Haus / Hotel ${f.h}</span>`;
+    } else if (f.k === "station") {
+      rows = [["1 Bahnhof", 25], ["2 Bahnhöfe", 50], ["3 Bahnhöfe", 100], ["4 Bahnhöfe", 200]];
+      hi = mine.filter((j) => BOARD[j].k === "station").length - 1;
+    } else rows = [["Eins gehört dir", "4 × Zahl"], ["Beide gehören dir", "10 × Zahl"]], hi = mine.filter((j) => BOARD[j].k === "util").length - 1;
+    const marks = f.k === "prop" && pr.houses ? (pr.houses === 5 ? `<em class="hotel"></em>` : "<em></em>".repeat(pr.houses)) : "";
+    const icon = f.k === "station" ? "🚂 " : f.k === "util" ? (i === 12 ? "💡 " : "🚰 ") : "";
+    return `<button type="button" class="deed${i === selIdx ? " sel" : ""}${pr.mort ? " mort" : ""}" data-sel="${i}" style="--bc:${c};--ink:${ink(c)}" aria-pressed="${i === selIdx}">` +
+      `<span class="dh"><b>${icon}${esc(f.n)}</b><i class="dm">${marks}</i></span>` +
+      `<span class="dr">${rows.map((r, k) => `<span class="${k === hi ? "now" : ""}"><span>${r[0]}</span><b>${r[1]}</b></span>`).join("")}</span>` +
+      `<span class="df">${foot}<span>Hypothek ${G.mortgageValue(i)}</span></span>${pr.mort ? `<span class="stamp">Beliehen</span>` : ""}</button>`;
+  }
   function manageHTML() {
     const V = v(), me = V.me, mine = G.ownedBy(V, me).sort(order), ok = canManage(V);
     const buildOk = ok && (V.step === "roll" || V.step === "after"), sellOk = ok && ["roll", "after", "debt"].includes(V.step);
+    if (!mine.includes(selIdx)) selIdx = mine.length ? mine[0] : null;
     let h = `<h2>Meine Grundstücke</h2><div class="label">Kasse ${V.players[me].cash} · Bank: ${V.houses} Häuser, ${V.hotels} Hotels</div>`;
     if (!ok) h += `<p class="hint">Bauen und beleihen geht nur in deinem Zug.</p>`;
     if (V.step === "debt" && ok) h += `<p class="hint"><b>Du schuldest ${V.debt.amount}.</b> Verkaufe Häuser oder beleihe Grundstücke, dann wird automatisch bezahlt.</p>`;
-    if (!mine.length) h += `<p class="hint">Dir gehört noch nichts.</p>`;
-    let lastG = null;
-    for (const i of mine) {
-      const f = BOARD[i], pr = V.props[i], gname = f.k === "prop" ? GROUPS[f.g].name : f.k === "station" ? "Bahnhöfe" : "Werke";
-      if (gname !== lastG) { h += `<div class="gh">${gname}</div>`; lastG = gname; }
-      const st = pr.mort ? `beliehen, auslösen ${G.unmortgageCost(i)}` : pr.houses === 5 ? "Hotel" : pr.houses ? `${pr.houses} ${pr.houses === 1 ? "Haus" : "Häuser"}` : "";
-      const btn = (a, label, bad, enabled) => `<button class="btn ${enabled && !bad ? "" : "off"}" data-a="${a}" data-i="${i}">${label}</button>`;
-      let bs = "";
-      if (f.k === "prop" && !pr.mort) {
-        bs += btn("build", `+ ${f.h}`, buildOk ? G.buildError(V, me, i) : "x", true);
-        if (pr.houses) bs += btn("sell", `− ${f.h / 2}`, sellOk ? G.sellError(V, me, i) : "x", true);
-      }
-      bs += pr.mort ? btn("unmortgage", `Auslösen`, buildOk ? G.unmortError(V, me, i) : "x", true) : btn("mortgage", `Hypothek ${G.mortgageValue(i)}`, sellOk ? G.mortError(V, me, i) : "x", true);
-      h += `<div class="trow" style="--bc:${colorOf(i)}"><div class="nmx">${esc(f.n)}${st ? `<small>${st}</small>` : ""}</div>${bs}</div>`;
+    if (!mine.length) return h + `<p class="hint">Dir gehört noch nichts.</p><button class="btn btn-primary btn-block" data-close>Fertig</button>`;
+    const groups = [];
+    for (const i of mine) { const r = rank(i); (groups[groups.length - 1] && groups[groups.length - 1].r === r ? groups[groups.length - 1] : groups[groups.push({ r, l: [] }) - 1]).l.push(i); }
+    h += `<div class="deck">` + groups.map((g) => `<div class="grp"><div class="gh" style="color:${colorOf(g.l[0])}">${groupName(BOARD[g.l[0]])} · ${g.l.length}/${g.r < 8 ? GROUPS[g.r].m.length : g.r === 8 ? 4 : 2}</div><div class="stack">${g.l.map((i) => deedHTML(i, V, mine)).join("")}</div></div>`).join("") + `</div>`;
+    if (groups.length > 1) h += `<div class="dots">` + groups.map((g, k) => `<button type="button" data-g="${k}" aria-label="${groupName(BOARD[g.l[0]])}" style="--bc:${colorOf(g.l[0])}"></button>`).join("") + `</div>`;
+    const i = selIdx, f = BOARD[i], pr = V.props[i];
+    const st = pr.mort ? `beliehen, auslösen ${G.unmortgageCost(i)}` : pr.houses === 5 ? "Hotel" : pr.houses ? `${pr.houses} ${pr.houses === 1 ? "Haus" : "Häuser"}` : "";
+    const btn = (a, label, bad) => `<button class="btn ${bad ? "off" : ""}" data-a="${a}" data-i="${i}">${label}</button>`;
+    let bs = "";
+    if (f.k === "prop" && !pr.mort) {
+      bs += btn("build", `+ Haus ${f.h}`, buildOk ? G.buildError(V, me, i) : "x");
+      if (pr.houses) bs += btn("sell", `− Haus ${f.h / 2}`, sellOk ? G.sellError(V, me, i) : "x");
     }
+    bs += pr.mort ? btn("unmortgage", `Auslösen ${G.unmortgageCost(i)}`, buildOk ? G.unmortError(V, me, i) : "x") : btn("mortgage", `Hypothek ${G.mortgageValue(i)}`, sellOk ? G.mortError(V, me, i) : "x");
+    h += `<div class="trow" style="--bc:${colorOf(i)}"><div class="nmx">${esc(f.n)}${st ? `<small>${st}</small>` : ""}</div>${bs}</div>`;
     return h + `<button class="btn btn-primary btn-block" data-close>Fertig</button>`;
+  }
+  function wireDeck(el, page) {
+    const d = el.querySelector(".deck"); if (!d) return;
+    const dots = [...el.querySelectorAll(".dots button")];
+    const mark = () => { const k = Math.round(d.scrollLeft / Math.max(1, d.clientWidth)); dots.forEach((b, j) => b.setAttribute("aria-current", j === k)); };
+    d.style.scrollBehavior = "auto"; d.scrollLeft = page * d.clientWidth; d.style.scrollBehavior = "";
+    d.addEventListener("scroll", mark, { passive: true }); mark();
   }
 
   // ---------- trade ----------
@@ -96,9 +126,10 @@
   }
 
   function draw() {
-    const el = $("#sheetBody"), scroll = el.scrollTop;
+    const el = $("#sheetBody"), scroll = el.scrollTop, d0 = el.querySelector(".deck"), page = d0 ? Math.round(d0.scrollLeft / Math.max(1, d0.clientWidth)) : 0;
+    el.classList.toggle("deckmode", kind === "manage");
     el.innerHTML = kind === "info" ? infoHTML(arg) : kind === "manage" ? manageHTML() : kind === "trade" ? tradeHTML() : "";
-    el.scrollTop = scroll;
+    el.scrollTop = scroll; wireDeck(el, page);
   }
 
   function click(e) {
@@ -106,6 +137,8 @@
     const t = e.target.closest("button"); if (!t || !kind) return;
     if (t.hasAttribute("data-close")) return close();
     const V = v();
+    if (kind === "manage" && t.dataset.sel != null) { selIdx = +t.dataset.sel; ctx.sfx("pop"); return draw(); }
+    if (kind === "manage" && t.dataset.g != null) { const d = $("#sheetBody .deck"); if (d) d.scrollTo({ left: +t.dataset.g * d.clientWidth, behavior: "smooth" }); return; }
     if (kind === "manage" && t.dataset.a) {
       const a = { t: t.dataset.a, idx: +t.dataset.i }, fn = { build: G.buildError, sell: G.sellError, mortgage: G.mortError, unmortgage: G.unmortError }[a.t];
       const err = canManage(V) ? fn(V, V.me, a.idx) : "Das geht nur in deinem Zug.";

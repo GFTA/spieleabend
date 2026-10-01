@@ -193,6 +193,34 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .partner button[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--accent)}
 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:520px){.twocol{grid-template-columns:1fr}}
+
+/* my properties: deeds cascade per colour group, one group per swipe page on phones */
+.sheet.deckmode{max-width:780px}
+.deck{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:0;scrollbar-width:none;margin:0 -18px;padding:0 18px}
+.deck::-webkit-scrollbar{display:none}
+.grp{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:8px}
+.grp .gh{margin:0}
+.stack{display:flex;flex-direction:column;width:158px;padding-top:4px}
+.deed{width:100%;align-items:stretch;--h:206px;--strip:36px;position:relative;height:var(--h);margin:calc(var(--strip) - var(--h)) 0 0;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;
+  border-radius:10px;background:#fffaf0;color:#1a1426;box-shadow:0 0 0 1.5px rgba(0,0,0,.35),0 -3px 8px rgba(0,0,0,.25);transition:margin .25s,transform .2s;-webkit-tap-highlight-color:transparent}
+.deed:first-child{margin-top:0}
+.deed.sel{transform:translateY(-2px);box-shadow:0 0 0 3px var(--accent),0 6px 16px rgba(0,0,0,.45)}
+.deed.sel + .deed{margin-top:8px}
+.deed .dh{flex:none;height:var(--strip);display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 8px;background:var(--bc);color:var(--ink)}
+.deed .dh b{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deed .dm{display:flex;gap:2px;flex:none;font-style:normal}
+.deed .dm em{display:block;width:8px;height:8px;border-radius:2px;background:#16a34a;box-shadow:0 0 0 1.5px #fff}
+.deed .dm em.hotel{width:18px;background:#dc2626}
+.deed .dr{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4px 6px;font-size:10.5px;font-variant-numeric:tabular-nums}
+.deed .dr>span{white-space:nowrap;display:flex;justify-content:space-between;gap:6px;padding:1px 3px;border-radius:4px}
+.deed .dr>span.now{background:#fde68a;font-weight:800}
+.deed .df{flex:none;display:flex;flex-direction:column;gap:1px;padding:5px 8px;font-size:10.5px;color:#57534e;border-top:1px dashed rgba(0,0,0,.25);text-align:center}
+.deed.mort{filter:grayscale(.9) brightness(.85)}
+.deed .stamp{position:absolute;left:50%;top:60%;transform:translate(-50%,-50%) rotate(-14deg);padding:3px 8px;border:2.5px solid #b91c1c;border-radius:6px;color:#b91c1c;font-weight:900;font-size:15px;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,250,240,.7)}
+.dots{display:flex;justify-content:center;gap:8px}
+.dots button{width:12px;height:12px;border-radius:50%;border:0;padding:0;background:var(--bc);opacity:.4;transition:transform .2s,opacity .2s}
+.dots button[aria-current="true"]{opacity:1;transform:scale(1.35);box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--bc)}
+@media (min-width:700px){.deck{flex-wrap:wrap;overflow:visible;scroll-snap-type:none;gap:18px 26px;justify-content:center;margin:0;padding:0}.grp{flex:0 0 auto}.dots{display:none}}
 /* ---------- overlays ---------- */
 .sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
 .sheet.wide{max-width:560px}
