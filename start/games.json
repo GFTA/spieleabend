@@ -128,5 +128,15 @@
     "url": "https://dame.cool-kidz.net/",
     "max": 2,
     "status": "http://dame:8080/info"
+  },
+  {
+    "id": "schach",
+    "name": "Schach",
+    "title": "Schach",
+    "desc": "Schach mit allen Regeln: Rochade, en passant, Umwandlung, Matt und Patt. Allein gegen den Computer oder zu zweit online.",
+    "players": "2 Spieler + Zuschauer",
+    "url": "https://schach.cool-kidz.net/",
+    "max": 2,
+    "status": "http://schach:8080/info"
   }
 ]

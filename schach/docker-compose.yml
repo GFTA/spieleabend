@@ -1,0 +1,19 @@
+services:
+  schach:
+    build:
+      context: ..
+      dockerfile: schach/Dockerfile
+      args:
+        GAME: schach
+    image: schach:latest
+    container_name: schach
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${SCHACH_PORT:-8095}:8080"
+    volumes:
+      - schach-data:/data
+
+volumes:
+  schach-data:

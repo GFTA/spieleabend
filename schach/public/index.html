@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Schach">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Schach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<style>
+:root{--sea:#1f2350;--felt:#2a2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="vulkan"]{--sea:#3a1c1a;--felt:#3d1f18}
+:root[data-table="mint"]{--sea:#cfe9e0;--felt:#d3ecdf}
+:root[data-table="felt"]{--sea:#10363a;--felt:#0f3a2b}
+:root[data-table="ocean"]{--sea:#123057;--felt:#123a66}
+:root[data-table="light"]{--sea:#cfe0f3;--felt:#dfe8f5}
+:root[data-table="blossom"]{--sea:#e6d9f4;--felt:#f4dfe9}
+/* The page itself never scrolls (iOS Safari would slide the whole page); only inner areas do. */
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn:disabled{opacity:.45;cursor:default}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+/* ---------- hero ---------- */
+.hero .mini{width:96px;height:96px;margin:0 auto;display:block;transform:rotate(-6deg);filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+/* ---------- board ---------- */
+.board{--cell:44px;--light:#f0dcb6;--dark:#b07a4f;--frame:#4b2e1d;position:relative;flex:none;width:calc(var(--cell) * 8);height:calc(var(--cell) * 8);margin:calc(var(--cell) * .16);
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:calc(var(--cell) * .08);
+  box-shadow:0 0 0 calc(var(--cell) * .16) var(--frame),0 0 0 calc(var(--cell) * .19) rgba(255,255,255,.1),0 16px 34px rgba(0,0,0,.45)}
+.board.play{cursor:pointer}
+.sqs{position:absolute;inset:0;display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border-radius:inherit;overflow:hidden}
+.sq{position:relative;background:var(--light);font-size:calc(var(--cell) * .2);font-weight:800;line-height:1}
+.sq.d{background:var(--dark)}
+.sq i{position:absolute;font-style:normal;opacity:.7;color:var(--dark);pointer-events:none}
+.sq.d i{color:var(--light)}
+.sq i.f{right:5%;bottom:4%}
+.sq i.r{left:6%;top:5%}
+.sq::before{content:"";position:absolute;inset:0;pointer-events:none}
+.sq.last::before{background:rgba(255,214,64,.34)}
+.sq.src::before{background:rgba(255,214,64,.58)}
+.sq.tip::before{background:rgba(88,180,255,.55)}
+.sq.drop::before{background:rgba(255,255,255,.4)}
+.sq.chk::before{background:radial-gradient(circle,rgba(255,50,60,.95) 0,rgba(255,50,60,.6) 38%,rgba(255,50,60,0) 74%)}
+.sq.tgt::after{content:"";position:absolute;inset:36%;border-radius:50%;background:rgba(255,214,64,.92);box-shadow:0 0 0 calc(var(--cell) * .05) rgba(0,0,0,.25);pointer-events:none;animation:ping 1.2s ease-in-out infinite}
+.sq.tgt.cap::after{inset:6%;background:transparent;box-shadow:inset 0 0 0 calc(var(--cell) * .07) rgba(255,214,64,.95)}
+@keyframes ping{50%{transform:scale(1.18)}}
+#pcs{position:absolute;inset:0;pointer-events:none}
+.pcs{fill:var(--pf);stroke:var(--ps);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round;overflow:visible}
+.c0{--pf:#fffaf0;--ps:#2b2118;--pd:#2b2118}
+.c1{--pf:#3b3846;--ps:#0e0d13;--pd:#dcd8ea}
+.pc{position:absolute;left:0;top:0;width:var(--cell);height:var(--cell);transform:translate(calc(var(--x) * var(--cell)),calc(var(--y) * var(--cell)));transition:transform .26s cubic-bezier(.3,.7,.3,1)}
+.pc .pcs{position:absolute;inset:2%;width:96%;height:96%;transition:transform .22s,opacity .22s,filter .2s;filter:drop-shadow(0 calc(var(--cell) * .04) calc(var(--cell) * .03) rgba(0,0,0,.4))}
+.pc.c1 .pcs{filter:drop-shadow(0 0 1px rgba(255,255,255,.85)) drop-shadow(0 calc(var(--cell) * .04) calc(var(--cell) * .03) rgba(0,0,0,.4))}
+.pc.born .pcs{animation:born .3s backwards}
+@keyframes born{from{transform:scale(.3);opacity:0}}
+.pc.crowned .pcs{animation:crown .6s cubic-bezier(.2,.8,.3,1.4)}
+@keyframes crown{from{transform:scale(.2) rotate(-40deg)}}
+.pc.gone .pcs{transform:scale(.2);opacity:0}
+.pc.moving{z-index:3}
+.pc.sel .pcs{transform:translateY(-5%) scale(1.07)}
+.pc.lift{z-index:9;transition:none}
+.pc.lift .pcs{transform:scale(1.28);filter:drop-shadow(0 calc(var(--cell) * .22) calc(var(--cell) * .16) rgba(0,0,0,.45))}
+.pc.settle{transition:transform .14s ease-out}
+.board.shake{animation:shake .35s}
+@keyframes shake{25%{translate:-6px 0}50%{translate:6px 0}75%{translate:-3px 0}}
+.chip{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+.chip.c0{background:#f3ead7} .chip.c1{background:#2a2933}
+/* promotion picker sits on the board, so the pawn stays in view */
+#promo{position:absolute;inset:0;z-index:12;display:grid;place-items:center;background:rgba(10,8,20,.55);border-radius:inherit;touch-action:manipulation;cursor:default}
+#promo[hidden]{display:none}
+.promoBox{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;border-radius:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+.promoBox b{font-size:13px;font-weight:800}
+.promoBox .opts{display:flex;gap:6px}
+.promoBox button{width:calc(var(--cell) * 1.3);padding:4px 0 5px;border:0;border-radius:12px;background:var(--light);box-shadow:inset 0 0 0 1.5px var(--line);display:flex;flex-direction:column;align-items:center;gap:0;color:#2b2118}
+.promoBox button .pcs{width:calc(var(--cell) * 1.0);height:calc(var(--cell) * 1.0)}
+.promoBox button span{font-size:11px;font-weight:800;line-height:1.1}
+.promoBox button:active{background:#fff}
+.promoBox .cancel{font-size:12px;color:var(--muted);background:none;border:0;padding:4px 10px;font-weight:700;width:auto;box-shadow:none;color:var(--muted)}
+/* captured pieces and material lead under each name */
+.pmini{width:17px;height:17px;margin-right:-7px;flex:none}
+.ptaken{display:flex;align-items:center;min-height:17px;padding-right:7px;overflow:hidden}
+.ptaken b{margin-left:11px;font-size:11px;font-weight:800;color:var(--muted)}
+.ptime{flex:none;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.ptime.low{color:var(--red)}
+.ptime.run{color:var(--accent)}
+.ptime.low.run{color:var(--red);animation:blink .6s steps(2) infinite}
+/* ---------- lobby ---------- */
+.members .dot.p0{background:#f3ead7} .members .dot.p1{background:#2a2933;box-shadow:0 0 0 1.5px var(--line)}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.plates{flex:1;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.plate{position:relative;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.plate.away{opacity:.55}
+.plate.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{40%{transform:scale(1.06)}}
+.plate .pav{font-size:26px;line-height:1;flex:none}
+.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.plate .pname{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate .pmeta{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate .pscore{flex:none;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.plate .pscore small{font-size:11px;font-weight:600;color:var(--muted)}
+.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
+.plate.active .pwins{background:var(--accent);color:#231a05}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:10px 16px}
+.moves{display:flex;justify-content:safe center;align-items:baseline;gap:5px;width:min(96%,440px);min-height:22px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:13px;font-weight:700;color:var(--muted);padding:2px 4px;margin-bottom:-6px}
+.moves::-webkit-scrollbar{display:none}
+.moves .n{font-weight:600;opacity:.7;margin-left:6px}
+.moves .m{padding:1px 6px;border-radius:6px;color:var(--text);background:var(--bg2)}
+.moves .m.cur{background:var(--accent);color:#231a05}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:30px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:12px 12px;font-size:15px}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  #game{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
+  .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
+  .roundinfo{display:block}
+  .plates{max-width:760px}
+  .plate .pav{font-size:30px}
+  .plate .pname{font-size:15px}
+  .arena{padding:8px 0 0}
+  .lastmove{font-size:14px}
+  .dock{align-self:start;margin-top:48px;border-radius:22px;padding:18px;gap:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
+  .acts{flex-direction:column}
+  .who b{font-size:20px}
+  .dock .keys{display:block}
+}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="pbase"><path d="M10.5 39.500c0-2.200 1.600-3.800 3.800-3.800h16.400c2.200 0 3.800 1.600 3.800 3.800z"/></g>
+    <symbol id="pc1" viewBox="0 0 45 45"><g>
+      <path d="M17.200 23c-.4 5.500-3.200 8.500-4.700 13h20c-1.500-4.500-4.300-7.500-4.700-13z"/>
+      <rect x="15.500" y="19" width="14" height="4.200" rx="2.100"/>
+      <circle cx="22.500" cy="13" r="5.600"/>
+      <use href="#pbase"/></g></symbol>
+    <symbol id="pc2" viewBox="0 0 45 45"><g>
+      <path d="M13.500 36c-.5-9.500 3-14.500 7-18.500 1.800-1.800 1.600-3.200.2-4.200-1.200 1.200-2.700 1.800-4.200 1.800.5-2 2-3.800 3.500-4.800l.5-4.200 3.500 2.500c9 .5 16.500 7 16.500 19.500 0 2.500-.3 5-.9 7.900z"/>
+      <path style="stroke:var(--pd)" d="M14.500 25.800c1.800-.6 3.800-2.600 5-4.800" fill="none"/>
+      <circle style="fill:var(--pd);stroke:none" cx="23.500" cy="14.200" r="1.250"/>
+      <use href="#pbase"/></g></symbol>
+    <symbol id="pc3" viewBox="0 0 45 45"><g>
+      <path d="M16.500 33.500h12l1.600 3.500H14.900z"/>
+      <path d="M22.500 11.500c5.800 3.800 9 8.500 9 13 0 3.300-1.800 5.700-3.800 7H17.800c-2-1.300-3.800-3.700-3.800-7 0-4.500 3.200-9.200 8.500-13z"/>
+      <circle cx="22.500" cy="8.500" r="3"/>
+      <path style="stroke:var(--pd)" d="M22.500 16.500v6.500M19.200 19.800h6.600" fill="none"/>
+      <use href="#pbase"/></g></symbol>
+    <symbol id="pc4" viewBox="0 0 45 45"><g>
+      <path d="M14.500 18h16l1.800 14.500H12.700z"/>
+      <path d="M12 32.500h21V36H12z"/>
+      <path d="M12 10.500h5v3.200h3.200v-3.200h4.600v3.200H28v-3.200h5V18H12z"/>
+      <use href="#pbase"/></g></symbol>
+    <symbol id="pc5" viewBox="0 0 45 45"><g>
+      <path d="M10.500 33.500L7.500 16.500l6.500 6.500 1-11.500 5.200 10.500 2.300-13 2.300 13 5.200-10.500 1 11.500 6.500-6.500-3 17z"/>
+      <path d="M11.500 33.500h22V36h-22z"/>
+      <circle cx="7.500" cy="15.500" r="2.300"/><circle cx="15" cy="10.500" r="2.300"/><circle cx="22.500" cy="8" r="2.300"/><circle cx="30" cy="10.500" r="2.300"/><circle cx="37.500" cy="15.500" r="2.300"/>
+      <use href="#pbase"/></g></symbol>
+    <symbol id="pc6" viewBox="0 0 45 45"><g>
+      <path d="M22.500 15c9.500 0 14.500 5.800 12.500 12.300-.8 2.800-2 4.700-3.500 6.700h-18c-1.500-2-2.700-3.900-3.500-6.700C8 20.800 13 15 22.500 15z"/>
+      <path style="stroke:var(--pd)" d="M13 29.500h19" fill="none"/>
+      <path d="M20.500 3.500h4v3.200h3.200v4h-3.200V15h-4v-4.300h-3.200v-4h3.200z"/>
+      <path d="M12 33.500h21V36H12z"/>
+      <use href="#pbase"/></g></symbol>
+  </defs>
+</svg>
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <svg class="mini" viewBox="0 0 96 96" aria-hidden="true"><rect width="96" height="96" rx="8" fill="#4b2e1d"/><g transform="translate(6 6)"><rect width="84" height="84" fill="#f0dcb6"/>
+        <g fill="#b07a4f"><rect x="21" width="21" height="21"/><rect x="63" width="21" height="21"/><rect y="21" width="21" height="21"/><rect x="42" y="21" width="21" height="21"/><rect x="21" y="42" width="21" height="21"/><rect x="63" y="42" width="21" height="21"/><rect y="63" width="21" height="21"/><rect x="42" y="63" width="21" height="21"/></g>
+        <svg x="20" y="12" width="44" height="44" viewBox="0 0 45 45" class="pcs c0" style="--pf:#fffaf0;--ps:#2b2118"><use href="#pc6"/></svg>
+        <svg x="42" y="36" width="40" height="40" viewBox="0 0 45 45" class="pcs c1" style="--pf:#3b3846;--ps:#0e0d13"><use href="#pc2"/></svg></g></svg>
+      <h1>Schach</h1>
+      <p class="tagline">Schach mit allen Regeln: Rochade, en passant, Umwandlung, Matt und Patt. Allein gegen den Computer oder zu zweit online.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="row">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Spielziel, Hausregeln und einen Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Mehrspieler“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem eigenen Server. Öffne dann dessen Adresse. Hier geht nur „Einzelspieler“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="panel" id="oppBox"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke des Computer-Gegners"></div>
+      <details class="houserules">
+        <summary><span class="label">Hausregeln</span><span class="rules-sum" id="rulesLocalSum"></span></summary>
+        <div class="rules-list" id="rulesLocal"></div>
+      </details>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
+    <p class="hint">Setze den gegnerischen König schachmatt. Figuren ziehst du mit dem Finger oder der Maus aufs Zielfeld, tippen geht auch.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke des Computer-Gegners"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="board" id="board" aria-label="Spielbrett"><div class="sqs" id="sqs"></div><div id="pcs"></div>
+        <div id="promo" hidden><div class="promoBox"><b>Umwandeln in …</b><div class="opts" id="promoOpts"></div><button type="button" class="cancel" id="promoCancel">Abbrechen</button></div></div></div>
+      <div class="moves" id="moveStrip" aria-label="Zugliste"></div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="acts">
+        <button class="btn" id="hintBtn" type="button" hidden>Tipp</button>
+        <button class="btn" id="undoBtn" type="button" hidden>Zug zurück</button>
+        <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
+      </div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li>Weiß beginnt, dann wechselt ihr euch ab. Jede Figur zieht auf ihre eigene Art, schlagen darf sie nur Gegner.</li>
+          <li><b>Bauer:</b> ein Feld vor, vom Start aus auch zwei. Er schlägt schräg. Auf der letzten Reihe wird er zur Dame, zum Turm, Läufer oder Springer.</li>
+          <li><b>Turm</b> gerade, <b>Läufer</b> schräg, <b>Dame</b> beides, jeweils beliebig weit. <b>Springer:</b> L-förmig, auch über andere Figuren. <b>König:</b> ein Feld in jede Richtung.</li>
+          <li><b>Schach:</b> Dein König wird bedroht, du musst das sofort beenden. Kannst du es nicht mehr, ist es <b>Matt</b> und die Runde verloren. Kein erlaubter Zug und kein Schach ist <b>Patt</b>, also unentschieden.</li>
+          <li><b>Rochade:</b> Zieh den König zwei Felder zum Turm hin, dann springt der Turm auf die andere Seite. Geht nur, wenn beide noch nie bewegt wurden, nichts dazwischen steht und der König nicht durch Schach zieht. <b>En passant:</b> Ein Bauer, der zwei Felder vorging, darf im nächsten Zug von einem Nachbarbauern wie nach einem Feld geschlagen werden.</li>
+          <li>Unentschieden gibt es auch bei dreimal derselben Stellung, 50 Zügen ohne Bauernzug oder Schlag und wenn niemand mehr Matt setzen kann.</li>
+          <li>Ziehen: Figur <b>festhalten und aufs Zielfeld schieben</b>, oder erst die Figur und dann das Feld antippen. Gelb markierte Felder sind erlaubt.</li>
+        </ul>
+  </template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
