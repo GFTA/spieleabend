@@ -1,37 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#1a1426"/>
-  <rect x="72" y="72" width="368" height="368" rx="48" fill="#2a2350"/>
-  <g fill="#f4effb">
-    <rect x="86" y="86" width="104" height="104" rx="20"/>
-    <rect x="204" y="86" width="104" height="104" rx="20"/>
-    <rect x="322" y="204" width="104" height="104" rx="20"/>
-    <rect x="86" y="322" width="104" height="104" rx="20"/>
-    <rect x="322" y="322" width="104" height="104" rx="20"/>
-  </g>
-  <g fill="#3d3478">
-    <rect x="322" y="86" width="104" height="104" rx="20"/>
-    <rect x="86" y="204" width="104" height="104" rx="20"/>
-    <rect x="204" y="322" width="104" height="104" rx="20"/>
-  </g>
-  <rect x="204" y="204" width="104" height="104" rx="20" fill="#f2c230"/>
+  <rect x="72" y="72" width="368" height="368" rx="40" fill="#3d3478"/>
+  <rect x="86" y="86" width="340" height="340" rx="28" fill="#f4effb"/>
+  <rect x="199.3" y="199.3" width="113.3" height="113.3" fill="#f2c230"/>
+  <path d="M199.3 86V426M86 199.3H426 M312.7 86V426M86 312.7H426" stroke="#3d3478" stroke-width="9" fill="none"/>
   <g fill="none" stroke="#2a2350" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
-    <!-- 5 -->
-    <path transform="translate(138 138)" d="M13 -28H-12L-15 -4C4 -12 18 0 16 14C14 30 -6 34 -16 22"/>
-    <!-- 3 -->
-    <path transform="translate(256 138)" d="M-15 -28H12L-4 -4C16 -6 20 10 14 22C8 32 -8 32 -16 22"/>
-    <!-- 9 (highlighted, darker ink) -->
-    <g transform="translate(256 256)" stroke="#1a1426">
-      <ellipse cx="0" cy="-12" rx="14" ry="15"/>
-      <path d="M14 -12C14 8 6 26 -12 30"/>
-    </g>
-    <!-- 1 -->
-    <path transform="translate(374 256)" d="M-10 -14L5 -28V28"/>
-    <!-- 7 -->
-    <path transform="translate(138 374)" d="M-15 -28H15L-6 28"/>
-    <!-- 8 -->
-    <g transform="translate(374 374)">
-      <ellipse cx="0" cy="-14" rx="12" ry="13"/>
-      <ellipse cx="0" cy="15" rx="15" ry="14"/>
-    </g>
+    <g transform="translate(142.7 142.7) scale(1.393)"><path d="M13 -28H-12L-15 -4C4 -12 18 0 16 14C14 30 -6 34 -16 22"/></g>
+    <g transform="translate(256.0 142.7) scale(1.393)"><path d="M-15 -28H12L-4 -4C16 -6 20 10 14 22C8 32 -8 32 -16 22"/></g>
+    <g transform="translate(256.0 256.0) scale(1.602)" stroke="#1a1426"><ellipse cx="0" cy="-12" rx="14" ry="15"/><path d="M14 -12C14 8 6 26 -12 30"/></g>
+    <g transform="translate(369.3 256.0) scale(1.393)"><path d="M-10 -14L5 -28V28"/></g>
+    <g transform="translate(142.7 369.3) scale(1.393)"><path d="M-15 -28H15L-6 28"/></g>
+    <g transform="translate(369.3 369.3) scale(1.393)"><ellipse cx="0" cy="-14" rx="12" ry="13"/><ellipse cx="0" cy="15" rx="15" ry="14"/></g>
   </g>
 </svg>
