@@ -385,7 +385,7 @@
       const k = `${V.round}:${V.last.winners.join(",")}:${V.players.map((p) => p.wins).join(",")}`;
       if (confettiFor !== k) {
         confettiFor = k; record(k);
-        setTimeout(() => confetti(), 700);
+        if (V.last.winners.some((i) => mode === "online" ? V.me < 0 || i === V.me : !V.players[i].bot)) setTimeout(() => confetti(), 700);
       }
     }
   }
