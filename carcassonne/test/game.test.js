@@ -438,10 +438,10 @@ test("tile geometry: every edge in one feature; adjacent F share meadow; F-R-F t
       const j = (i + 1) % 12;
       if (sideChars[i] === "F" && sideChars[j] === "F") uni(i, j);
     }
-    // Echte Sackgasse (genau eine Ein-Kanten-Straße auf dem Plättchen): Felder ums Ende verbinden.
+    // Echte Sackgasse (Straße endet am Kloster): Felder ums Ende verbinden. Endet sie an der Stadt, bleiben die Felder getrennt.
     // Bei Kreuzung/T-Stück (mehrere Stub-Straßen) nicht verbinden.
     const stubs = t.feats.filter((f) => f.k === "R" && f.e && f.e.length === 1);
-    if (stubs.length === 1) {
+    if (stubs.length === 1 && t.feats.some((f) => f.k === "K")) {
       const r = stubs[0].e[0];
       const a = (r + 11) % 12, b = (r + 1) % 12;
       if (sideChars[a] === "F" && sideChars[b] === "F") uni(a, b);

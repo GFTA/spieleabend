@@ -106,12 +106,14 @@
     O: { n: 2, sides: ["CCC", "CCC", "FRF", "FFF"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5], s: 1 },
       { k: "R", e: [7] },
-      { k: "F", e: [6, 8, 9, 10, 11], cities: [0] }
+      { k: "F", e: [6], cities: [0] },
+      { k: "F", e: [8, 9, 10, 11], cities: [0] }
     ]},
     P: { n: 3, sides: ["CCC", "CCC", "FRF", "FFF"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5], s: 0 },
       { k: "R", e: [7] },
-      { k: "F", e: [6, 8, 9, 10, 11], cities: [0] }
+      { k: "F", e: [6], cities: [0] },
+      { k: "F", e: [8, 9, 10, 11], cities: [0] }
     ]},
     Q: { n: 1, sides: ["CCC", "CCC", "FFF", "CCC"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5, 9, 10, 11], s: 1 },
@@ -124,12 +126,14 @@
     S: { n: 2, sides: ["CCC", "CCC", "FRF", "CCC"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5, 9, 10, 11], s: 1 },
       { k: "R", e: [7] },
-      { k: "F", e: [6, 8], cities: [0] }
+      { k: "F", e: [6], cities: [0] },
+      { k: "F", e: [8], cities: [0] }
     ]},
     T: { n: 1, sides: ["CCC", "CCC", "FRF", "CCC"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5, 9, 10, 11], s: 0 },
       { k: "R", e: [7] },
-      { k: "F", e: [6, 8], cities: [0] }
+      { k: "F", e: [6], cities: [0] },
+      { k: "F", e: [8], cities: [0] }
     ]},
     U: { n: 8, sides: ["FFF", "FRF", "FFF", "FRF"], feats: [
       { k: "R", e: [4, 10] },
@@ -965,6 +969,7 @@
       current: S.current,
       board,
       lastPlace: S.lastPlace ? { x: S.lastPlace.x, y: S.lastPlace.y, r: S.lastPlace.r, id: S.lastPlace.id } : null,
+      legal: S.phase === "meeple" && S.cur === me ? legalMeeples(S) : [],
       players: S.players.map((p, i) => ({
         name: p.name, bot: p.bot, avatar: avatarOf(p, i), wins: p.wins,
         score: p.score, meeples: p.meeples, color: p.color
