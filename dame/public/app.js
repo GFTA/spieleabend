@@ -395,7 +395,11 @@
     el.classList.remove("lift"); el.style.transform = "";
     drag = null; down = null;
   }
-  function dragPoint(e) { return { x: e.clientX, y: e.clientY - drag.lift }; }
+  // on touch the piece rises above the finger as it moves away, so a one-square step still works
+  function dragPoint(e) {
+    const far = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) / (drag.cell * 1.2);
+    return { x: e.clientX, y: e.clientY - drag.maxLift * Math.min(1, far) };
+  }
   function moveDrag(e) {
     const b = boardEl.getBoundingClientRect(), p = dragPoint(e);
     drag.el.style.transform = `translate(${p.x - b.left - drag.cell / 2}px,${p.y - b.top - drag.cell / 2}px)`;
@@ -407,7 +411,7 @@
     }
   }
   function endDrag(e, cancelled) {
-    const d = drag, el = d.el, p = { x: e.clientX, y: e.clientY - d.lift };
+    const d = drag, el = d.el, p = dragPoint(e);
     el.classList.remove("lift"); el.style.transform = "";
     for (const s of sqEls) s && s.classList.remove("drop");
     drag = null; down = null;
@@ -437,7 +441,7 @@
       const el = pcEls.get(down.from); if (!el) return;
       if (!sel || sel.from !== down.from) sel = { from: down.from, steps: [] };
       const cell = boardEl.getBoundingClientRect().width / 8;
-      drag = { id: e.pointerId, el, cell, lift: down.touch ? cell * 0.95 : 0, over: -1 };
+      drag = { id: e.pointerId, el, cell, maxLift: down.touch ? cell * 0.6 : 0, x0: down.x, y0: down.y, over: -1 };
       el.classList.add("lift");
       sfx("pick"); buzz(8);
       paintSel();
