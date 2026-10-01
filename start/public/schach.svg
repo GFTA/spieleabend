@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1a1426"/>
+  <rect x="86" y="86" width="340" height="340" rx="30" fill="#4b2e1d"/>
+  <g transform="translate(101 101)">
+    <rect width="310" height="310" rx="14" fill="#f0dcb6"/>
+    <g fill="#b07a4f"><rect x="77.5" width="77.5" height="77.5"/><rect x="232.5" width="77.5" height="77.5"/><rect y="77.5" width="77.5" height="77.5"/><rect x="155" y="77.5" width="77.5" height="77.5"/><rect x="77.5" y="155" width="77.5" height="77.5"/><rect x="232.5" y="155" width="77.5" height="77.5"/><rect y="232.5" width="77.5" height="77.5"/><rect x="155" y="232.5" width="77.5" height="77.5"/></g>
+  </g>
+  <g transform="translate(78 82) scale(7.8)" fill="#fffaf0" stroke="#2b2118" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M13.5 36c-.5-9.5 3-14.5 7-18.5 1.8-1.8 1.6-3.2.2-4.2-1.2 1.2-2.7 1.8-4.2 1.8.5-2 2-3.8 3.5-4.8l.5-4.2 3.5 2.500c9 .5 16.500 7 16.500 19.500 0 2.500-.3 5-.9 7.900z"/>
+    <path d="M14.5 25.800c1.800-.6 3.800-2.600 5-4.800" fill="none"/>
+    <circle cx="23.500" cy="14.200" r="1.250" fill="#2b2118" stroke="none"/>
+    <path d="M10.500 39.500c0-2.200 1.600-3.800 3.800-3.800h16.400c2.200 0 3.800 1.600 3.800 3.800z"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+# systemd unit for running Schach without Docker.
+# Copy ~/spieleabend/schach to /opt/schach, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/schach/deploy/schach.service /etc/systemd/system/
+#   sudo systemctl enable --now schach
+[Unit]
+Description=Schach game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/schach
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8095
+Environment=DATA_DIR=/var/lib/schach
+StateDirectory=schach
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
