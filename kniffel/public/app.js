@@ -360,7 +360,7 @@
     $("#reRanking").innerHTML = rankingHTML(true);
     UI.roundEndFooter({ over: true });
     const k = `${V.turn}:${w.join(",")}`;
-    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (me >= 0) Spieleabend.profile.result("kniffel", k, { won: w.includes(me), draw: !w.length, online: mode === "online" }); }
+    if (confettiFor !== k) { confettiFor = k; if (w.some((i) => mode === "online" ? V.me < 0 || i === V.me : !V.players[i].bot)) { confetti(); sfx("win"); } const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (me >= 0) Spieleabend.profile.result("kniffel", k, { won: w.includes(me), draw: !w.length, online: mode === "online" }); }
   }
 
   // ---------- start screen ----------
