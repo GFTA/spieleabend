@@ -154,6 +154,13 @@ test("goal, giving up and rematch", () => {
   assert.deepStrictEqual(S.players.map((p) => p.wins), [0, 0]);
 });
 
+test("every round has its own id, also after a rematch (confetti and statistics key)", () => {
+  const S = game();
+  const ids = [G.view(S, 0).rid];
+  for (let k = 0; k < 3; k++) { G.act(S, S.cur, { t: "giveup" }); G.act(S, 0, { t: "next" }); ids.push(G.view(S, 0).rid); }
+  assert.strictEqual(new Set(ids).size, 4);
+});
+
 test("draws: threefold repetition and long quiet phases", () => {
   const S = setup(game(), { a1: "W", h2: "B" });
   S.keys = [`${S.grid.map((v) => v + 1).join("")}0`];
