@@ -213,7 +213,7 @@ module.exports = function roomServer(g) {
       deadTimers.delete(code);
       if (rooms.get(code) !== room || room.state !== S) return;
       const events = Game.tick(S);
-      if (events.length) { room.touched = Date.now(); bump(room); broadcast(room, events); saveRooms(); }
+      if (events.length) { bump(room); broadcast(room, events); saveRooms(); }
       else schedule(room);
     }), ms + 30).unref());
     if (S.phase === "roundEnd") { clearTimer(botTimers, code); clearTimer(turnTimers, code); return; }
@@ -225,7 +225,7 @@ module.exports = function roomServer(g) {
       if (plan.key) botTimers.set(code, { key: plan.key, t: setTimeout(guard("Computerzug", () => {
         botTimers.delete(code);
         if (rooms.get(code) !== room || room.state !== S) return;
-        const done = g.botMove ? g.botMove(room, plan.pi, ctx) : defaultBotMove(room, plan.pi);
+        const done = asMachine(() => (g.botMove ? g.botMove(room, plan.pi, ctx) : defaultBotMove(room, plan.pi)));
         if (!done) schedule(room); // try again after another pause
       }), plan.delay).unref() });
     }
@@ -237,17 +237,21 @@ module.exports = function roomServer(g) {
         clearTimer(turnTimers, code);
         turnTimers.set(code, { key: tkey, ends: Date.now() + Game.TURN_MS, t: setTimeout(guard("Zugzeit", () => {
           turnTimers.delete(code);
-          if (room.state === S && g.turnClock(room) === tkey) apply(room, S.cur, { t: "timeout" });
+          if (room.state === S && g.turnClock(room) === tkey) asMachine(() => apply(room, S.cur, { t: "timeout" }));
         }), Game.TURN_MS).unref() });
       }
     } else clearTimer(turnTimers, code);
   }
 
+  // computer moves and clock run-outs must not count as activity, or a room nobody is in never closes
+  let machine = false;
+  function asMachine(fn) { machine = true; try { return fn(); } finally { machine = false; } }
+
   // apply an action for player pi and tell everybody; run-out deadlines are resolved first
   function apply(room, pi, a) {
     const expired = Game.tick ? Game.tick(room.state) : [];
     const res = Game.act(room.state, pi, a);
-    room.touched = Date.now();
+    if (!machine) room.touched = Date.now();
     if (res.ok || expired.length) {
       bump(room);
       broadcast(room, expired.concat(res.ok ? res.events || [] : []));
