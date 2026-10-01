@@ -43,7 +43,7 @@
   // ---------- helpers ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   const myTurn = () => !!V && (V.phase === "play" || V.phase === "drawn") && V.cur === V.me;
-  const stackOk = (c) => !V.pending || (V.top.v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4");
+  const stackOk = (c) => !V.pending || (!!rules().stack && (V.top.v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4"));
   const fits = (c) => stackOk(c) && (c.c === "w" || c.c === V.color || c.v === V.top.v);
   const rules = () => (V && V.rules) || {};
   // jump-in: the exact same card as the top one may be thrown in out of turn (online only)
@@ -56,7 +56,7 @@
       ? `${V.players[V.cur].name} ist dran. Reinwerfen geht nur mit genau derselben Karte.`
       : `Warte, ${V.players[V.cur].name} ist dran.`;
     if (V.phase === "drawn" && c.id !== V.drawnId) return "Nach dem Ziehen darfst du nur die gezogene Karte legen.";
-    if (V.pending) return `Leg eine ${V.top.v === "d2" ? "+2 oder +4" : "+4"} drauf oder zieh ${V.pending} Karten vom Stapel.`;
+    if (V.pending) return rules().stack ? `Leg eine ${V.top.v === "d2" ? "+2 oder +4" : "+4"} drauf oder zieh ${V.pending} Karten vom Stapel.` : `Zieh ${V.pending} Karten vom Stapel.`;
     return `Passt nicht. Gesucht: ${G.CNAME[V.color]} oder ${V.top.c === "w" ? "eine Farbwahl-Karte" : G.VNAME[V.top.v] || V.top.v}.`;
   }
   let sortMode = store.get("passuno.sort") === "value" ? "value" : "color";

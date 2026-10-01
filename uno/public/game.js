@@ -77,8 +77,10 @@
   const top = (S) => S.discard[S.discard.length - 1];
 
   // while +2/+4 cards are pending, only a +2 or +4 on a +2, or a +4 on a +4, can be added
+  // (house rule "stack"; without it the pending cards have to be drawn)
   function stackable(S, c) {
     if (!S.pending) return true;
+    if (!rulesOf(S).stack) return false;
     return top(S).v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4";
   }
 
@@ -398,7 +400,7 @@
       if (S.phase === "drawn" && c.id !== S.drawnId) return fail("Nach dem Ziehen darfst du nur die gezogene Karte legen.");
       if (!canPlay(S, c)) {
         const t = top(S);
-        if (S.pending) return fail(`Leg eine ${t.v === "d2" ? "+2 oder +4" : "+4"} drauf oder zieh ${S.pending} Karten.`);
+        if (S.pending) return fail(R.stack ? `Leg eine ${t.v === "d2" ? "+2 oder +4" : "+4"} drauf oder zieh ${S.pending} Karten.` : `Zieh ${S.pending} Karten vom Stapel.`);
         return fail(`Passt nicht. Gesucht: ${CNAME[S.color]} oder ${t.c === "w" ? "eine Farbwahl-Karte" : VNAME[t.v] || t.v}.`);
       }
       if (c.c === "w" && !COLORS.includes(a.color)) return fail("Bitte eine Farbe wählen.");
@@ -466,7 +468,7 @@
     if ((v.unoWaits || []).some((w) => w.pi === v.me)) return { t: "uno" };
     if ((v.phase !== "play" && v.phase !== "drawn") || v.cur !== v.me) return null;
     if (level && v.canChallenge && Math.random() < (level === "hard" ? 0.35 : level === "normal" ? 0.2 : 0)) return { t: "challenge" };
-    const stackOk = (c) => !v.pending || (v.top.v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4");
+    const stackOk = (c) => !v.pending || (v.rules && v.rules.stack && (v.top.v === "d2" ? c.v === "d2" || c.v === "d4" : c.v === "d4"));
     const fits = (c) => stackOk(c) && (c.c === "w" || c.c === v.color || c.v === v.top.v);
     let options = v.hand.filter(fits);
     if (v.phase === "drawn") options = options.filter((c) => c.id === v.drawnId);
