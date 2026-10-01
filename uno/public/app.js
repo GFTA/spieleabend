@@ -523,7 +523,7 @@
     if (V.phase === "roundEnd") {
       renderRoundEnd();
       const k = `${V.round}:${V.last.winner}:${V.players[V.last.winner].score}`;
-      if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (V.last.over && me >= 0) Spieleabend.profile.result("uno", k, { won: V.last.winner === me, online: mode === "online" }); }
+      if (confettiFor !== k) { confettiFor = k; if (mode === "online" ? V.me < 0 || V.last.winner === V.me : !V.players[V.last.winner].bot) { confetti(); sfx("win"); } const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (V.last.over && me >= 0) Spieleabend.profile.result("uno", k, { won: V.last.winner === me, online: mode === "online" }); }
     }
   }
 
