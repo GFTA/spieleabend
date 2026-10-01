@@ -91,6 +91,15 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .dock-tile:empty{display:none}
 .dock-tile svg{width:100%;height:100%;display:block}
 .dock-tile.dim{opacity:.6}
+.dock-tile.drag{cursor:grab;touch-action:none}
+.dock-tile.lifted{opacity:.3}
+.ghost.lifted{opacity:.3}
+.dragtile{position:fixed;left:0;top:0;z-index:60;pointer-events:none;border-radius:8px;overflow:hidden;background:#7aa83f;box-shadow:0 0 0 2px rgba(0,0,0,.3),0 14px 30px rgba(0,0,0,.5);opacity:.96;transition:width .12s,height .12s}
+.dragtile.snap{box-shadow:0 0 0 3px var(--accent),0 8px 20px rgba(0,0,0,.45)}
+.dragtile svg{width:100%;height:100%;display:block}
+body.dragging,body.dragging *{cursor:grabbing !important;user-select:none;-webkit-user-select:none}
+body.dragging .spotg.dim{opacity:1}
+.spotg.hot .spot{fill:rgba(242,194,48,.3);stroke:rgba(242,194,48,1);stroke-dasharray:none}
 .mi{width:13px;height:14px;flex:none;vertical-align:-2px}
 .stock{flex:none;display:flex;gap:5px;align-items:center;font-size:15px;font-weight:800;color:var(--muted)}
 .stock b{color:var(--text);font-size:17px}

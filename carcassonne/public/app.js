@@ -32,6 +32,7 @@
   let flashTile = null, flashMeeple = null, scorePulse = null;
   const cam = { x: 0, y: 0, s: 1, auto: true, init: false, tgt: null, raf: 0 };
   let dragMoved = 0;
+  let drag = null; // tile drag & drop: {src,pid,sx,sy,r,active,el,px,py,hot,raf}
   const TS = 56; // tile size in svg units
   const LABEL = { R: "Straße", C: "Stadt", K: "Kloster", F: "Wiese" };
   const MEEPLE_ICON = (c) => `<svg class="mi" viewBox="0 0 24 26" style="color:${c}" aria-hidden="true"><use href="#ccMeeple"/></svg>`;
@@ -296,6 +297,7 @@
     }
     lyT.innerHTML = t; lyM.innerHTML = m; lyH.innerHTML = h;
     flashTile = null; flashMeeple = null;
+    if (drag && drag.active) markHot();
   }
 
   function plateHTML(i) {
@@ -324,6 +326,7 @@
     else if (V.phase === "meeple" && V.lastPlace) cur.innerHTML = dockTileSVG(V.lastPlace.id, V.lastPlace.r);
     else cur.innerHTML = "";
     cur.classList.toggle("dim", !play);
+    cur.classList.toggle("drag", play && V.phase === "place");
 
     const opts = play && V.phase === "place" && preview ? optsAt(preview.x, preview.y) : [];
     $("#placeActs").hidden = V.phase !== "place";
@@ -341,7 +344,7 @@
     } else {
       const P = V.players[V.cur];
       const pre = P.avatar + " ";
-      if (play && V.phase === "place") { who = pre + "Du bist dran"; hint = preview ? (opts.length > 1 ? "Tippe das Plättchen zum Drehen, dann „Legen“." : "Passt so. Jetzt „Legen“.") : "Tippe eine gestrichelte Stelle auf dem Brett."; }
+      if (play && V.phase === "place") { who = pre + "Du bist dran"; hint = preview ? (opts.length > 1 ? "Tippe das Plättchen zum Drehen, ziehe es woandershin oder „Legen“." : "Passt so. Jetzt „Legen“.") : "Ziehe das Plättchen aufs Brett oder tippe eine gestrichelte Stelle."; }
       else if (play && V.phase === "meeple") { who = pre + "Gefolgsmann setzen?"; hint = V.legal && V.legal.length ? "Tippe eine Stelle auf dem Plättchen oder setze keinen." : "Hier ist nichts frei."; }
       else { who = pre + `${P.name} ist dran`; hint = P.bot ? "Der Computer überlegt …" : V.me < 0 ? "Du schaust zu." : "Warte auf den Zug."; }
     }
@@ -451,6 +454,94 @@
     $("#zoomFit").addEventListener("click", () => { cam.auto = true; cam.tgt = null; camSync(); });
     if (window.ResizeObserver) new ResizeObserver(() => { if (V && cam.auto) camSync(true); else camApply(); }).observe(wrap);
   })();
+
+  // drag & drop of the current tile (from the dock or from the ghost) onto a legal spot
+  function markHot() {
+    const ly = $("#lyH"); if (!ly) return;
+    ly.querySelectorAll(".spotg.hot").forEach((n) => n.classList.remove("hot"));
+    if (drag && drag.hot) { const n = ly.querySelector(`.spotg[data-x="${drag.hot.x}"][data-y="${drag.hot.y}"]`); if (n) n.classList.add("hot"); }
+  }
+  function dragPlace() {
+    const wrap = $("#boardWrap"), rc = wrap.getBoundingClientRect();
+    const size = Math.max(44, Math.min(150, TS * cam.s));
+    const lift = drag.touch ? size * 0.75 + 14 : 0;
+    const cx = drag.px, cy = drag.py - lift;
+    const bx = (cx - rc.left - cam.x) / cam.s / TS - 0.5, by = (cy - rc.top - cam.y) / cam.s / TS - 0.5;
+    let best = null, bd = 0.8;
+    for (const o of legalNow()) {
+      const d = Math.hypot(o.x - bx, o.y - by);
+      if (d < bd && cx > rc.left && cx < rc.right && cy > rc.top && cy < rc.bottom) { bd = d; best = o; }
+    }
+    let r = drag.r;
+    if (best) {
+      const opts = optsAt(best.x, best.y);
+      r = (opts.find((o) => o.r === drag.r) || opts[0]).r;
+      drag.hot = { x: best.x, y: best.y, r };
+    } else drag.hot = null;
+    const el = drag.el;
+    let sx = cx, sy = cy;
+    if (drag.hot) { sx = rc.left + cam.x + (drag.hot.x + 0.5) * TS * cam.s; sy = rc.top + cam.y + (drag.hot.y + 0.5) * TS * cam.s; }
+    el.style.width = el.style.height = (drag.hot ? Math.max(TS * cam.s, 30) : size) + "px";
+    el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-50%)`;
+    el.classList.toggle("snap", !!drag.hot);
+    if (drag.shownR !== r) { el.innerHTML = dockTileSVG(V.current, r); drag.shownR = r; }
+    markHot();
+  }
+  function dragLoop() {
+    if (!drag || !drag.active) return;
+    const rc = $("#boardWrap").getBoundingClientRect(), m = 46;
+    let vx = 0, vy = 0;
+    if (drag.px < rc.left + m) vx = 1; else if (drag.px > rc.right - m) vx = -1;
+    const py = drag.py - (drag.touch ? 40 : 0);
+    if (py < rc.top + m) vy = 1; else if (py > rc.bottom - m) vy = -1;
+    if (vx || vy) { userCam(); cam.x += vx * 7; cam.y += vy * 7; camApply(); dragPlace(); }
+    drag.raf = requestAnimationFrame(dragLoop);
+  }
+  function dragEnd(commit) {
+    if (!drag) return;
+    const d = drag; drag = null;
+    cancelAnimationFrame(d.raf);
+    if (d.el) d.el.remove();
+    document.body.classList.remove("dragging");
+    $("#curTile").classList.remove("lifted");
+    const g = $("#lyH .ghost"); if (g) g.classList.remove("lifted");
+    $("#lyH").querySelectorAll(".spotg.hot").forEach((n) => n.classList.remove("hot"));
+    if (d.active && commit && d.hot && canPlay() && V.phase === "place") {
+      preview = { x: d.hot.x, y: d.hot.y, r: d.hot.r };
+      sfx("pop"); buzz(8);
+      renderGame();
+    }
+  }
+  document.addEventListener("pointerdown", (e) => {
+    if (drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (!canPlay() || V.phase !== "place" || !V.current) return;
+    let src = null;
+    if (e.target.closest("#curTile")) src = "dock";
+    else if (preview && e.target.closest("#boardWrap .ghost")) src = "ghost";
+    if (!src) return;
+    if (src === "ghost") { e.stopPropagation(); dragMoved = 0; }
+    drag = { src, pid: e.pointerId, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, r: preview ? preview.r : 0, active: false, touch: e.pointerType !== "mouse", hot: null, el: null, shownR: -1 };
+  }, true);
+  window.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    drag.px = e.clientX; drag.py = e.clientY;
+    if (!drag.active) {
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 8) return;
+      if (!canPlay()) { dragEnd(false); return; }
+      drag.active = true; dragMoved = 99;
+      const el = document.createElement("div"); el.className = "dragtile"; document.body.append(el); drag.el = el;
+      document.body.classList.add("dragging");
+      if (drag.src === "dock") $("#curTile").classList.add("lifted"); else { const g = $("#lyH .ghost"); if (g) g.classList.add("lifted"); }
+      buzz(6);
+      drag.raf = requestAnimationFrame(dragLoop);
+    }
+    if (!canPlay() || V.phase !== "place") { dragEnd(false); return; }
+    e.preventDefault();
+    dragPlace();
+  }, { passive: false });
+  window.addEventListener("pointerup", (e) => { if (drag && e.pointerId === drag.pid) dragEnd(true); });
+  window.addEventListener("pointercancel", (e) => { if (drag && e.pointerId === drag.pid) dragEnd(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drag) dragEnd(false); });
 
   $("#rotBtn").addEventListener("click", () => {
     if (!preview || !canPlay()) return;
