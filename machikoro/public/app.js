@@ -100,7 +100,7 @@
 
   function doAct(a) {
     if (mode === "local") {
-      const res = G.act(L, L.cur, a);
+      const res = G.act(L, L.cur >= 0 ? L.cur : 0, a); // between rounds nobody is "cur"; the one human sits at seat 0
       if (!res.ok) { toast(res.error); sfx("bad"); return false; }
       handleEvents(res.events, G.view(L, 0));
       store.set(K.local, L);
@@ -234,10 +234,12 @@
       if (k >= 7) { clearInterval(spinDice.t); spinning = false; renderDice(); }
     }, 60);
   }
+  // two dice need the Bahnhof; a choice made in an earlier round must not leak into one without it
+  const diceWanted = () => (V && V.players[V.me] && V.players[V.me].lm.station && wantDice === 2 ? 2 : 1);
   function tapDie() {
     if (!V || V.phase !== "play") return;
     if (!canPlay()) { toast(V.me < 0 ? "Du schaust zu." : `Warte, ${V.players[V.cur].name} ist dran.`); return; }
-    if (V.step === "roll") play({ t: "roll", dice: wantDice });
+    if (V.step === "roll") play({ t: "roll", dice: diceWanted() });
     else if (V.step === "reroll") play({ t: "reroll" });
   }
 
@@ -431,7 +433,7 @@
     if (open || $("#game").hidden || !$("#roundEnd").hidden || !canPlay()) return;
     if ((e.key === " " || e.key.toLowerCase() === "r") && V.step === "roll") {
       e.preventDefault();
-      play({ t: "roll", dice: wantDice });
+      play({ t: "roll", dice: diceWanted() });
     }
   });
 
