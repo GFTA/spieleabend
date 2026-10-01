@@ -275,6 +275,7 @@
     const fail = (error) => ({ ok: false, error, events });
     let events = [];
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
+    if (!Number.isInteger(pi) || !S.players[pi]) return fail("Unbekannter Spieler.");
     if (!S.unoWaits) S.unoWaits = [];
     const R = rulesOf(S);
 

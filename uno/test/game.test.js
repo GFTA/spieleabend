@@ -427,3 +427,45 @@ test("view lists the last played cards, newest first", () => {
   assert.deepStrictEqual(v.recent.map((c) => c.id), [3, 2, 1]);
   assert.strictEqual(v.top.id, 4);
 });
+
+test("hostile input is refused without touching the game", () => {
+  const S = rig(3);
+  const before = JSON.stringify(S);
+  const bad = [
+    null, undefined, 5, "play", [], {}, { t: null }, { t: "constructor" }, { t: "__proto__" }, { t: "toString" }, { t: "buy", id: "constructor" },
+    { t: "play" }, { t: "play", id: "constructor" }, { t: "play", id: "__proto__" }, { t: "play", id: -1 }, { t: "play", id: 1e9 }, { t: "play", id: NaN },
+    { t: "play", id: {} }, { t: "play", id: [1] }, { t: "play", id: S.players[(S.cur + 1) % 3].hand[0].id }, { t: "color" }, { t: "color", c: "constructor" },
+    { t: "keep" }, { t: "next" }, { t: "challenge" }, { t: "uno" }
+  ];
+  for (const a of bad) {
+    const r = G.act(S, S.cur, a);
+    assert.strictEqual(r.ok, false, JSON.stringify(a));
+  }
+  for (const pi of [null, undefined, -1, 3, 99, "0", "constructor", "__proto__", 0.5, NaN]) {
+    assert.strictEqual(G.act(S, pi, { t: "draw" }).ok, false, String(pi));
+    assert.strictEqual(G.act(S, pi, { t: "play", id: S.players[0].hand[0].id }).ok, false, String(pi));
+  }
+  assert.strictEqual(G.act(S, (S.cur + 1) % 3, { t: "draw" }).ok, false);
+  assert.strictEqual(JSON.stringify(S), before);
+});
+
+test("computer players play a legal round to the end at every level", () => {
+  for (const level of ["easy", "normal", "hard", "random"]) {
+    const S = G.newGame(["A", "B", "C", "D"], 0, {});
+    S.players.forEach((p) => { p.bot = true; });
+    const t0 = Date.now();
+    let steps = 0;
+    while (S.phase !== "roundEnd" && steps++ < 4000) {
+      const pi = S.cur;
+      const a = G.suggest(G.view(S, pi), G.botLevel(S, pi, level));
+      assert.ok(a, `${level}: the computer has an action`);
+      let r = G.act(S, pi, a);
+      if (!r.ok && a.t === "play") r = G.act(S, pi, { t: S.phase === "drawn" ? "keep" : "draw" });
+      assert.ok(r.ok, `${level}: ${JSON.stringify(a)} -> ${r.error}`);
+      assert.strictEqual(total(S), size(S), "no card is lost or duplicated");
+    }
+    assert.strictEqual(S.phase, "roundEnd", `${level}: the round ends`);
+    assert.ok(S.last && S.last.winner >= 0);
+    assert.ok(Date.now() - t0 < 3000, `${level}: a whole round is quick`);
+  }
+});
