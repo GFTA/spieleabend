@@ -9,7 +9,7 @@ siehe [`ARCHITECTURE.md`](../ARCHITECTURE.md).
 - **Ende**: Wer keinen Stein oder keinen Zug mehr hat, verliert. Unentschieden bei dreimal derselben Stellung oder 50 Zügen ohne Schlag und ohne Männerzug. Aufgeben geht jederzeit.
 - **Hausregeln**: „Ohne Schlagzwang“ und „Zugzeit“ (30 Sekunden, danach zieht das Spiel zufällig).
 - **Bedienung**: Steine mit Maus oder Finger aufs Zielfeld ziehen (Auswahl rastet ein oder springt zurück), oder Stein und Feld antippen. Mehrfachsprünge geht Feld für Feld oder direkt aufs Endfeld. Leuchtende Steine zeigen, welche schlagen müssen.
-- **Einzelspieler**: Stufen Leicht, Normal, Profi und Zufällig. „Tipp“ zeigt den Zug, den der Computer spielen würde, „Zug zurück“ nimmt den eigenen Zug gegen den Computer zurück.
+- **Einzelspieler**: Stufen Leicht, Normal, Profi und Zufällig. „Tipp“ zeigt den Zug, den der Computer spielen würde (auch online), „Zug zurück“ nimmt den eigenen Zug gegen den Computer zurück.
 - **Computer**: Alpha-Beta-Suche mit Schlagsuche, Materialbewertung und Zufall unter fast gleich guten Zügen. Profi rechnet unter einer halben Sekunde pro Zug.
 
 ## Entwicklung
