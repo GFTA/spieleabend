@@ -164,3 +164,12 @@ test("playing alone without any computer works start to finish", () => {
     if (round === 1) assert.ok(Game.act(S, 0, { t: "next" }).ok);
   }
 });
+
+test("hostile input is rejected without changing the state", () => {
+  const S = pair(1);
+  const before = JSON.stringify(S);
+  for (const a of [{ t: "constructor" }, { t: "__proto__", id: "constructor" }, { t: "set", i: "constructor", n: 1 }, { t: "set", i: -1, n: 99 }, null, "x"]) {
+    try { Game.act(S, 0, a); } catch (e) { /* rejecting by throwing is fine */ }
+  }
+  assert.strictEqual(JSON.stringify(S), before);
+});
