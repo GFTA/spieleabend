@@ -490,6 +490,7 @@
     // raise panel
     const box = $("#raiseBox");
     box.hidden = !(mine && raiseOpen);
+    $("#dock").classList.toggle("raising", !box.hidden);
     if (!box.hidden) {
       const range = $("#raiseRange");
       raiseVal = clampRaise(raiseVal);
@@ -565,7 +566,7 @@
     $("#reRanking").innerHTML = rankingHTML(true);
     UI.roundEndFooter({ over: true });
     const k = `${V.hand}:${c}`;
-    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (me >= 0) Spieleabend.profile.result("poker", k, { won: c === me, online: mode === "online" }); }
+    if (confettiFor !== k) { confettiFor = k; const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (me >= 0 && c === me) { confetti(); sfx("win"); } if (me >= 0) Spieleabend.profile.result("poker", k, { won: c === me, online: mode === "online" }); }
   }
 
   // ---------- start screen ----------

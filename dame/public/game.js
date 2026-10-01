@@ -145,6 +145,7 @@
 
   function startRound(S) {
     S.round++;
+    S.uid = S.uid == null ? rand(1e6) : S.uid + 1; // never repeats, not even after a rematch (the round counter does): key for confetti and statistics
     S.grid = startGrid();
     S.phase = "play";
     S.last = null;
@@ -390,7 +391,7 @@
     const me = S.players[pi] ? pi : -1;
     const legal = S.phase === "play" ? movesOf(S, S.cur).map((m) => ({ path: m.path, caps: m.caps })) : [];
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, level: S.level == null ? 2 : S.level,
+      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, rid: S.uid, goal: S.goal, level: S.level == null ? 2 : S.level,
       rules: S.rules, col: S.col.slice(), grid: S.grid.slice(), draws: S.draws || 0, nextStarter: S.starter % 2,
       clockMs: S.rules.clock ? CLOCK_MS : 0, clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => Object.assign({ name: p.name, bot: p.bot, avatar: avatarOf(p, i), wins: p.wins, moves: p.moves || 0 }, count(S.grid, S.col[i]))),

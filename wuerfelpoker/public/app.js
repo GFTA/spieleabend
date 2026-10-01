@@ -335,18 +335,21 @@
   function renderRoundEnd() {
     const last = V.last || { winners: [] }, w = last.winners;
     const names_ = w.map((i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name));
-    const plural = w.length > 1 || (w.length === 1 && names_[0] === "Du");
+    const verb = w.length > 1 ? "gewinnen" : names_[0] === "Du" ? "gewinnst" : "gewinnt";
     $("#reLabel").textContent = last.over ? "Spiel vorbei" : `Runde ${V.round} vorbei`;
-    const champ = last.over ? V.players.map((p, i) => [p.score, i]).sort((a, b) => b[0] - a[0])[0][1] : null;
+    // several can share the win (same round, both over the goal): all of them are champions
+    const top = Math.max(...V.players.map((p) => p.score));
+    const champs = last.over ? V.players.map((p, i) => i).filter((i) => V.players[i].score === top) : [];
+    const champNames = champs.map((i) => (mode === "online" && i === V.me ? "Du" : V.players[i].name));
     $("#reTitle").textContent = last.over
-      ? `${champ === V.me && mode === "online" ? "Du gewinnst" : `${V.players[champ].name} gewinnt`} das Spiel!`
-      : w.length ? `${names_.join(" und ")} ${plural ? "gewinnen" : "gewinnt"} mit ${last.label.replace(/ \(.*\)$/, "")}!` : "Niemand hat gewürfelt.";
+      ? `${champNames.join(" und ")} ${champs.length > 1 ? "gewinnen" : champNames[0] === "Du" ? "gewinnst" : "gewinnt"} das Spiel!`
+      : w.length ? `${names_.join(" und ")} ${verb} mit ${last.label.replace(/ \(.*\)$/, "").replace(/^Zwei Paare$/, "Zwei Paaren")}!` : "Niemand hat gewürfelt.";
     $("#reRanking").innerHTML = rankingHTML(true);
     $("#reHist").innerHTML = histHTML();
     $("#reHistWrap").hidden = (V.history || []).length < 2;
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
     const k = `${V.round}:${w.join(",")}:${V.players.map((p) => p.score).join(",")}`;
-    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (last.over && me >= 0) Spieleabend.profile.result("wuerfelpoker", k, { won: champ === me, online: mode === "online" }); }
+    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (last.over && me >= 0) Spieleabend.profile.result("wuerfelpoker", k, { won: champs.includes(me), online: mode === "online" }); }
   }
 
   // ---------- start screen ----------

@@ -85,6 +85,8 @@
 .board .card{--cw:calc(clamp(46px,14vw,80px) * var(--cs))}
 .streetline{font-size:13px;color:var(--muted);text-align:center;min-height:1.3em;font-weight:600}
 .dock{background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+/* short phones: while the raise panel is open the dock drops its extras so the board stays visible above it */
+@media (max-height:740px){.dock.raising{gap:8px;padding-top:10px}.dock.raising .oddsrow,.dock.raising .meter,.dock.raising .txt .hand,.dock.raising .txt small,.dock.raising #hintBtn{display:none}.dock.raising .mine{min-height:0}.dock.raising .raisebox{gap:8px;padding:8px 10px}.dock.raising .acts .btn,.dock.raising #raiseGo{padding-top:12px;padding-bottom:12px}.dock.raising .hole .card{--cw:calc(38px * var(--cs))}}
 
 .mine{display:flex;align-items:center;gap:12px;min-height:64px;padding-left:4px}
 .hole{display:flex;gap:6px;flex:none}

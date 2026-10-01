@@ -1,5 +1,5 @@
 // Offline cache for the app shell (only active when served over HTTPS).
-const CACHE = "schach-v2";
+const CACHE = "schach-v3";
 const FILES = ["./", "index.html", "kit.css", "room-ui.css", "avatars.js", "profile.js", "kit.js", "room-ui.js", "home-ui.js", "game.js", "app.js", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

@@ -141,7 +141,7 @@
 
   function doAct(a) {
     if (mode === "local") {
-      const res = G.act(L, L.cur, a);
+      const res = G.act(L, L.cur >= 0 ? L.cur : 0, a); // between rounds nobody is current: the human (seat 0) starts the next one
       if (!res.ok) { toast(res.error); sfx("bad"); return false; }
       handleEvents(res.events, G.view(L, 0));
       store.set(K.local, L);

@@ -316,6 +316,7 @@
     pcEls.delete(a.from);
     const victim = a.capSq >= 0 ? pcEls.get(a.capSq) : null;
     if (a.castle) pcEls.delete(a.castle[0]);
+    paintSel(); // the target dots of the tapped piece go away while it slides
     el.classList.remove("sel", "lift");
     el.classList.add("moving");
     const finish = () => {

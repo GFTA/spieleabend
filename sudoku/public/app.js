@@ -36,7 +36,7 @@
   let confettiFor = null;
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "sudoku.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, min: 0, onChange: () => renderHome() });
-  let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
+  let tab = HOME.single() || !webHost || (store.get(K.local) || {}).players ? "local" : "online", tabTouched = HOME.single(); // a saved local game: open on it, so a reload shows "Weiterspielen"
   let goalLocal = G.normGoal(store.get(K.goal) || 1);
   let levelLocal = G.normLevel(store.get(K.level) || 2);
 
@@ -329,13 +329,12 @@
     scoreList($("#reScores"), w);
     UI.roundEndFooter({ over, next: "Nächste Runde" });
 
-    if (over && w.includes(V.me) && confettiFor !== V.round) {
-      confettiFor = V.round;
-      confetti();
-      try { Spieleabend.profile.result("sudoku", null, { won: true, online: mode === "online" }); } catch (e) {}
-    } else if (over && V.me >= 0 && !w.includes(V.me) && confettiFor !== V.round) {
-      confettiFor = V.round;
-      try { Spieleabend.profile.result("sudoku", null, { won: false, online: mode === "online" }); } catch (e) {}
+    // rid is new for every round (the round number starts at 1 again after a rematch); the profile ignores a key it has seen
+    if (over && V.me >= 0 && confettiFor !== V.rid) {
+      confettiFor = V.rid;
+      const won = w.includes(V.me);
+      if (won) confetti();
+      try { Spieleabend.profile.result("sudoku", `r${V.rid}`, { won, online: mode === "online" }); } catch (e) {}
     }
   }
 

@@ -50,7 +50,7 @@
   let serverState = "checking"; // "checking" | "ok" | "none"
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "schiffe.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, onChange: () => renderHome() });
-  let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
+  let tab = HOME.single() || !webHost || (store.get(K.local) || {}).players ? "local" : "online", tabTouched = HOME.single(); // a saved local game: open on it, so a reload shows "Weiterspielen"
   let sizeLocal = G.normSize(store.get(K.size) || 10), goalLocal = G.normGoal(store.get(K.goal) || 1);
   let localRules = G.normRules(store.get(K.rules));
   let levelLocal = G.normLevel(store.get(K.level));
@@ -751,8 +751,13 @@
     $("#roundEnd").hidden = V.phase !== "roundEnd" || peek;
     if (V.phase === "roundEnd") {
       if (!peek) renderRoundEnd();
-      const k = `${V.round}:${V.last.winners.join(",")}:${V.players.map((p) => p.wins).join(",")}`;
-      if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); record(k); }
+      const k = `${V.rid}:${V.round}:${V.last.winners.join(",")}`;
+      if (confettiFor !== k) {
+        confettiFor = k; record(k);
+        // confetti only for a win (watchers and a local game against computers: for the human side)
+        const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot);
+        if (me < 0 || V.last.winners.includes(me)) { confetti(); sfx("win"); }
+      }
     }
   }
 

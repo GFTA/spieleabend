@@ -103,17 +103,17 @@
       { k: "C", e: [0, 1, 2, 3, 4, 5], s: 0 },
       { k: "F", e: [6, 7, 8, 9, 10, 11], cities: [0] }
     ]},
-    O: { n: 2, sides: ["CCC", "CCC", "FRF", "FFF"], feats: [
+    O: { n: 2, sides: ["CCC", "CCC", "FRF", "FRF"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5], s: 1 },
-      { k: "R", e: [7] },
-      { k: "F", e: [6], cities: [0] },
-      { k: "F", e: [8, 9, 10, 11], cities: [0] }
+      { k: "R", e: [7, 10] },
+      { k: "F", e: [6, 11], cities: [0] },
+      { k: "F", e: [8, 9], cities: [] }
     ]},
-    P: { n: 3, sides: ["CCC", "CCC", "FRF", "FFF"], feats: [
+    P: { n: 3, sides: ["CCC", "CCC", "FRF", "FRF"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5], s: 0 },
-      { k: "R", e: [7] },
-      { k: "F", e: [6], cities: [0] },
-      { k: "F", e: [8, 9, 10, 11], cities: [0] }
+      { k: "R", e: [7, 10] },
+      { k: "F", e: [6, 11], cities: [0] },
+      { k: "F", e: [8, 9], cities: [] }
     ]},
     Q: { n: 1, sides: ["CCC", "CCC", "FFF", "CCC"], feats: [
       { k: "C", e: [0, 1, 2, 3, 4, 5, 9, 10, 11], s: 1 },

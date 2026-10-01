@@ -336,8 +336,10 @@
       const k = `${V.round}:${V.last.word}:${V.players.map((p) => p.score).join(",")}`;
       if (confettiFor !== k) {
         confettiFor = k; if (V.last.over) record(k);
-        const meWon = mode === "online" ? V.last.solver === V.me && V.me >= 0 : V.last.solver >= 0;
-        if (meWon || (V.last.over && V.last.winners.length)) setTimeout(() => { confetti(); sfx("win"); }, 700);
+        const meIdx = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot);
+        const meWon = V.last.solver >= 0 && V.last.solver === meIdx;
+        const iWon = V.last.over && meIdx >= 0 && V.last.winners.includes(meIdx);
+        if (meWon || iWon) setTimeout(() => { confetti(); sfx("win"); }, 700);
       }
     }
   }

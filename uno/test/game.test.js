@@ -128,6 +128,23 @@ test("+2 waits until the victim draws it from the pile, then they play on", () =
   assert.strictEqual(S.phase, "play");
 });
 
+test("without the stacking rule a +2 or +4 cannot be countered, it has to be drawn", () => {
+  const S = G.newGame(["a", "b"], 0, { stack: false });
+  S.cur = 0; S.discard = [card("r", "5", 900)]; S.color = "r";
+  S.players[0].hand = [card("r", "d2", 901), card("r", "1", 950)];
+  S.players[1].hand = [card("b", "d2", 902), card("w", "d4", 903), card("y", "7", 953)];
+  G.act(S, 0, { t: "play", id: 901 });
+  assert.strictEqual(S.pending, 2);
+  assert.strictEqual(G.act(S, 1, { t: "play", id: 902 }).ok, false, "no +2 on +2");
+  assert.strictEqual(G.act(S, 1, { t: "play", id: 903, color: "g" }).ok, false, "no +4 on +2");
+  const v = G.view(S, 1);
+  assert.deepStrictEqual(G.suggest(v, "normal"), { t: "draw" }, "the computer draws too");
+  assert.deepStrictEqual(G.suggest(v, "easy"), { t: "draw" });
+  G.act(S, 1, { t: "draw" });
+  assert.strictEqual(S.players[1].hand.length, 5);
+  assert.strictEqual(S.pending, 0);
+});
+
 test("stacking: counter or draw everything; the pile has to be tapped when nothing fits", () => {
   const S = G.newGame(["a", "b", "c"], 0, { stack: true });
   S.cur = 0; S.dir = 1; S.discard = [card("r", "5", 900)]; S.color = "r";

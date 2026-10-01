@@ -37,7 +37,7 @@
   let serverState = "checking"; // "checking" | "ok" | "none"
   const webHost = /^https?:$/.test(location.protocol);
   const HOME = window.HomeUI({ key: "dame.opp", max: G.MAX_PLAYERS, botNames: G.BOT_NAMES, onChange: () => renderHome() });
-  let tab = HOME.single() || !webHost ? "local" : "online", tabTouched = HOME.single();
+  let tab = HOME.single() || !webHost || (store.get(K.local) || {}).players ? "local" : "online", tabTouched = HOME.single(); // a saved local game: open on it, so a reload shows "Weiterspielen"
   let goalLocal = G.normGoal(store.get(K.goal) || 1);
   let levelLocal = G.normLevel(store.get(K.level) || 2);
   let localRules = G.normRules(store.get(K.rules));
@@ -518,7 +518,7 @@
     $("#roundEnd").hidden = V.phase !== "roundEnd" || peek || animating || animQ.length > 0;
     if (V.phase === "roundEnd") {
       if (!peek && !animating && !animQ.length) renderRoundEnd();
-      const k = `${V.round}:${V.last.winners.join(",")}:${V.players.map((p) => p.wins).join(",")}:${V.draws}`;
+      const k = `${V.rid}:${V.round}:${V.last.winners.join(",")}`;
       if (confettiFor !== k) {
         confettiFor = k; record(k);
         if (V.last.winners.some((w) => mode === "online" ? V.me < 0 || w === V.me : !V.players[w].bot)) setTimeout(() => confetti(), 900);

@@ -193,6 +193,7 @@
 
   function startRound(S) {
     S.round++;
+    S.uid = S.uid == null ? rand(1e6) : S.uid + 1; // never repeats, not even after a rematch (the round counter does): key for confetti and statistics
     const n = S.players.length;
     S.teams = S.rules.teams && n === 4;
     S.players.forEach((p, i) => {
@@ -557,7 +558,7 @@
   function view(S, pi) {
     const P = S.players[pi], me = P ? pi : -1, reveal = S.phase === "roundEnd";
     return {
-      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, goal: S.goal, size: S.size, level: S.level == null ? 2 : S.level,
+      me, phase: S.phase, cur: S.cur, turn: S.turn, round: S.round, rid: S.uid, goal: S.goal, size: S.size, level: S.level == null ? 2 : S.level,
       fleet: FLEETS[S.size], rules: S.rules, teams: !!S.teams, shotsLeft: S.shotsLeft,
       clockMs: clockMs(S), clock: S.deadline ? Math.max(0, S.deadline - Date.now()) : 0,
       players: S.players.map((p, i) => {

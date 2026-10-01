@@ -151,7 +151,10 @@
     S.seq++;
     const names = winners.map((i) => S.players[i].name).join(" und ");
     log(S, winners.length ? `${names} ${winners.length > 1 ? "gewinnen" : "gewinnt"} die Runde mit ${S.last.label}.` : "Niemand hat gewürfelt.");
-    if (over) log(S, `${S.players.slice().sort((a, b) => b.score - a.score)[0].name} gewinnt das Spiel!`);
+    if (over) {
+      const top = Math.max(...S.players.map((p) => p.score)), champs = S.players.filter((p) => p.score === top).map((p) => p.name);
+      log(S, `${champs.join(" und ")} ${champs.length > 1 ? "gewinnen" : "gewinnt"} das Spiel!`);
+    }
     events.push({ t: "roundEnd" });
   }
 
@@ -250,10 +253,15 @@
     const best = others.sort((a, b) => compare(b, a))[0];
     const beating = !best || compare(now, best) > 0;
     if (level === "easy") {
-      if (Math.random() < 0.3 || now.cat >= 6) return { t: "stop" };
-      const keep = v.dice.map(() => Math.random() < 0.4);
-      if (keep.every(Boolean)) keep[0] = false;
-      if (keep.join() !== v.hold.join()) return { t: "hold", keep };
+      // a random hold is picked only while nothing is held yet: picking a new one after every
+      // hold it made would loop through holds for ages instead of rolling
+      const held = v.hold.some(Boolean);
+      if (now.cat >= 6 || Math.random() < 0.3) return { t: "stop" };
+      if (!held && Math.random() < 0.6) {
+        const keep = v.dice.map(() => Math.random() < 0.4);
+        if (keep.every(Boolean)) keep[0] = false;
+        if (keep.some(Boolean)) return { t: "hold", keep };
+      }
       return { t: "roll" };
     }
     // stop when the hand is strong, or (hard) when it already beats everyone who played

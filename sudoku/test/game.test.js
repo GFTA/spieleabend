@@ -173,3 +173,28 @@ test("hostile input is rejected without changing the state", () => {
   }
   assert.strictEqual(JSON.stringify(S), before);
 });
+
+test("actions with fractions, strings or missing numbers are refused", () => {
+  const S = pair(1);
+  const free = S.puzzle.findIndex((n) => !n);
+  for (const a of [{ t: "set", i: free + 0.5, n: 3 }, { t: "set", i: free, n: 2.5 }, { t: "set", i: "5", n: 3 }, { t: "set", i: free }, { t: "set", n: 3 },
+    { t: "note", i: free, n: "3" }, { t: "note", i: null, n: 3 }, { t: "clear", i: free + 0.5 }, { t: "clear" }, { t: "skip", pi: "1" }, { t: "skip", pi: 1.5 }]) {
+    assert.strictEqual(Game.act(S, 0, a).ok, false, JSON.stringify(a));
+  }
+  assert.deepStrictEqual(S.players[0].grid, S.puzzle);
+  assert.strictEqual(S.players[0].notes.every((n) => n === 0), true);
+  assert.strictEqual(Game.act(S, 0, { t: "set", i: free, n: 3 }).ok, true);
+});
+
+test("every round has its own id, also after a rematch (confetti and statistics key)", () => {
+  const S = pair(1);
+  const ids = [Game.view(S, 0).rid];
+  for (let k = 0; k < 2; k++) {
+    S.players[0].grid = S.solution.slice();
+    assert.ok(Game.act(S, 0, { t: "submit" }).ok);
+    assert.strictEqual(S.last.over, true);
+    assert.ok(Game.act(S, 0, { t: "next" }).ok);
+    ids.push(Game.view(S, 0).rid);
+  }
+  assert.strictEqual(new Set(ids).size, 3);
+});
