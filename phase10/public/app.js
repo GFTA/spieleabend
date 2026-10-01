@@ -100,6 +100,8 @@
   const still = matchMedia("(prefers-reduced-motion: reduce)");
   const rectOf = (el) => (el ? el.getBoundingClientRect() : null);
   const visible = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+  // a pile scrolled out of the arena: the card still flies, towards (or in from) the screen edge on that side
+  const edgeRect = (r) => ({ left: r.left, top: r.bottom <= 0 ? -r.height - 24 : innerHeight + 24, width: r.width, height: r.height });
   const topCardEl = () => $("#discardBtn .card:last-child");
   let dropFrom = null; // a card just let go of in a drag: the next flight of it starts there
   // where everything is before an update: hand and spread, cards on the table, seats
@@ -118,8 +120,10 @@
   // a card (face or back) flies from rect `from` onto element `to`, which shows up when it lands
   // on a smooth curve that bows sideways; long flights (phone: stack → hand) take a little longer
   function fly(html, from, to, delay = 0, dur = 420) {
-    const tr = rectOf(to);
-    if (!visible(from) || !visible(tr) || still.matches) return;
+    const tr0 = rectOf(to);
+    if (still.matches || !from || from.width <= 0 || !tr0 || tr0.width <= 0 || (!visible(from) && !visible(tr0))) return;
+    const tr = visible(tr0) ? tr0 : edgeRect(tr0);
+    if (!visible(from)) from = edgeRect(from);
     const f = document.createElement("div");
     f.className = "flyer";
     f.innerHTML = html;
