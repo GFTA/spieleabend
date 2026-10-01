@@ -336,7 +336,7 @@
     const events = [];
     const fail = (error) => ({ ok: false, error, events });
     const ok = () => ({ ok: true, events });
-    const P = S.players[pi];
+    const P = Number.isInteger(pi) ? S.players[pi] : null;
     if (!P) return fail("Unbekannter Spieler.");
     if (!a || typeof a.t !== "string") return fail("Unbekannte Aktion.");
 
@@ -380,7 +380,7 @@
       case "torpedo": {
         if (S.phase !== "play") return fail("Gerade wird nicht geschossen.");
         if (S.cur !== pi) return fail(`${S.players[S.cur].name} ist dran.`);
-        const ti = +a.target, T = S.players[ti], cell = +a.cell, n = S.size;
+        const ti = a.target, T = Number.isInteger(ti) ? S.players[ti] : null, cell = a.cell, n = S.size;
         if (!T || ti === pi || T.out) return fail("Auf diese Flotte kannst du nicht schießen.");
         if (!foe(S, pi, ti)) return fail("Das ist dein Teampartner!");
         if (!Number.isInteger(cell) || cell < 0 || cell >= n * n) return fail("Dieses Feld gibt es nicht.");
