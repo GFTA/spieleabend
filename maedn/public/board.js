@@ -1,5 +1,5 @@
 // Mensch ärgere dich nicht board geometry. A star with 4, 6 or 8 arms: every arm is three fields wide,
-// the track runs clockwise (10 fields per arm), each player has a yard next to their arm and a goal lane on it.
+// the track runs clockwise (10 fields per arm), each player has a yard next to their arm and a goal lane at the end of their lap.
 // Coordinates are top-left corners of 1×1 cells. No DOM, so the tests can check the layout.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -26,9 +26,12 @@
       for (let i = 1; i <= 4; i++) track.push(pt(n, dc + i, -1)); // up the next arm
       track.push(pt(n, dt, 0)); // its tip
     }
+    // a lap is 40 steps; on the big boards it ends 3 arms ahead (30 steps), so the games stay as short as on 4 arms.
+    // Goal lane `s` is the one player `s` walks into, it lies on arm (s + lap/10) % arms.
+    const lap = arms === 4 ? 40 : 30, lane = (s) => (s + lap / 10) % arms;
     const goal = [], yard = [];
     for (let s = 0; s < arms; s++) {
-      goal.push([0, 1, 2, 3].map((i) => pt(s, dt - 1 - i, 0)));
+      goal.push([0, 1, 2, 3].map((i) => pt(lane(s), dt - 1 - i, 0)));
     }
 
     // yards sit in the gap between an arm and the next; close to the middle, but clear of all arms and each other
@@ -68,7 +71,7 @@
     const maxx = Math.max(...all.map((p) => p[0])) + 1, maxy = Math.max(...all.map((p) => p[1])) + 1;
     const tl = (p, dx) => [r6(p[0] - minx + (dx || 0)), r6(p[1] - miny + (dx || 0))];
     return {
-      arms, w: r6(maxx - minx), h: r6(maxy - miny), dc: r6(dc),
+      arms, lap, w: r6(maxx - minx), h: r6(maxy - miny), dc: r6(dc),
       track: track.map((p) => tl(p, -0.5)),
       goal: goal.map((g) => g.map((p) => tl(p, -0.5))),
       yard: yard.map((y) => y.map((p) => tl(p, 0))),

@@ -13,8 +13,10 @@ Tippe auf den Würfel. Mit einer 6 kommt eine Figur aus dem Haus, danach geht es
 ums Brett und in dein Ziel. Wer auf einer fremden Figur landet, wirft sie raus. Wer
 zuerst alle vier Figuren im Ziel hat, gewinnt. Zu zweit sitzt ihr euch gegenüber
 (Rot gegen Grün). Ab 5 Spielern wächst das Brett: 5 bis 6 spielen auf einem Brett mit
-sechs Armen (60 Felder), 7 bis 8 auf einem mit acht Armen (80 Felder), jeweils mit
-den Farben Rot, Blau, Grün, Gelb, Lila, Türkis, Orange und Rosa.
+sechs Armen, 7 bis 8 auf einem mit acht Armen, jeweils mit den Farben Rot, Blau, Grün,
+Gelb, Lila, Türkis, Orange und Rosa. Auf den großen Brettern geht es nicht einmal
+ganz ums Brett: Nach 30 Feldern biegst du in dein Ziel ab (es liegt auf einem der
+Arme vor dir), sonst würde ein Spiel mit vielen Leuten ewig dauern.
 
 - **Spielziel**: „Erster gewinnt“ oder „Alle Plätze“ (weiterspielen bis zum letzten Platz).
 - **Grundregeln**: Rauskommen und das Startfeld räumen sind Pflicht, nach einer 6 wird

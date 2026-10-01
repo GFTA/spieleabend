@@ -40,10 +40,9 @@
   const BADGE_AT = [[0.08, 2.2], [7.08, 2.2], [7.08, 7.1], [0.08, 7.1]];
   const DICE_AT = [[2.25, 0.18], [7.05, 0.18], [7.05, 9.18], [2.25, 9.18]];
   function cellOf(geo, seat, rel, k) {
-    const home = geo.track.length;
     if (rel < 0) return geo.yard[seat][k];
-    if (rel >= home) return geo.goal[seat][rel - home];
-    return geo.track[(seat * 10 + rel) % home];
+    if (rel >= geo.lap) return geo.goal[seat][rel - geo.lap];
+    return geo.track[(seat * 10 + rel) % geo.track.length];
   }
 
   let mode = null;        // "local" | "online" | null
@@ -459,7 +458,7 @@
       const k = `${V.round}:${V.last.winners.join(",")}:${V.players.map((p) => p.wins).join(",")}`;
       if (confettiFor !== k) {
         confettiFor = k; record(k);
-        if (V.last.winners.length) setTimeout(() => { confetti(); sfx("win"); }, 700);
+        if (V.last.winners.some((i) => mode === "online" ? V.me < 0 || i === V.me : !V.players[i].bot)) setTimeout(() => { confetti(); sfx("win"); }, 700);
       }
     }
   }

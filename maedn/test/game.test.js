@@ -32,47 +32,47 @@ test("seats: two players sit opposite, teams only with four", () => {
   assert.strictEqual(game(4, { teams: true }).rules.teams, true);
 });
 
-test("big boards: 5-6 players get 60 fields, 7-8 get 80, everybody has an own start and colour", () => {
+test("big boards: 5-6 players get 6 arms, 7-8 get 8, a lap is 30 steps there, everybody has an own start and colour", () => {
   assert.strictEqual(G.MAX_PLAYERS, 8);
   assert.strictEqual(G.COLORS.length, 8);
   for (const [n, arms] of [[2, 4], [4, 4], [5, 6], [6, 6], [7, 8], [8, 8]]) {
     const S = game(n);
     assert.strictEqual(S.arms, arms, n + " players");
-    assert.strictEqual(S.track, arms * 10);
+    assert.strictEqual(S.track, arms === 4 ? 40 : 30);
     assert.strictEqual(G.armsFor(n), arms);
     assert.strictEqual(new Set(S.players.map((p) => p.seat)).size, n);
     assert.ok(S.players.every((p) => p.seat < arms));
     const v = G.view(S, 0);
     assert.strictEqual(v.arms, arms);
-    assert.strictEqual(v.track, arms * 10);
+    assert.strictEqual(v.track, arms === 4 ? 40 : 30);
   }
   assert.strictEqual(G.newGame(names(8).concat([{ name: "Extra" }]), 1).players.length, 8);
   assert.strictEqual(game(6, { teams: true }).rules.teams, false);
   assert.strictEqual(G.BOT_NAMES.length, 7);
 });
 
-test("on a 60-field board a piece walks all the way round before it enters the goal", () => {
+test("on the 6-arm board a lap is 30 steps, then the piece enters the goal", () => {
   const S = game(6);
-  setup(S, [[57, -1, -1, -1], [30, -1, -1, -1]]);
+  setup(S, [[27, -1, -1, -1], [10, -1, -1, -1]]);
   roll(S, 3);
-  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => [m.k, m.from, m.to]), [[0, 57, 60]], "field 60 is the first goal field");
+  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => [m.k, m.from, m.to]), [[0, 27, 30]], "step 30 is the first goal field");
   move(S, 0);
-  assert.strictEqual(S.players[0].pieces[0], 60);
+  assert.strictEqual(S.players[0].pieces[0], 30);
   // a piece on the last track field needs exactly 4 to reach the last goal field, 5 is too far
-  setup(S, [[59, -1, -1, -1]]);
+  setup(S, [[29, -1, -1, -1]]);
   S.cur = 0; S.need = "roll"; S.dice = 0;
   roll(S, 4);
-  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => m.to), [63]);
+  assert.deepStrictEqual(G.view(S, 0).moves.map((m) => m.to), [33]);
   const T = game(6);
-  setup(T, [[59, -1, -1, -1]]);
+  setup(T, [[29, -1, -1, -1]]);
   roll(T, 5);
   assert.deepStrictEqual(G.view(T, 0).moves, []);
 });
 
-test("on the 80-field board seats are 10 fields apart and hits find the piece on the other arm", () => {
+test("on the 8-arm board seats are 10 fields apart on a ring of 80 and hits find the piece on the other arm", () => {
   const S = game(8);
-  // seat 7 stands on rel 5 = field 75; seat 0 reaches field 75 from rel 71 with a 4
-  setup(S, [[71, -1, -1, -1], null, null, null, null, null, null, [5, -1, -1, -1]]);
+  // seat 7 stands on rel 15 = field 85 % 80 = 5; seat 0 reaches field 5 from rel 1 with a 4
+  setup(S, [[1, -1, -1, -1], null, null, null, null, null, null, [15, -1, -1, -1]]);
   roll(S, 4);
   const m = G.view(S, 0).moves;
   assert.strictEqual(m.length, 1);

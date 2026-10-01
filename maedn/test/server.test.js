@@ -143,7 +143,7 @@ test("up to eight people or computers share a room and get the 80-field board", 
   a.send({ t: "start" });
   const v = (await a.next((m) => m.t === "room" && m.view)).view;
   assert.strictEqual(v.arms, 8);
-  assert.strictEqual(v.track, 80);
+  assert.strictEqual(v.track, 30);
   assert.deepStrictEqual(v.players.map((p) => p.seat), [0, 1, 2, 3, 4, 5, 6, 7]);
   assert.strictEqual(v.rules.teams, false, "teams need exactly four");
   a.ws.close();

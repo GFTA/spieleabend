@@ -18,7 +18,9 @@
   const GOALS = { 1: "Wer zuerst fertig ist", 2: "Alle Plätze ausspielen" };
   const CLOCK_MS = 20000, GRACE = 600;
   const OUT = -2; // piece: -1 in the yard, 0..track-1 steps from its start, track..track+3 goal, -2 gave up (the track has 10 fields per arm: 40, 60 or 80)
-  const trk = (S) => S.track || 40;
+  const trk = (S) => S.track || 40; // steps from the start field to the goal lane
+  const lapFor = (arms) => (arms === 4 ? 40 : 30); // the big boards are cut short, the goal lane sits on the arm 3 (or 4) arms ahead
+  const ring = (S) => (S.arms || 4) * 10; // fields on the track
 
   // House rules. Shared with the UI, which renders one switch per entry.
   const RULES = [
@@ -56,7 +58,7 @@
   // whose pieces player pi moves: in teams a finished player plays for the partner
   const owner = (S, pi) => (S.rules.teams && S.players[pi].done ? partner(S, pi) : pi);
   // absolute track field of a piece that is on the track
-  const abs = (S, o, rel) => (S.players[o].seat * 10 + rel) % trk(S);
+  const abs = (S, o, rel) => (S.players[o].seat * 10 + rel) % ring(S);
   const color = (S, i) => COLORS[S.players[i].seat];
 
   function occupant(S, field) {
@@ -138,7 +140,7 @@
     const S = {
       players: list.map((p, i) => ({ name: p.name, bot: !!p.bot, lvl: 1 + Math.floor(Math.random() * 3), avatar: avatarOf(p, i), wins: 0 })),
       goal: normGoal(goal), rules: normRules(rules), level: normLevel(level),
-      arms: armsFor(list.length), track: armsFor(list.length) * 10,
+      arms: armsFor(list.length), track: lapFor(armsFor(list.length)),
       round: 0, turn: 0, starter: rand(list.length), log: [], last: null, lastMove: null, deadline: 0
     };
     if (S.players.length !== 4) S.rules.teams = false;
@@ -353,7 +355,7 @@
         if (ignore && ignore.pi === i && ignore.k === k) return;
         if (r === -1) { if (P.seat * 10 === f) n += 0.5; return; }
         if (r < 0 || r >= TRACK) return;
-        const dist = (f - abs(S, i, r) + TRACK) % TRACK;
+        const dist = (f - abs(S, i, r) + ring(S)) % ring(S);
         if (dist >= 1 && dist <= 6 && r + dist < TRACK) n++;
       });
     });
@@ -420,6 +422,6 @@
 
   return {
     MAX_PLAYERS, COLORS, SEATS, armsFor, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, GOALS, RULES, DEFAULT_RULES,
-    normRules, normGoal, normLevel, newGame, startRound, act, legalMoves, suggest, tick, nextDeadline, resetClock, botMove, view
+    lapFor, normRules, normGoal, normLevel, newGame, startRound, act, legalMoves, suggest, tick, nextDeadline, resetClock, botMove, view
   };
 });

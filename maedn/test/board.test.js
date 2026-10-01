@@ -19,18 +19,24 @@ test("the classic 4-arm board is the familiar 11×11 cross", () => {
 });
 
 for (const arms of [4, 6, 8]) {
-  test(`${arms} arms: a closed track of ${arms * 10} fields, one step apart, goal lanes lead from the tips`, () => {
+  test(`${arms} arms: a closed track of ${arms * 10} fields, one step apart, goal lanes lead from the tip at the end of the lap`, () => {
     const g = geometry(arms);
     assert.strictEqual(g.track.length, arms * 10);
     assert.strictEqual(g.goal.length, arms);
     assert.strictEqual(g.yard.length, arms);
     for (let i = 0; i < g.track.length; i++) assert.ok(near(dist(g.track[i], g.track[(i + 1) % g.track.length]), 1), "step " + i);
     for (let s = 0; s < arms; s++) {
-      // the field before a start is the tip of the arm; the goal lane starts right behind it
-      const tip = g.track[(s * 10 + g.track.length - 1) % g.track.length];
+      // the last field of a lap is the tip of an arm; the goal lane starts right behind it
+      const tip = g.track[(s * 10 + g.lap - 1) % g.track.length];
       assert.ok(near(dist(tip, g.goal[s][0]), 1), "goal of seat " + s);
       for (let i = 1; i < 4; i++) assert.ok(near(dist(g.goal[s][i - 1], g.goal[s][i]), 1));
     }
+  });
+
+  test(`${arms} arms: the lap matches the engine, every arm holds exactly one goal lane`, () => {
+    const g = geometry(arms);
+    assert.strictEqual(g.lap, require("../public/game.js").lapFor(arms));
+    assert.strictEqual(new Set(g.goal.map((l) => l[0].join())).size, arms);
   });
 
   test(`${arms} arms: no two fields overlap, everything lies on the board, yards hold four pieces`, () => {
