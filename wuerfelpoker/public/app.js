@@ -349,7 +349,7 @@
     $("#reHistWrap").hidden = (V.history || []).length < 2;
     UI.roundEndFooter({ over: last.over, next: "Nächste Runde" });
     const k = `${V.round}:${w.join(",")}:${V.players.map((p) => p.score).join(",")}`;
-    if (confettiFor !== k) { confettiFor = k; confetti(); sfx("win"); const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (last.over && me >= 0) Spieleabend.profile.result("wuerfelpoker", k, { won: champs.includes(me), online: mode === "online" }); }
+    if (confettiFor !== k) { confettiFor = k; if (w.some((i) => mode === "online" ? V.me < 0 || i === V.me : !V.players[i].bot)) { confetti(); sfx("win"); } const me = mode === "online" ? V.me : V.players.findIndex((p) => !p.bot); if (last.over && me >= 0) Spieleabend.profile.result("wuerfelpoker", k, { won: champs.includes(me), online: mode === "online" }); }
   }
 
   // ---------- start screen ----------
