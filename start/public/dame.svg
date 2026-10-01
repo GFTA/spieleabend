@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1a1426"/>
+  <rect x="86" y="86" width="340" height="340" rx="30" fill="#4b2e1d"/>
+  <g transform="translate(101 101)">
+    <rect width="310" height="310" rx="14" fill="#ecdcb8"/>
+    <g fill="#8b5a3c"><rect x="77.5" width="77.5" height="77.5"/><rect x="232.5" width="77.5" height="77.5"/><rect y="77.5" width="77.5" height="77.5"/><rect x="155" y="77.5" width="77.5" height="77.5"/><rect x="77.5" y="155" width="77.5" height="77.5"/><rect x="232.5" y="155" width="77.5" height="77.5"/><rect y="232.5" width="77.5" height="77.5"/><rect x="155" y="232.5" width="77.5" height="77.5"/></g>
+    <g stroke="rgba(0,0,0,.25)" stroke-width="6">
+      <circle cx="116" cy="38.5" r="29" fill="#2f2e3a"/><circle cx="193.5" cy="116" r="29" fill="#2f2e3a"/>
+      <circle cx="38.5" cy="271.5" r="29" fill="#f6efe0"/><circle cx="193.5" cy="271.5" r="29" fill="#f6efe0"/>
+    </g>
+    <path transform="translate(193.5 270) scale(.78) translate(-193.5 -268)" d="M169 281h49l4-27-13 10-15-21-15 21-13-10z" fill="#e8b923" stroke="#8a6508" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>

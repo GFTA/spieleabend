@@ -118,5 +118,15 @@
     "url": "https://carcassonne.cool-kidz.net/",
     "max": 5,
     "status": "http://carcassonne:8080/info"
+  },
+  {
+    "id": "dame",
+    "name": "Dame",
+    "title": "Dame",
+    "desc": "Dame mit deutschen Regeln: Schlagzwang, Mehrfachsprünge und fliegende Damen. Allein gegen den Computer oder zu zweit online.",
+    "players": "2 Spieler + Zuschauer",
+    "url": "https://dame.cool-kidz.net/",
+    "max": 2,
+    "status": "http://dame:8080/info"
   }
 ]

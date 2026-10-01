@@ -1,0 +1,19 @@
+services:
+  dame:
+    build:
+      context: ..
+      dockerfile: dame/Dockerfile
+      args:
+        GAME: dame
+    image: dame:latest
+    container_name: dame
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${DAME_PORT:-8094}:8080"
+    volumes:
+      - dame-data:/data
+
+volumes:
+  dame-data:
