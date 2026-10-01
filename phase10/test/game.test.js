@@ -196,3 +196,79 @@ test("views: your own hand only, clock turn played for you", () => {
   // with two players the turn only comes straight back when the other one had to sit out (an Aussetzen thrown for them)
   if (!S.log.slice(-2).some((l) => /aussetzen|setzt aus/.test(l))) assert.notStrictEqual(S.cur, pi);
 });
+
+test("hostile input is refused without touching the game", () => {
+  const hand = [C("r", 5), C("b", 5), C("g", 5), C("r", 9), C("y", 9), C("b", 9), C("g", 9), C("b", 1), C("g", 12), C("r", 3)];
+  const S = rigged(1, hand);
+  const snap = () => JSON.stringify(S);
+  let before = snap();
+  for (const a of [null, undefined, 5, "draw", [], {}, { t: 7 }, { t: "constructor" }, { t: "__proto__" }]) {
+    assert.strictEqual(G.act(S, 0, a).ok, false, JSON.stringify(a));
+  }
+  assert.strictEqual(G.act(S, 1, { t: "draw", from: "deck" }).ok, false, "out of turn");
+  for (const pi of [-1, 2, 1.5, NaN, null, undefined, "0", "constructor", "__proto__"]) {
+    assert.strictEqual(G.act(S, pi, { t: "draw", from: "deck" }).ok, false, String(pi));
+  }
+  // the discard pile is empty at the start: nothing to take
+  S.discard.length = 0;
+  before = snap();
+  assert.strictEqual(G.act(S, 0, { t: "draw", from: "discard" }).ok, false);
+  assert.strictEqual(snap(), before);
+
+  assert.ok(G.act(S, 0, { t: "draw", from: "deck" }).ok);
+  before = snap();
+  const [a, b, c, d, e, f] = hand.map((x) => x.id);
+  const bad = [undefined, null, "x", 5, {}, [], [[]], [[a, b, c]], [[a, b, c], []], [[a, b, c], 5], [[a, b, c], "def"], [[a, b, c], [d, e]],
+    [[a, b, c], [d, e, f, f]], [[a, b, c], [a, e, f]], [[a, b, c], [d, e, "9"]], [[a, b, c], [d, e, [f]]], [[a, b, c], [d, e, null]],
+    [[String(a), String(b), String(c)], [d, e, f]], [[a, b, c], [d, e, f], [a]], [[a, b, c], [d, e, 1e9]], [[a, b, c], [d, e, NaN]]];
+  for (const groups of bad) assert.strictEqual(G.act(S, 0, { t: "lay", groups }).ok, false, `lay ${JSON.stringify(groups)}`);
+  assert.strictEqual(snap(), before);
+
+  for (const id of [undefined, null, "x", String(a), [a], {}, NaN, 1e9, -1, true]) {
+    assert.strictEqual(G.act(S, 0, { t: "discard", id }).ok, false, `discard ${String(id)}`);
+  }
+  assert.strictEqual(G.act(S, 0, { t: "hit", id: a, meld: 0 }).ok, false, "hit before laying");
+  assert.strictEqual(snap(), before);
+
+  assert.ok(G.act(S, 0, { t: "lay", groups: [[a, b, c], [d, e, f]] }).ok);
+  before = snap();
+  for (const meld of [undefined, null, "0", "1", [1], {}, -1, 2, 99, 0.5, NaN, "constructor", true]) {
+    assert.strictEqual(G.act(S, 0, { t: "hit", id: hand[6].id, meld }).ok, false, `hit meld ${String(meld)}`);
+  }
+  for (const id of [undefined, null, String(hand[6].id), [hand[6].id], {}, NaN, 1e9]) {
+    assert.strictEqual(G.act(S, 0, { t: "hit", id, meld: 1 }).ok, false, `hit id ${String(id)}`);
+  }
+  assert.strictEqual(snap(), before);
+});
+
+test("skip card targets must be real seats", () => {
+  const S = G.newGame([{ name: "A" }, { name: "B" }, { name: "C" }], 10, { skipChoose: true }, 2);
+  S.cur = 0; S.step = "act";
+  const sk = SK();
+  S.players[0].hand = [sk, C("r", 3), C("b", 4)];
+  const before = JSON.stringify(S);
+  for (const target of [0, 3, -1, 1.5, "1", "2", [1], {}, NaN, true, "constructor"]) {
+    assert.strictEqual(G.act(S, 0, { t: "discard", id: sk.id, target }).ok, false, `target ${String(target)}`);
+  }
+  assert.strictEqual(JSON.stringify(S), before);
+  assert.ok(G.act(S, 0, { t: "discard", id: sk.id, target: 2 }).ok);
+  assert.ok(S.players[2].skipped);
+});
+
+test("computer players think fast: no single move takes long", () => {
+  let slowest = 0, moves = 0;
+  for (const level of [1, 2, 3]) {
+    const S = G.newGame([{ name: "A", bot: true }, { name: "B", bot: true }, { name: "C", bot: true }, { name: "D", bot: true }], 3, { skipChoose: true }, level);
+    let guard = 0;
+    while (!(S.phase === "roundEnd" && S.last.over) && guard++ < 20000) {
+      if (S.phase === "roundEnd") { G.act(S, 0, { t: "next" }); continue; }
+      const pi = S.cur, t0 = performance.now();
+      const a = G.botMove(S, pi);
+      slowest = Math.max(slowest, performance.now() - t0);
+      moves++;
+      assert.ok(G.act(S, pi, a).ok);
+    }
+  }
+  assert.ok(moves > 100, `${moves} moves`);
+  assert.ok(slowest < 300, `slowest move ${slowest.toFixed(0)} ms`);
+});
