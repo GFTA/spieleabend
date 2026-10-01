@@ -125,6 +125,20 @@ test("miss passes the turn, hit shoots again, sinking marks water around", () =>
   assert.match(S.log[S.log.length - 1], /U-Boot versenkt/);
 });
 
+test("every round has its own id, also after a rematch (confetti and statistics key)", () => {
+  const S = G.newGame(two(), 1, 10);
+  const ids = [G.view(S, 0).rid];
+  for (let k = 0; k < 2; k++) {
+    ready(S);
+    const a = S.cur;
+    for (const ship of FLEET) for (const c of ship) shoot(S, a, 1 - a, c);
+    assert.strictEqual(S.last.over, true);
+    assert.ok(G.act(S, 0, { t: "next" }).ok);
+    ids.push(G.view(S, 0).rid);
+  }
+  assert.strictEqual(new Set(ids).size, 3);
+});
+
 test("without 'again' every shot passes the turn", () => {
   const S = G.newGame(two(), 1, 10, { again: false });
   ready(S);
