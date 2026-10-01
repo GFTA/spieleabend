@@ -21,6 +21,49 @@ test("checksums: 72 tiles, 6 cloisters (2 with road), 10 shields, U/V/W/X", () =
   assert.strictEqual(c.tees, 4);
 });
 
+test("tile definitions: every edge field belongs to exactly one feature of the matching kind", () => {
+  for (const id of Object.keys(Game.TYPES)) {
+    const t = Game.TYPES[id], owner = [];
+    t.feats.forEach((f, fi) => (f.e || []).forEach((e) => { assert.strictEqual(owner[e], undefined, id + " edge " + e + " twice"); owner[e] = fi; }));
+    for (let e = 0; e < 12; e++) {
+      assert.notStrictEqual(owner[e], undefined, id + " edge " + e + " without feature");
+      assert.strictEqual(t.feats[owner[e]].k, t.sides[(e / 3) | 0][e % 3], id + " edge " + e + " kind");
+    }
+  }
+});
+
+test("tile definitions: a meadow lists exactly the cities its edge fields touch", () => {
+  for (const id of Object.keys(Game.TYPES)) {
+    const t = Game.TYPES[id], owner = [];
+    t.feats.forEach((f, fi) => (f.e || []).forEach((e) => { owner[e] = fi; }));
+    t.feats.forEach((f, fi) => {
+      if (f.k !== "F") return;
+      const touch = new Set();
+      for (const e of f.e) for (const n of [(e + 11) % 12, (e + 1) % 12]) if (t.feats[owner[n]].k === "C") touch.add(owner[n]);
+      assert.deepStrictEqual([...touch].sort(), [...f.cities].sort(), id + " meadow " + fi);
+    });
+  }
+});
+
+test("city corner with road: the road curves from south to west and ends nowhere else", () => {
+  for (const id of ["O", "P"]) {
+    const t = Game.TYPES[id], roads = t.feats.filter((f) => f.k === "R");
+    assert.strictEqual(roads.length, 1);
+    assert.deepStrictEqual(roads[0].e, [7, 10]);
+  }
+  // O next to the start road: the road runs on through the tile (D has 2 ends, O has 2, one pair joins -> 2 open)
+  const S = two();
+  S.stack = ["E", "E", "E", "E"];
+  S.current = "O"; S.phase = "place"; S.cur = 0;
+  // start tile D has its east side FRF, so O must be turned so that a road side faces west
+  const pl = Game.legalPlaces(S).find((m) => m.x === Game.START + 1 && m.y === Game.START);
+  assert.ok(pl, "O can be attached east of the start tile");
+  assert.ok(Game.act(S, 0, { t: "place", x: pl.x, y: pl.y, r: pl.r }).ok);
+  const root = Object.keys(S.comp).find((k) => S.comp[k].kind === "R" && Object.keys(S.comp[k].tiles).length === 2);
+  assert.ok(root, "road continues over the O tile");
+  assert.strictEqual(S.comp[root].open, 2);
+});
+
 test("sides match by reverse equality; rotation preserves matching", () => {
   assert.ok(Game.sidesMatch("FRF", "FRF"));
   assert.ok(Game.sidesMatch("CCC", "CCC"));
