@@ -78,3 +78,28 @@ test("profile: old per-game Bilanz is imported once", () => {
   P.importLegacy("hangman", { rounds: 10, wins: 4 });
   assert.deepStrictEqual([P.get().stats.hangman.g, P.get().stats.hangman.w], [10, 4]);
 });
+
+const plain = (x) => JSON.parse(JSON.stringify(x)); // objects from the vm context have another prototype
+test("profile: settings that follow the player are validated, can be forgotten and travel with the cookie", () => {
+  const a = browser();
+  assert.deepStrictEqual(plain(a.P.prefs()), {});
+  a.P.setPrefs({ table: "felt", sound: false, vol: 140, motion: false, contrast: true, notify: true, hack: 1 });
+  assert.deepStrictEqual(plain(a.P.prefs()), { table: "felt", sound: false, vol: 100, motion: false, contrast: true, notify: true });
+  a.P.setPrefs({ table: "NOT A TABLE!", vol: "loud", sound: "yes", contrast: null });
+  assert.deepStrictEqual(plain(a.P.prefs()), { table: "felt", sound: false, vol: 100, motion: false, notify: true }, "invalid values are ignored, null forgets");
+  const b = browser("uno.cool-kidz.net", a.cookies);
+  assert.strictEqual(b.P.prefs().table, "felt");
+  a.P.set({ name: "Ben" });
+  assert.strictEqual(a.P.prefs().vol, 100, "other profile changes keep the settings");
+  a.P.resetAll();
+  assert.deepStrictEqual(plain(a.P.prefs()), {});
+});
+
+test("profile: with many games the cookie stays small and the result keys survive in localStorage", () => {
+  const { P, win, cookies } = browser();
+  for (let i = 0; i < 22; i++) P.result("game" + String(i).padStart(2, "0"), "k".repeat(30) + i, { won: i % 2 === 0, online: true });
+  assert.ok(win.lastCookie.length < 3000, `cookie is ${win.lastCookie.length} bytes`);
+  assert.strictEqual(P.get().stats.game05.k, "k".repeat(30) + 5, "the key is still known, a reload does not count the round twice");
+  assert.strictEqual(P.result("game05", "k".repeat(30) + 5, { won: false }), false);
+  assert.ok(Object.keys(cookies).length === 1);
+});

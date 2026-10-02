@@ -66,7 +66,7 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   b.send({ t: "start" });
   assert.match((await b.next((m) => m.t === "error")).msg, /Nur/);
   b.send({ t: "ready", on: true }); // the host starts with everyone who is ready
-  await a.next((m) => m.t === "room" && m.members[1].ready);
+  await a.next((m) => m.t === "room" && m.members[1] && m.members[1].ready);
   a.send({ t: "settings", size: 7 });
   await a.next((m) => m.t === "room" && m.size === 7);
   a.send({ t: "start" });
@@ -120,4 +120,30 @@ test("rooms, avatars, spectators, a full game and a computer opponent over WebSo
   }
   assert.strictEqual(v.phase, "roundEnd");
   a.ws.close(); b.ws.close(); c.ws.close();
+});
+
+test("nudge: only the player whose turn it is, only people, once per 20 seconds", async () => {
+  await new Promise((r) => server.listening ? r() : server.on("listening", r));
+  const port = server.address().port;
+  const a = client(port), b = client(port);
+  await a.open; await b.open;
+  a.send({ t: "create", name: "Nudge-A", size: 8, goal: 1 });
+  const joined = await a.next((m) => m.t === "joined");
+  b.send({ t: "join", code: joined.code, name: "Nudge-B" });
+  await b.next((m) => m.t === "joined");
+  a.send({ t: "nudge" });
+  assert.strictEqual(await a.next((m) => m.t === "error", 300).catch(() => null), null, "no game yet: ignored");
+  b.send({ t: "ready", on: true });
+  await a.next((m) => m.t === "room" && m.members[1] && m.members[1].ready);
+  a.send({ t: "start" });
+  const run = await a.next((m) => m.t === "room" && m.view);
+  const cur = run.view.cur, [first, second] = cur === 0 ? [a, b] : [b, a];
+  first.send({ t: "nudge" });
+  assert.strictEqual(await first.next((m) => m.t === "nudge" || m.t === "nudged", 300).catch(() => null), null, "nobody nudges themselves");
+  second.send({ t: "nudge" });
+  assert.strictEqual((await first.next((m) => m.t === "nudge")).name, cur === 0 ? "Nudge-B" : "Nudge-A");
+  assert.ok((await second.next((m) => m.t === "nudged")).name);
+  second.send({ t: "nudge" });
+  assert.match((await second.next((m) => m.t === "error")).msg, /gerade erst/);
+  a.ws.close(); b.ws.close();
 });

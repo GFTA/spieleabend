@@ -214,6 +214,22 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 
 `#myName` hat überall `maxlength="18"`.
 
+### Globale Einstellungen, Tastenkürzel, Anstupsen (`shared/profile.js`, `kit.js`, `room-ui.js`)
+
+- **Prefs** (`SAProfile.prefs()` / `setPrefs(patch)`, im Profil-Cookie als `pf`, gelten in allen Spielen und auf der Startseite):
+  `table`, `sound`, `vol` (0–100), `motion` (false = weniger Bewegung), `contrast` (hoher Kontrast), `notify`.
+  Ungültige Werte werden verworfen, `null` löscht einen Schlüssel. Ohne gespeicherten Tisch gilt der System-Modus (hell/dunkel).
+  Ist das Cookie zu groß, entfernt `save()` zuerst `k` und leere Statistikfelder.
+- `kit.js` setzt `data-motion="off"` / `data-contrast="high"` auf `<html>` (CSS in `kit.css`), kappt WAAPI-Animationen bei „weniger Bewegung“
+  und bietet `K.notify`, `K.badge` (Favicon-Punkt), `K.say` (aria-live) sowie Dialog-Barrierefreiheit für alle `.overlay`
+  (Rolle, Fokus rein/zurück, Tab-Falle).
+- Tastenkürzel (`room-ui.js`): Alt+M Menü, Alt+O Einstellungen, Alt+C Chat, Alt+K Ton, Alt+V Vollbild, Alt+H oder `?` Übersicht.
+  Neue Kürzel dort eintragen und im `#keysSheet` auflisten.
+- **Anstupsen:** Client `{t:"nudge"}` → Server (`room-server.js`) prüft laufendes Spiel, Sitzplatz, menschlichen Zugspieler und 20 s Abklingzeit,
+  sendet `{t:"nudge", name}` an den Spieler und `{t:"nudged"}` an den Absender. Der Button `#nudgeBtn` erscheint nach 20 s Warten.
+- Das Menü zeigt Raumcode (Link kopieren), Zuschauer und Ping; `#updateBar` meldet eine neue Version (Vergleich von `/info` mit `<meta name="…-version">`).
+- Startseite: Suche (`/`), Favoriten (★) und „Zuletzt gespielt“ in localStorage; `profile.html` zeigt Erfolge, abgeleitet aus der Statistik.
+
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
 
 - `room-ui.js` baut in **jedem** Spiel oben rechts ein Einstellungen-Sheet

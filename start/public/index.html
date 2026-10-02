@@ -30,6 +30,13 @@
 :root[data-table="blossom"]{color-scheme:light;--bg:#fbe3ec;--bg2:#fff6f9;--surface:#f7d4e1;--line:#eebfd0;--text:#3a1a2b;--muted:#8b5a70;--sea:#e6d9f4;--hull:#6b4a63}
 :root[data-table="vulkan"]{--bg:#241512;--bg2:#301c17;--surface:#3d241d;--line:#583229;--text:#fbeee8;--muted:#cfa89a;--sea:#3a1c1a}
 :root[data-table="mint"]{color-scheme:light;--bg:#dff3ea;--bg2:#f4fcf8;--surface:#c9e9db;--line:#b0d8c6;--text:#12352a;--muted:#4d7a68;--sea:#cfe9e0;--hull:#3f6656}
+/* settings from the games' menu: high contrast, less motion (profile prefs) */
+:root[data-contrast="high"]{--text:#fff;--muted:#e6dff2;--line:#9a8bc0}
+:root[data-contrast="high"][data-table="felt"]{--muted:#d5eadf;--line:#7fb59d}
+:root[data-contrast="high"][data-table="ocean"]{--muted:#d6e2f5;--line:#7f9ccb}
+:root[data-contrast="high"][data-table="vulkan"]{--muted:#f2d9cf;--line:#c58a78}
+:root[data-contrast="high"][data-table="light"],:root[data-contrast="high"][data-table="blossom"],:root[data-contrast="high"][data-table="mint"]{--text:#000;--muted:#262b3a;--line:#4a5470}
+:root[data-motion="off"] *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 *{box-sizing:border-box}
 html{background:var(--bg)}
 body{margin:0;min-height:100vh;background:radial-gradient(90% 420px at 50% -80px,color-mix(in srgb,var(--accent) 9%,transparent),transparent 70%) no-repeat,var(--bg);color:var(--text);font:15px/1.45 var(--ui);-webkit-tap-highlight-color:transparent;
@@ -163,6 +170,16 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .pnote{color:var(--muted);font-size:13px;padding:8px 10px;border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--line)}
 .perr{color:#ff8a8f;font-size:13px;min-height:0}
 .partybox{display:flex;flex-direction:column;gap:8px}
+/* find a game: search, favourites first, the ones played last next */
+.finder{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.finder input{flex:1 1 200px;min-width:0;border:0;border-radius:14px;padding:11px 14px;font-size:16px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.finder input::placeholder{color:var(--muted)}
+.finder .chip{border:0;border-radius:999px;padding:9px 14px;font-weight:800;font-size:14px;cursor:pointer;background:var(--bg2);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line)}
+.finder .chip[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 0 0 2px var(--accent)}
+.nogames{grid-column:1/-1;text-align:center;color:var(--muted);padding:24px 0}
+.favbtn{position:relative;z-index:2;flex:none;width:30px;height:30px;margin:-4px 0 -4px auto;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+.favbtn[aria-pressed="true"]{color:var(--accent)}
+.game .tagnew{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--surface);color:var(--text)}
 /* in a party the host picks the game: no own start button on the cards */
 .inparty .game .actions{display:none}
 .partybox:empty{display:none}
@@ -205,6 +222,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 
   <div class="gamescol">
   <div class="section-head"><div class="label">Spiele</div><p class="hint">Ohne Party startet ein Spiel allein gegen den Computer.</p></div>
+  <div class="finder" role="search"><input id="q" type="search" placeholder="Spiel suchen (Taste /)" aria-label="Spiel suchen" autocomplete="off" enterkeyhint="search"><button class="chip" id="favOnly" type="button" aria-pressed="false">★ Favoriten</button></div>
   <section class="games" id="games" aria-label="Spiele"></section>
   </div>
   </div>
@@ -223,8 +241,18 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   // table design, same choices as in the games - picked here top-right, carried over to
   // whichever game gets opened via a ?table= param on its link (see render() below)
   const TABLES = [["night", "Nacht", "#1a1426"], ["felt", "Filz", "#15372a"], ["ocean", "Ozean", "#15243a"], ["light", "Hell", "#eceff5"], ["blossom", "Blüte", "#f7c6d9"], ["vulkan", "Vulkan", "#301c17"], ["mint", "Minze", "#dff3ea"]];
+  const { AVATARS, COLORS } = window.SAAvatars, P = window.SAProfile;
+  // the table of the profile (any game or this page), else what this browser stored, else the system's light/dark setting
   let table = "night";
-  try { table = JSON.parse(localStorage.getItem("spieleabend.table")) || "night"; } catch (e) {}
+  try { table = JSON.parse(localStorage.getItem("spieleabend.table")) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "night"); } catch (e) {}
+  if (P.prefs().table) table = P.prefs().table;
+  if (!TABLES.some((x) => x[0] === table)) table = "night";
+  function applyPrefs() {
+    const root = document.documentElement, pf = P.prefs();
+    if (pf.contrast) root.dataset.contrast = "high"; else delete root.dataset.contrast;
+    if (pf.motion === false) root.dataset.motion = "off"; else delete root.dataset.motion;
+  }
+  applyPrefs();
   function applyTable() {
     const root = document.documentElement;
     if (table === "night") delete root.dataset.table; else root.dataset.table = table;
@@ -236,13 +264,13 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     const b = e.target.closest("[data-t]"); if (!b) return;
     table = b.dataset.t;
     try { localStorage.setItem("spieleabend.table", JSON.stringify(table)); } catch (err) {}
+    P.setPrefs({ table });
     applyTable();
     updateLinks();
   });
   applyTable();
 
   // name, avatar and colour: the profile (profile.js, one cookie for every game), handed to the games as ?name=…&av=…
-  const { AVATARS, COLORS } = window.SAAvatars, P = window.SAProfile;
   let me = { name: "", avatar: "", color: "" };
   function loadMe() { const p = P.get(); me = { name: p.name, avatar: p.av, color: p.col }; }
   loadMe();
@@ -292,9 +320,22 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 
   const TINT = { uno: "#e0393e", schiffe: "#2d6fd6", viergewinnt: "#f2c230", wuerfelpoker: "#f28a1f", kniffel: "#2fa35b", poker: "#8a4fd0", maedn: "#1fb5c9", hangman: "#b98a5a", phase10: "#ec6fb2" };
   let games = [];
+  // favourites (starred) first, then the games played last, then the rest in the usual order
+  let favs = [], recent = [], favOnly = false, query = "";
+  try { favs = JSON.parse(localStorage.getItem("spieleabend.fav")) || []; recent = JSON.parse(localStorage.getItem("spieleabend.recent")) || []; } catch (e) {}
+  if (!Array.isArray(favs)) favs = [];
+  if (!Array.isArray(recent)) recent = [];
+  const keep = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  function shown() {
+    const q = query.trim().toLowerCase(), rank = (g) => (favs.includes(g.id) ? 0 : recent.includes(g.id) ? 1 + recent.indexOf(g.id) / 10 : 5);
+    return games.map((g, i) => [g, i]).filter(([g]) => (!favOnly || favs.includes(g.id)) && (!q || `${g.name} ${g.title || ""} ${g.desc} ${g.players}`.toLowerCase().includes(q)))
+      .sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([g]) => g);
+  }
   function render(status) {
+    status = status || lastStatus;
     const st = Object.fromEntries((status || []).map((s) => [s.id, s]));
-    $("#games").innerHTML = games.map((g) => {
+    const list = shown();
+    $("#games").innerHTML = !list.length ? `<p class="nogames">${favOnly && !favs.length ? "Noch keine Favoriten. Tippe bei einem Spiel auf den Stern." : "Kein Spiel gefunden."}</p>` : list.map((g) => {
       const s = st[g.id];
       const pill = !s ? `<span class="pill">Prüfe …</span>`
         : s.online ? `<span class="pill on">Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}</span>`
@@ -302,7 +343,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       return `<article class="game" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
         <div class="top">
           <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88"></div>
-          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}</div></div>
+          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}<button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
         </div>
         <p>${esc(g.desc)}</p>
         <div class="partybox" data-for="${esc(g.id)}"></div>
@@ -315,6 +356,18 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   }
 
   let lastStatus = null;
+  $("#q").addEventListener("input", (e) => { query = e.target.value; render(); });
+  $("#favOnly").addEventListener("click", (e) => { favOnly = !favOnly; e.currentTarget.setAttribute("aria-pressed", String(favOnly)); render(); });
+  $("#games").addEventListener("click", (e) => {
+    const f = e.target.closest("[data-fav]");
+    if (f) { const id = f.dataset.fav; favs = favs.includes(id) ? favs.filter((x) => x !== id) : favs.concat(id); keep("spieleabend.fav", favs); render(); return; }
+    const a = e.target.closest(".game a[data-url]");
+    if (a) { const id = a.closest(".game").dataset.id; recent = [id].concat(recent.filter((x) => x !== id)).slice(0, 4); keep("spieleabend.recent", recent); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input, textarea")) return;
+    e.preventDefault(); $("#q").focus();
+  });
   async function refresh() {
     try { lastStatus = await (await fetch("status.json", { cache: "no-store" })).json(); } catch (e) {}
     // keep what people are typing: only update the status pills
