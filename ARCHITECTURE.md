@@ -43,7 +43,7 @@ betrifft, auch das Bot-Timing (`Game.botPlan`, s. „Bots & Zug-Timer“);
 | Datei | Inhalt |
 |---|---|
 | `kit.css` | Basis-Palette, die sieben Tisch-Designs (nur Basisfarben) und alle Bausteine, die überall gleich aussehen (Knöpfe-Grundlagen, Felder, Panels, Segmente, Toggles, Toast, Avatar-Raster, Reaktionsblasen, Konfetti, Startseiten-Link …) |
-| `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (Profil + `?name=`/`?av=`), `avatarPicker()`/`pickerHTML()`, `profile`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
+| `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (Profil + `?name=`/`?av=`), `avatarPicker()`/`pickerHTML()`, `profile`, `toast`, `confetti`, `showBubble`, `sortToggle()`/`sortToggleHTML()` (Sortier-Schalter 123 / Regenbogen für Kartenhände), Startseiten-Link im WLAN |
 | `avatars.js` / `profile.js` | Avatar-Liste, Farben; Profil mit Statistik (s. „Profil, Avatar & Statistik“) |
 | `room-ui.css` / `room-ui.js` | Warteraum und Spielmenü (s. u.) |
 | `cards.css` / `cards.js` | Kartentisch-Mechanik für alle Kartenspiele (s. „Karten: `shared/cards.js`“) |
