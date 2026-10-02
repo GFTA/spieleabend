@@ -6,11 +6,12 @@
 //   Cards.fly({ rect, html, ... })                 one card in the air (optionally turning over); the primitive under flights
 //   Cards.flights({ resolve, off, onLand })        animated moves; the target card stays hidden until it lands
 //   Cards.cascade(n, { fmax, room })               --f/--H for a pile whose cards overlap downwards
-//   Cards.rectOf(el), Cards.reduced()              plain {left, top, width, height}; prefers-reduced-motion
+//   Cards.rectOf(el), Cards.reduced()              plain {left, top, width, height, right, bottom}; prefers-reduced-motion
 (function (root) {
   "use strict";
   const reduce = () => !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const rectOf = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
+  const box4 = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
+  const rectOf = (el) => { const r = el.getBoundingClientRect(); return box4(r.left, r.top, r.width, r.height); };
   // --w is the card width for cards that size themselves with --w, --cw for the ones that use --cw
   const place = (g, r) => { g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--w:${r.width}px;--cw:${r.width}px`; };
   const faceOf = (html, cls) => {
@@ -97,7 +98,7 @@
     function start() {
       const r = rectOf(drag.el), g = document.createElement("div");
       drag.started = true; drag.rect = r;
-      g.className = "cd-ghost";
+      g.className = "cd-ghost cd-held";
       place(g, r);
       if (o.tilt) g.style.transformOrigin = "50% 50%";
       const clone = drag.el.cloneNode(true);
@@ -133,7 +134,7 @@
       }
       if (d.started) {
         if (!tapped && mode !== "abort") lastDrag = Date.now();
-        if (mode === "up" && !tapped && t) dropped = !!o.drop(d.s, t, { left: d.gx, top: d.gy, width: d.rect.width, height: d.rect.height });
+        if (mode === "up" && !tapped && t) dropped = !!o.drop(d.s, t, box4(d.gx, d.gy, d.rect.width, d.rect.height));
         if (dropped) d.ghost.remove();
         else {
           d.el.classList.remove("cd-dragging");
