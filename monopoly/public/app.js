@@ -237,6 +237,7 @@
   };
   const sideText = (s) => [s.cash ? `${M(s.cash)}` : "", ...s.props.map((i) => BOARD[i].n), s.card ? "Freikarte" : ""].filter(Boolean).join(", ") || "nichts";
 
+  let wasMine = false;
   function renderDock(busy) {
     dockFns = [];
     const acts = [], sub = [];
@@ -244,11 +245,16 @@
     let av = "", who = "", hint = "", now = "", mine = false;
     if (V.phase === "roundEnd") {
       const w = V.last.winners[0];
+      Spieleabend.mine(false); wasMine = false;
       av = V.players[w].avatar; who = `${name(w)} ${w === V.me ? "gewinnst" : "gewinnt"}`; hint = "Runde vorbei.";
       if (!busy && peek) acts.push(btn("Ergebnis", "btn-primary", () => { peek = false; render(); }));
     } else {
       const a = V.actor, P = V.players[a];
       mine = a === V.me;
+      const cue = mine && (mode === "online" || V.players.some((p) => p.bot));
+      Spieleabend.mine(cue);
+      if (cue && !wasMine && !busy) { sfx("turn"); buzz([40, 60, 40]); }
+      wasMine = cue;
       av = P.avatar;
       who = mine ? "Du bist dran" : `${P.name} ist dran`;
       hint = mine ? "" : P.bot ? "Der Computer überlegt …" : V.me < 0 ? "Du schaust zu." : "Warte auf den Zug.";
