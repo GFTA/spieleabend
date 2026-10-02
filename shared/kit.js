@@ -219,5 +219,17 @@
     return { sfx, buzz, isOn: () => on, wake };
   }
 
-  window.Spieleabend = { $, esc, store, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, profile: P, toast, confetti, showBubble, sound, dropParams };
+  // Hand sort switch: "123" on one side, a rainbow circle on the other; the lit side is the current order.
+  // mode: "value" (by number) or "color". Games keep the click handling and the stored choice themselves.
+  const SORT_INNER = '<span class="st st-n">123</span><span class="st st-c"><i></i></span>';
+  const sortLabel = (mode) => (mode === "value" ? "Sortiert nach Zahl, tippen für Farbe" : "Sortiert nach Farbe, tippen für Zahl");
+  const sortToggleHTML = (mode, attrs = "") => `<button type="button" class="sorttoggle" data-mode="${mode}" aria-label="${sortLabel(mode)}" title="${sortLabel(mode)} (S)"${attrs ? " " + attrs : ""}>${SORT_INNER}</button>`;
+  function sortToggle(el, mode) {
+    el.classList.add("sorttoggle");
+    el.dataset.mode = mode;
+    el.setAttribute("aria-label", sortLabel(mode));
+    el.title = sortLabel(mode) + " (S)";
+    if (!el.firstElementChild) el.innerHTML = SORT_INNER;
+  }
+  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, profile: P, toast, confetti, showBubble, sound, dropParams };
 })();
