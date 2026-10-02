@@ -275,13 +275,17 @@
   function paintSel() {
     for (const e of $$(".card.sel")) e.classList.remove("sel");
     const s = dnd.src || sel;
-    for (const el of $$("#builds .slot")) el.classList.toggle("cd-drop", !!s && fitsBuild(s.c, +el.dataset.build));
+    for (const el of $$("#builds .slot")) { const fit = !!s && fitsBuild(s.c, +el.dataset.build); el.classList.toggle("cd-drop", fit); el.classList.toggle("cd-pulse", fit && !dnd.src); }
     for (const el of $$("#myDisc .cd-pile")) el.classList.toggle("cd-drop", !!s && s.from === "hand");
     if (sel) { const el = srcEl(sel); if (el) el.classList.add("sel"); }
   }
 
   const dnd = Cards.dnd({
     root: "#game",
+    zones: (s) => [
+      ...$$("#builds .slot").map((el) => ({ el, ok: fitsBuild(s.c, +el.dataset.build) })),
+      ...$$("#myDisc .cd-pile").map((el) => ({ el, ok: s.from === "hand" }))
+    ],
     grab(e) {
       const c = e.target.closest("[data-src]");
       return c && canPlay() ? Object.assign(srcOf(c), { el: c }) : null;
@@ -343,6 +347,8 @@
   }
 
   // ---------- rendering ----------
+  let roundFx = null;
+  Cards.autoFlip("#hand", ".card");
   function showScreen(id) {
     for (const s of ["home", "lobby", "game"]) $("#" + s).hidden = s !== id;
   }
@@ -408,6 +414,8 @@
       $("#myDisc").innerHTML = m.disc.map((d, j) => pileHTML(d, { src: "disc", i: j, attrs: `data-disc="${j}" data-d="${j}"`, fmax: 0.28, room: 1.1 })).join("");
       $("#hand").innerHTML = V.hand.map((c) => cardHTML(c, { attrs: 'data-src="hand"' })).join("");
     }
+    const rk = (R && R.code || "L") + ":" + V.round;
+    if (roundFx !== rk) { const first = roundFx === null; roundFx = rk; if (!first || V.deckN) Cards.shuffle(rectOf($("#deck .card")), { html: backHTML(), n: 8 }); }
     trackHand = V.hand ? V.hand.slice() : [];
 
     // log
@@ -451,6 +459,7 @@
 
     // turn change feedback
     const key = `${V.round}:${V.turn}:${V.cur}`;
+    Spieleabend.mine(play && (mode === "online" || V.players.some((p) => p.bot)));
     if (play && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = key;
 
