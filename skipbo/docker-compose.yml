@@ -1,0 +1,19 @@
+services:
+  skipbo:
+    build:
+      context: ..
+      dockerfile: skipbo/Dockerfile
+      args:
+        GAME: skipbo
+    image: skipbo:latest
+    container_name: skipbo
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${SKIPBO_PORT:-8097}:8080"
+    volumes:
+      - skipbo-data:/data
+
+volumes:
+  skipbo-data:

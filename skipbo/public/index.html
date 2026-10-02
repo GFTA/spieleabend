@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skip-Bo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Skip-Bo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<style>
+:root{--sea:#1f2350;--felt:#2a2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="vulkan"]{--sea:#3a1c1a;--felt:#3d1f18}
+:root[data-table="mint"]{--sea:#cfe9e0;--felt:#d3ecdf}
+:root[data-table="felt"]{--sea:#10363a;--felt:#0f3a2b}
+:root[data-table="ocean"]{--sea:#123057;--felt:#123a66}
+:root[data-table="light"]{--sea:#cfe0f3;--felt:#dfe8f5}
+:root[data-table="blossom"]{--sea:#e6d9f4;--felt:#f4dfe9}
+/* The page itself never scrolls (iOS Safari would slide the whole page); only inner areas do. */
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn:disabled{opacity:.45;cursor:default}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+/* ---------- cards ---------- */
+:root{--w:var(--cw);--cw:min(calc(clamp(44px,13vw,60px) * var(--cs)),calc((100vw - 56px) / 5));--mw:calc(clamp(27px,7.4vw,34px) * var(--cs))}
+.card{position:relative;flex:none;width:var(--w);height:calc(var(--w) * 1.4);border-radius:calc(var(--w) * .13);background:#fffdf6;color:var(--cc,#2c6bd8);
+  box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#2c6bd8),0 2px 5px rgba(0,0,0,.38);display:grid;place-items:center;font-family:var(--display);line-height:1;touch-action:none}
+.card b{font-weight:400;font-size:calc(var(--w) * .58);pointer-events:none}
+.card::before{content:attr(data-n);position:absolute;left:calc(var(--w) * .1);top:calc(var(--w) * .06);font:800 calc(var(--w) * .21)/1 var(--body,Figtree,sans-serif);pointer-events:none}
+.c1{--cc:#2c6bd8}.c2{--cc:#2a9a57}.c3{--cc:#d6414b}
+.card.w{--cc:#2b1b4a;background:conic-gradient(from 20deg,#ffe27a,#ff9ec4,#9ec9ff,#9be7c4,#ffe27a);color:#2b1b4a}
+.card.w b.sb{font-size:calc(var(--w) * .4);letter-spacing:.02em}
+.card.w::after{content:"";position:absolute;inset:calc(var(--w) * .13);border-radius:calc(var(--w) * .1);background:rgba(255,255,255,.55);z-index:0}
+.card.w b{position:relative;z-index:1}
+.card.w::before{z-index:1}
+.card.back{--cc:#7a5cff;background:repeating-linear-gradient(45deg,#3b2a8c 0 6px,#4a37a8 6px 12px);box-shadow:inset 0 0 0 calc(var(--w) * .06) #fffdf6,0 2px 5px rgba(0,0,0,.38)}
+.card.back::before{content:"SB";left:50%;top:50%;transform:translate(-50%,-50%);color:#fffdf6;font-size:calc(var(--w) * .34);letter-spacing:.03em}
+.mini{--w:var(--mw)}
+.obox .card,.deckslot .card,#builds .card{touch-action:pan-x pan-y}
+.pile{--n:1;position:relative;width:var(--w);height:calc(var(--w) * 1.4 * var(--H,1));flex:none}
+.pile.empty{border-radius:calc(var(--w) * .13);box-shadow:inset 0 0 0 2px var(--line);background:rgba(255,255,255,.04)}
+.pile .card{position:absolute;left:0;top:calc(var(--i,0) * var(--f,0) * var(--w) * 1.4)}
+.pile .cnt{position:absolute;right:-5px;bottom:-5px;z-index:3;min-width:1.5em;padding:1px 5px;border-radius:999px;background:var(--surface);color:var(--text);font:800 clamp(11px,2.9vw,13px)/1.4 var(--body,Figtree,sans-serif);text-align:center;box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums;pointer-events:none}
+.mini .pile .cnt,.pile.mini .cnt{right:-4px;bottom:-4px;font-size:11px;padding:0 4px}
+[data-src]{cursor:grab}
+.card.sel{transform:translateY(calc(var(--w) * -.16));box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#2c6bd8),0 0 0 3px var(--accent),0 8px 16px rgba(0,0,0,.45)}
+.card.dragging{opacity:.25}
+.card.sent{opacity:.3}
+.ghost{position:fixed;z-index:52;pointer-events:none;transform-origin:0 0;margin:0}
+.ghost .card{position:static;box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#2c6bd8),0 8px 18px rgba(0,0,0,.5)}
+.ghost.back .card{--cc:#7a5cff}
+.slot.ok .pile,.mydisc .pile.ok2{filter:drop-shadow(0 0 7px var(--accent))}
+.slot.ok .pile.empty,.mydisc .pile.ok2.empty{box-shadow:inset 0 0 0 2.5px var(--accent)}
+.slot.over .pile,.mydisc .pile.over{transform:scale(1.06)}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roundinfo b{color:var(--text)}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:space-around;gap:12px;padding:10px 12px}
+.opps{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;width:100%}
+.opps.scroll{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 2px 8px;scrollbar-width:none}
+.opps.scroll::-webkit-scrollbar{display:none}
+.obox{position:relative;flex:none;display:flex;flex-direction:column;gap:7px;padding:8px 10px 10px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.obox.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.obox.away{opacity:.55}
+.obox.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{40%{transform:scale(1.05)}}
+.ohead{display:flex;align-items:center;gap:6px;min-width:0}
+.ohead .pav{font-size:20px;line-height:1;flex:none}
+.ohead .pname{flex:1;min-width:0;font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:9em}
+.owins{flex:none;min-width:20px;height:20px;padding:0 5px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 1.5px var(--line);font-variant-numeric:tabular-nums}
+.obox.active .owins{background:var(--accent);color:#231a05}
+.ohand{flex:none;display:flex;align-items:center;gap:4px;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.ohand .card{--w:calc(var(--mw) * .5)}
+.ohand .card::before{content:none}
+.orow{display:flex;align-items:flex-start;gap:calc(var(--mw) * .2)}
+.orow .sep{flex:none;width:calc(var(--mw) * .25)}
+.table{display:flex;align-items:center;justify-content:center;gap:calc(var(--cw) * .5);padding:14px 16px 16px;border-radius:24px;background:var(--felt);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.32);max-width:100%}
+.deck{position:relative}
+.deckslot{display:flex;flex-direction:column;align-items:center;gap:4px}
+.builds{display:flex;gap:calc(var(--cw) * .14)}
+.slot{position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.slot .pile.empty::after{content:attr(data-hint);position:absolute;inset:0;display:grid;place-items:center;font:800 calc(var(--w) * .4)/1 var(--display);color:rgba(255,255,255,.22)}
+.cap{font-size:clamp(10px,2.7vw,12px);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.myboard{display:flex;align-items:flex-start;justify-content:center;gap:calc(var(--cw) * .32)}
+.myboard .grp{display:flex;flex-direction:column;gap:4px;align-items:center}
+.mydisc{display:flex;gap:calc(var(--cw) * .12)}
+.mydisc .pile{cursor:pointer}
+.hand{display:flex;gap:calc(var(--cw) * .1);justify-content:center;min-height:calc(var(--cw) * 1.4 + 8px);padding-top:calc(var(--cw) * .16)}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:28px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:2px}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:12px 12px;font-size:15px}
+.hero .cards{display:flex;justify-content:center;gap:0;margin:0 auto}
+.hero .cards .card{--w:64px;margin:0 -8px}
+.hero .cards .card:nth-child(1){transform:rotate(-12deg) translateY(6px)}
+.hero .cards .card:nth-child(2){transform:translateY(-4px);z-index:1}
+.hero .cards .card:nth-child(3){transform:rotate(12deg) translateY(6px)}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  :root{--cw:calc(72px * var(--cs));--mw:calc(38px * var(--cs))}
+  .arena{padding:10px 24px;gap:18px}
+  .dock{border-radius:22px 22px 0 0;padding:14px 24px 16px}
+  .ohead .pname{font-size:15px}
+  .lastmove{font-size:14px}
+  .opps.scroll{flex-wrap:wrap;justify-content:center;overflow:visible}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <div class="cards" aria-hidden="true"><div class="card c1" data-n="3"><b>3</b></div><div class="card w" data-n="SB"><b class="sb">SB</b></div><div class="card c3" data-n="11"><b>11</b></div></div>
+      <h1>Skip-Bo</h1>
+      <p class="tagline">Wer zuerst seinen Vorratsstapel leer spielt, gewinnt. Karten von 1 bis 12 der Reihe nach auf die Bauhaufen legen, Skip-Bo-Joker nutzen. Für 2 bis 6 Spieler, mit Computer-Gegnern.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="row">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Vorrat, Siege und Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Mehrspieler“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem eigenen Server. Öffne dann dessen Adresse. Hier geht nur „Einzelspieler“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="panel" id="oppBox"></div>
+      <div class="label">Vorratsstapel</div>
+      <div class="seg" id="stockLocal" role="group" aria-label="Größe des Vorratsstapels"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke des Computer-Gegners"></div>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
+    <p class="hint">Wer dran ist, zieht auf fünf Karten auf, spielt beliebig viele Karten auf die Bauhaufen (1 bis 12) und beendet den Zug mit einer Karte auf einen eigenen Ablagestapel.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Vorratsstapel</div>
+      <div class="seg" id="stockOnline" role="group" aria-label="Größe des Vorratsstapels"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke des Computer-Gegners"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="opps" id="opps"></div>
+      <div class="table" id="table">
+        <div class="deckslot"><div class="deck" id="deck"></div><span class="cap">Stapel</span></div>
+        <div class="builds" id="builds"></div>
+      </div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="myboard" id="myBoard">
+        <div class="grp"><div id="myStock"></div><span class="cap">Vorrat</span></div>
+        <div class="grp"><div class="mydisc" id="myDisc"></div><span class="cap">Ablage</span></div>
+      </div>
+      <div class="hand" id="hand"></div>
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="acts"><button class="btn btn-primary" id="passBtn" type="button" hidden>Zug beenden</button><button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li><b>Ziel:</b> Wer zuerst seinen <b>Vorratsstapel</b> (die oberste Karte liegt offen) leer spielt, gewinnt die Runde.</li>
+          <li>Zu Beginn deines Zugs füllst du deine Hand auf <b>5 Karten</b> auf. Leere Hand mitten im Zug: sofort fünf neue.</li>
+          <li>In der Mitte liegen vier <b>Bauhaufen</b>. Auf jeden kommt der Reihe nach 1, 2, 3 … bis 12. Dafür darfst du Handkarten, die Vorratskarte und die oberste Karte jedes Ablagestapels nehmen. Ein voller Haufen (bis 12) wird abgeräumt.</li>
+          <li>Der <b>Skip-Bo-Joker</b> ersetzt jede Zahl.</li>
+          <li>Beende deinen Zug, indem du <b>eine Handkarte</b> auf einen deiner vier <b>Ablagestapel</b> legst. Dort darf alles liegen, genutzt wird nur die oberste Karte.</li>
+          <li>Karte antippen und dann den Haufen antippen, oder ziehen. Zweimal antippen legt automatisch.</li>
+        </ul>
+  </template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

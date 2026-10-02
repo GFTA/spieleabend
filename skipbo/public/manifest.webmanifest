@@ -1,0 +1,17 @@
+{
+  "name": "Skip-Bo",
+  "short_name": "Skip-Bo",
+  "description": "Vorratsstapel leer spielen: Karten von 1 bis 12 auf die Bauhaufen legen, Skip-Bo-Joker nutzen. Mit Computer-Gegnern.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1426",
+  "theme_color": "#1a1426",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

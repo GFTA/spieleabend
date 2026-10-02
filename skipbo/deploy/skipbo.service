@@ -1,0 +1,21 @@
+# systemd unit for running Skip-Bo without Docker.
+# Copy ~/spieleabend/skipbo to /opt/skipbo, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/skipbo/deploy/skipbo.service /etc/systemd/system/
+#   sudo systemctl enable --now skipbo
+[Unit]
+Description=Skip-Bo game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/skipbo
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8097
+Environment=DATA_DIR=/var/lib/skipbo
+StateDirectory=skipbo
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
