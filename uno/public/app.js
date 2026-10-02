@@ -239,95 +239,44 @@
     if (!tipShown) { tipShown = true; toast("Nochmal antippen zum Legen, oder auf den Stapel ziehen."); }
   }
 
-  // ---------- drag and drop ----------
-  let drag = null, renderPending = false;
+  // ---------- drag and drop (Cards.dnd): a hand card up to the discard pile, the draw pile down to the dock ----------
+  let renderPending = false;
+  const flushRender = () => { if (renderPending) { renderPending = false; render(); } };
   function dropZone(kind, y) {
     const dock = $("#dock").getBoundingClientRect();
     if (kind === "card") return y < dock.top - 10;
     return y > dock.top - 30;
   }
-  // iOS Safari sends pointermove/up to the element the finger went down on, even if a
-  // re-render removed it from the page; then nothing reaches window. So we listen on
-  // that element too, never re-render during a drag, and drop a stale drag on the next touch.
-  const seen = new WeakSet();
-  const once = (e) => { if (seen.has(e)) return false; seen.add(e); return true; };
-  function onElMove(e) { if (once(e)) onMove(e); }
-  function onElUp(e) { if (once(e)) endDrag(e, false); }
-  function onElCancel(e) { if (once(e)) endDrag(e, true); }
-  function abortDrag() {
-    if (!drag) return;
-    const d = drag; drag = null;
-    finishDrag(d);
-  }
-  function finishDrag(d) {
-    d.src.removeEventListener("pointermove", onElMove);
-    d.src.removeEventListener("pointerup", onElUp);
-    d.src.removeEventListener("pointercancel", onElCancel);
-    if (d.ghost) d.ghost.remove();
-    $("#discard").classList.remove("drop"); $("#dock").classList.remove("drop"); $("#drawPile").classList.remove("dragging");
-    const el = d.kind === "card" && document.querySelector(`#hand [data-id="${d.id}"]`);
-    if (el) el.classList.remove("lifted");
-    if (renderPending) { renderPending = false; render(); }
-  }
-  function onDown(e) {
-    if (e.button > 0) return;
-    if (drag) abortDrag();
-    const cardEl = e.target.closest("#hand .card[data-id]");
-    const deckEl = e.target.closest("#drawPile");
-    if (cardEl) drag = { kind: "card", id: +cardEl.dataset.id, el: cardEl, src: cardEl };
-    else if (deckEl) drag = { kind: "deck", el: deckEl.querySelector(".card:last-child"), src: deckEl };
-    else return;
-    Object.assign(drag, { pid: e.pointerId, x0: e.clientX, y0: e.clientY, t0: Date.now(), active: false });
-    drag.src.addEventListener("pointermove", onElMove);
-    drag.src.addEventListener("pointerup", onElUp);
-    drag.src.addEventListener("pointercancel", onElCancel);
-  }
-  function onMove(e) {
-    if (!drag || e.pointerId !== drag.pid) return;
-    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
-    if (!drag.active) {
-      if (Math.hypot(dx, dy) < 14) return; // fingers wobble; small moves are still a tap
-      if (drag.kind === "card" && Math.abs(dy) < Math.abs(dx) * 0.8) { abortDrag(); return; } // sideways: scroll the hand
-      if (drag.kind === "deck" && !myTurn()) { toast(`Warte, ${V.players[V.cur].name} ist dran.`); abortDrag(); return; }
-      if (drag.kind === "deck" && V.phase !== "play") { toast("Du hast schon gezogen."); abortDrag(); return; }
-      if (drag.kind === "card") {
-        const c = V.hand.find((x) => x.id === drag.id);
-        if (!c || !playable(c)) { const id = drag.id; abortDrag(); shake(id); toast(c ? whyNot(c) : ""); return; }
+  const dnd = Cards.dnd({
+    root: document, slop: 14, tilt: true, strip: ["fresh", "no", "shake"],
+    grab(e) {
+      const cardEl = e.target.closest("#hand .card[data-id]"), deckEl = e.target.closest("#drawPile");
+      if (cardEl) return { kind: "card", id: +cardEl.dataset.id, el: cardEl };
+      if (deckEl) return { kind: "deck", el: deckEl.querySelector(".card:last-child"), hold: deckEl };
+      return null;
+    },
+    canStart(s, dx, dy) {
+      if (s.kind === "card" && Math.abs(dy) < Math.abs(dx) * 0.8) return false; // sideways: scroll the hand
+      if (s.kind === "deck" && !myTurn()) { toast(`Warte, ${V.players[V.cur].name} ist dran.`); return false; }
+      if (s.kind === "deck" && V.phase !== "play") { toast("Du hast schon gezogen."); return false; }
+      if (s.kind === "card") {
+        const c = V.hand.find((x) => x.id === s.id);
+        if (!c || !playable(c)) { const id = s.id; queueMicrotask(() => { shake(id); toast(c ? whyNot(c) : ""); }); return false; }
       }
-      const r = drag.el.getBoundingClientRect();
-      const g = drag.el.cloneNode(true);
-      g.classList.remove("sel", "fresh", "no", "shake");
-      g.classList.add("ghost");
-      g.style.width = r.width + "px";
-      g.style.setProperty("--cw", r.width + "px");
-      document.body.appendChild(g);
-      drag.ghost = g; drag.ox = drag.x0 - r.left; drag.oy = drag.y0 - r.top;
-      drag.active = true;
-      if (drag.kind === "card") drag.el.classList.add("lifted"); else $("#drawPile").classList.add("dragging");
-      buzz(10);
-    }
-    e.preventDefault();
-    const x = e.clientX - drag.ox, y = e.clientY - drag.oy;
-    drag.ghost.style.transform = `translate(${x}px,${y}px) rotate(${Math.max(-12, Math.min(12, dx / 12))}deg) scale(1.06)`;
-    const over = dropZone(drag.kind, e.clientY);
-    $("#discard").classList.toggle("drop", drag.kind === "card" && over);
-    $("#dock").classList.toggle("drop", drag.kind === "deck" && over);
-  }
-  function endDrag(e, cancelled) {
-    if (!drag || (e && e.pointerId !== drag.pid)) return;
-    const d = drag; drag = null;
-    finishDrag(d);
-    if (cancelled) return;
-    const tap = !d.active || (!dropZone(d.kind, e.clientY) && Date.now() - d.t0 < 350 && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 30);
-    if (tap) { if (d.kind === "card") tapCard(d.id); else tryDraw(); return; }
-    if (!dropZone(d.kind, e.clientY)) return;
-    if (d.kind === "card") tryPlay(d.id); else tryDraw();
-  }
-  document.addEventListener("pointerdown", onDown);
-  window.addEventListener("pointermove", (e) => { if (once(e)) onMove(e); }, { passive: false });
-  window.addEventListener("pointerup", (e) => { if (once(e)) endDrag(e, false); });
-  window.addEventListener("pointercancel", (e) => { if (once(e)) endDrag(e, true); });
-  window.addEventListener("blur", abortDrag);
+      return true;
+    },
+    onStart(s) { if (s.kind === "deck") $("#drawPile").classList.add("dragging"); buzz(10); },
+    target: (_, s, e) => (dropZone(s.kind, e.clientY) ? { el: s.kind === "card" ? $("#discard") : $("#dock"), ok: true } : null),
+    // a short quick press that ends outside the drop zone is a tap, fingers wobble
+    release(s, e, { started, ms, dist, t }) {
+      if (started && (t || ms >= 350 || dist >= 30)) return false;
+      flushRender();
+      if (s.kind === "card") tapCard(s.id); else tryDraw();
+      return true;
+    },
+    drop(s) { if (s.kind === "card") tryPlay(s.id); else tryDraw(); return true; },
+    onEnd(_, s) { $("#drawPile").classList.remove("dragging"); s.el.classList.remove("cd-dragging"); flushRender(); }
+  });
   // desktop: the mouse wheel scrolls the hand sideways
   $("#hand").addEventListener("wheel", (e) => {
     const h = $("#hand");
@@ -362,7 +311,7 @@
 
   function render() {
     renderUnoCall();
-    if (drag) { renderPending = true; return; }
+    if (dnd.busy) { renderPending = true; return; }
     if (mode === "local" && L) {
       V = G.view(L, localViewer());
       showScreen("game");
@@ -638,24 +587,17 @@
   $("#reLook").addEventListener("click", () => { reHidden = true; render(); });
   $("#reShow").addEventListener("click", () => { reHidden = false; render(); });
   // someone else draws: card backs travel from the pile to their seat
+  const BACK = '<span class="card card-back"></span>';
   function flyToSeat(pi, n) {
     const seat = document.querySelector(`#table .seat[data-seat="${pi}"] .sfan`), deck = $("#drawPile .card:last-child");
-    if (!seat || !deck || !deck.offsetWidth || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const d = deck.getBoundingClientRect(), s = seat.getBoundingClientRect(), sc = 0.4;
+    if (!seat || !deck || !deck.offsetWidth) return;
+    const d = Cards.rectOf(deck), s = seat.getBoundingClientRect(), sc = 0.4;
     const dx = s.left + s.width / 2 - d.left - (d.width * sc) / 2, dy = s.top + s.height / 2 - d.top - (d.height * sc) / 2;
     for (let k = 0; k < Math.min(n, 8); k++) {
-      const wrap = document.createElement("div");
-      wrap.className = "fly";
-      wrap.style.cssText = `left:${d.left}px;top:${d.top}px;width:${d.width}px;height:${d.height}px`;
-      const inner = document.createElement("div");
-      inner.className = "fly-inner";
-      const back = document.createElement("span");
-      back.className = "card card-back";
-      back.style.setProperty("--cw", d.width + "px");
-      inner.append(back); wrap.append(inner); document.body.append(wrap);
-      const a = wrap.animate([{ transform: "none", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(${sc}) rotate(${k % 2 ? 12 : -12}deg)`, opacity: 0.85 }],
-        { duration: 480, delay: k * 120, easing: "cubic-bezier(.3,.7,.3,1)", fill: "backwards" });
-      a.onfinish = a.oncancel = () => wrap.remove();
+      Cards.fly({
+        rect: d, html: BACK, dur: 480, delay: k * 120, easing: "cubic-bezier(.3,.7,.3,1)",
+        frames: [{ transform: "none", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(${sc}) rotate(${k % 2 ? 12 : -12}deg)`, opacity: 0.85 }]
+      });
     }
   }
   // where a player's cards are on screen: own hand at the bottom, everybody else at their seat
@@ -666,30 +608,23 @@
   // 7 and 0: a bundle of card backs travels from one hand to another
   function flyHands(from, to, n, delay = 0) {
     const a = handSpot(from), b = handSpot(to);
-    if (!a || !b || !a.width || !b.width || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!a || !b || !a.width || !b.width || Cards.reduced()) return;
     const cw = 34, ch = cw * 1.5;
-    const ax = a.left + a.width / 2 - cw / 2, ay = a.top + a.height / 2 - ch / 2;
+    const rect = { left: a.left + a.width / 2 - cw / 2, top: a.top + a.height / 2 - ch / 2, width: cw, height: ch };
     const dx = b.left + b.width / 2 - a.left - a.width / 2, dy = b.top + b.height / 2 - a.top - a.height / 2;
     const dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist, bow = Math.min(60, dist * 0.2);
     for (let k = 0; k < Math.min(n, 5); k++) {
-      const wrap = document.createElement("div");
-      wrap.className = "fly";
-      wrap.style.cssText = `left:${ax}px;top:${ay}px;width:${cw}px;height:${ch}px`;
-      const inner = document.createElement("div");
-      inner.className = "fly-inner";
-      const back = document.createElement("span");
-      back.className = "card card-back";
-      back.style.setProperty("--cw", cw + "px");
-      inner.append(back); wrap.append(inner); document.body.append(wrap);
       const sw = (k - 2) * 5;
-      const an = wrap.animate([
-        { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 0 },
-        { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.12 },
-        { transform: `translate(${dx / 2 + nx * bow}px,${dy / 2 + ny * bow}px) rotate(${(k - 2) * 14}deg) scale(1.15)`, opacity: 1, offset: 0.55 },
-        { transform: `translate(${dx + sw}px,${dy}px) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.9 },
-        { transform: `translate(${dx + sw}px,${dy}px)`, opacity: 0 }
-      ], { duration: 700, delay: delay + k * 70, easing: "ease-in-out", fill: "backwards" });
-      an.onfinish = an.oncancel = () => wrap.remove();
+      Cards.fly({
+        rect, html: BACK, dur: 700, delay: delay + k * 70, easing: "ease-in-out",
+        frames: [
+          { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 0 },
+          { transform: `translate(${sw}px,0) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.12 },
+          { transform: `translate(${dx / 2 + nx * bow}px,${dy / 2 + ny * bow}px) rotate(${(k - 2) * 14}deg) scale(1.15)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(${dx + sw}px,${dy}px) rotate(${(k - 2) * 6}deg)`, opacity: 1, offset: 0.9 },
+          { transform: `translate(${dx + sw}px,${dy}px)`, opacity: 0 }
+        ]
+      });
     }
     if (to === V.me) {
       [...$("#hand").children].forEach((el, i) => el.animate([{ translate: "0 -18px", opacity: 0 }, { translate: "0 0", opacity: 1 }], { duration: 300, delay: delay + 480 + i * 35, fill: "backwards" }));
@@ -723,35 +658,25 @@
   }
   function flyIn(ids) {
     if (!ids.length || ids.length > 12) return;
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (Cards.reduced()) {
       // phones with "reduce animations": no flight, just a short glow on the new cards
       ids.forEach((id) => { const el = document.querySelector(`#hand [data-id="${id}"]`); if (el) el.animate([{ opacity: 0.2 }, { opacity: 1 }], { duration: 250 }); });
       return;
     }
     const deckEl = $("#drawPile .card:last-child");
     if (!deckEl || !deckEl.offsetWidth) return;
-    const d = deckEl.getBoundingClientRect();
+    const d = Cards.rectOf(deckEl);
     ids.forEach((id, k) => {
       const el = document.querySelector(`#hand [data-id="${id}"]`);
       if (!el) return;
-      const r = el.getBoundingClientRect();
-      const wrap = document.createElement("div");
-      wrap.className = "fly";
-      wrap.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-      const inner = document.createElement("div");
-      inner.className = "fly-inner";
-      const face = el.cloneNode(true);
-      face.className = face.className.replace(/\b(no|ok|sel|fresh|jump|shake|lifted)\b/g, "");
-      face.style.setProperty("--cw", r.width + "px");
-      const back = document.createElement("span");
-      back.className = "card card-back fly-back";
-      back.style.setProperty("--cw", r.width + "px");
-      inner.append(back, face); wrap.append(inner); document.body.append(wrap);
-      el.style.opacity = "0"; // not visibility:hidden, so a quick tap still lands on this card
-      const opts = { duration: 460, delay: k * 110, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" };
-      wrap.animate([{ transform: `translate(${d.left - r.left}px,${d.top - r.top}px) scale(${d.width / r.width})` }, { transform: "none" }], opts);
-      const a = inner.animate([{ transform: "rotateY(180deg)" }, { transform: "rotateY(0deg)" }], opts);
-      a.onfinish = a.oncancel = () => { wrap.remove(); el.style.opacity = ""; };
+      const r = Cards.rectOf(el), face = el.cloneNode(true);
+      face.className = face.className.replace(/\b(no|ok|sel|fresh|jump|shake|cd-dragging)\b/g, "");
+      face.style.cssText = "";
+      Cards.fly({
+        rect: r, html: BACK, flip: face.outerHTML, dur: 460, delay: k * 110, easing: "cubic-bezier(.2,.8,.2,1)",
+        frames: [{ transform: `translate(${d.left - r.left}px,${d.top - r.top}px) scale(${d.width / r.width})` }, { transform: "none" }],
+        hide: el, hideBy: "opacity" // not visibility:hidden, so a quick tap still lands on this card
+      });
     });
   }
 

@@ -97,7 +97,6 @@
   });
 
   // ---------- animation: cards fly from where they were to where they are now ----------
-  const still = matchMedia("(prefers-reduced-motion: reduce)");
   const rectOf = (el) => (el ? el.getBoundingClientRect() : null);
   const visible = (r) => r && r.width > 0 && r.bottom > 0 && r.top < innerHeight;
   // a pile scrolled out of the arena: the card still flies, towards (or in from) the screen edge on that side
@@ -121,15 +120,9 @@
   // on a smooth curve that bows sideways; long flights (phone: stack → hand) take a little longer
   function fly(html, from, to, delay = 0, dur = 420) {
     const tr0 = rectOf(to);
-    if (still.matches || !from || from.width <= 0 || !tr0 || tr0.width <= 0 || (!visible(from) && !visible(tr0))) return;
+    if (!from || from.width <= 0 || !tr0 || tr0.width <= 0 || (!visible(from) && !visible(tr0))) return;
     const tr = visible(tr0) ? tr0 : edgeRect(tr0);
     if (!visible(from)) from = edgeRect(from);
-    const f = document.createElement("div");
-    f.className = "flyer";
-    f.innerHTML = html;
-    f.firstElementChild.style.setProperty("--cw", tr.width + "px");
-    document.body.appendChild(f);
-    to.style.visibility = "hidden";
     const sx = from.width / tr.width;
     const dx = tr.left - from.left, dy = tr.top - from.top, dist = Math.hypot(dx, dy) || 1;
     dur += Math.min(240, Math.max(0, dist - 250) * 0.3);
@@ -139,31 +132,19 @@
     const frames = [];
     for (let i = 0; i <= 10; i++) {
       const t = i / 10, lift = Math.sin(Math.PI * t);
-      const x = from.left + dx * t + nx * bow * 2 * lift * 0.5, y = from.top + dy * t + ny * bow * 2 * lift * 0.5;
+      const x = dx * t + nx * bow * lift, y = dy * t + ny * bow * lift;
       frames.push({ transform: `translate(${x}px,${y}px) scale(${sx + (1 - sx) * t + lift * 0.06}) rotate(${-6 * lift * (nx < 0 ? -1 : 1)}deg)`, opacity: t < 0.15 ? 0.9 + t * 0.66 : 1 });
     }
-    const a = f.animate(frames, { duration: dur, delay, easing: "cubic-bezier(.35,.1,.25,1)", fill: "both" });
-    const done = () => { f.remove(); to.style.visibility = ""; };
-    a.onfinish = done; a.oncancel = done;
-    setTimeout(done, dur + delay + 400);
+    Cards.fly({ rect: { left: from.left, top: from.top, width: tr.width, height: tr.height }, html, frames, dur, delay, easing: "cubic-bezier(.35,.1,.25,1)", hide: to });
   }
   // a short straight glide, for cards snapping into place
   function glide(html, from, to, dur = 220) {
     const tr = rectOf(to);
-    if (!visible(from) || !visible(tr) || still.matches) return;
-    const f = document.createElement("div");
-    f.className = "flyer";
-    f.innerHTML = html;
-    f.firstElementChild.style.setProperty("--cw", tr.width + "px");
-    document.body.appendChild(f);
-    to.style.visibility = "hidden";
-    const a = f.animate([
-      { transform: `translate(${from.left}px,${from.top}px) scale(${from.width / tr.width})` },
-      { transform: `translate(${tr.left}px,${tr.top}px) scale(1)` }
-    ], { duration: dur, easing: "cubic-bezier(.2,.9,.3,1.15)", fill: "both" });
-    const done = () => { f.remove(); to.style.visibility = ""; };
-    a.onfinish = done; a.oncancel = done;
-    setTimeout(done, dur + 400);
+    if (!visible(from) || !visible(tr)) return;
+    Cards.fly({
+      rect: { left: from.left, top: from.top, width: tr.width, height: tr.height }, html, dur, easing: "cubic-bezier(.2,.9,.3,1.15)", hide: to,
+      frames: [{ transform: `scale(${from.width / tr.width})` }, { transform: `translate(${tr.left - from.left}px,${tr.top - from.top}px) scale(1)` }]
+    });
   }
   const cardEl = (id) => document.querySelector(`#hand .card[data-id="${id}"], #myZone .slots .card[data-id="${id}"]`);
   function plateEl(i) { return document.querySelector(`#plates [data-seat="${i}"]`); }
@@ -629,8 +610,7 @@
   }
 
   // ---------- taps ----------
-  let justDragged = 0;
-  const afterDrag = () => Date.now() - justDragged < 350;
+  const afterDrag = () => dnd.since < 350;
   $("#hand").addEventListener("click", (e) => {
     const b = e.target.closest("[data-id]"); if (!b || afterDrag()) return;
     const id = +b.dataset.id, P = me();
@@ -690,7 +670,6 @@
   $("#melds").addEventListener("click", (e) => { const b = e.target.closest("[data-meld]"); if (b && !afterDrag()) tapMeld(b, e); });
 
   // ---------- drag & drop: pick a card up, drop it where it should go; it snaps into place ----------
-  let drag = null;
   function dropTargets(src) {
     const t = [], P = me(), turn = myTurn();
     if (src.kind === "pile") return [{ el: $("#dock"), kind: "draw" }];
@@ -712,92 +691,52 @@
     }
     return t;
   }
-  document.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || !V || $("#game").hidden || drag) return;
-    const card = e.target.closest("#hand .card, #myZone .slots .card");
-    const pileBtn = e.target.closest("#deckBtn, #discardBtn");
-    let src = null;
-    if (card) src = { kind: card.closest("#hand") ? "hand" : "staged", id: +card.dataset.id, el: card };
-    else if (pileBtn && myTurn() && V.step === "draw") {
-      if (pileBtn.id === "discardBtn" && (!V.top || G.isSkip(V.top))) return;
-      src = { kind: "pile", from: pileBtn.id === "deckBtn" ? "deck" : "discard", el: pileBtn.querySelector(".card:last-child") };
+  const dnd = Cards.dnd({
+    root: document, strip: ["fresh", "shake"],
+    grab(e) {
+      if (!V || $("#game").hidden) return null;
+      const card = e.target.closest("#hand .card, #myZone .slots .card"), pileBtn = e.target.closest("#deckBtn, #discardBtn");
+      let src = null;
+      if (card) src = { kind: card.closest("#hand") ? "hand" : "staged", id: +card.dataset.id, el: card };
+      else if (pileBtn && myTurn() && V.step === "draw") {
+        if (pileBtn.id === "discardBtn" && (!V.top || G.isSkip(V.top))) return null;
+        src = { kind: "pile", from: pileBtn.id === "deckBtn" ? "deck" : "discard", el: pileBtn.querySelector(".card:last-child") };
+      }
+      if (!src || !src.el) return null;
+      src.touch = e.pointerType !== "mouse";
+      return src;
+    },
+    // in the hand a sideways swipe scrolls on touch screens
+    canStart: (s, dx, dy) => !(s.kind === "hand" && s.touch && Math.abs(dx) > Math.abs(dy)),
+    onStart(s) {
+      s.targets = dropTargets(s);
+      for (const t of s.targets) t.el.classList.add("target");
+      if (s.kind === "hand" && me() && me().laid && myTurn() && V.step === "act") { sel = s.id; for (const t of s.targets) if (t.kind === "hit") t.el.classList.add("fits"); }
+    },
+    target(_, s, e) {
+      let over = null;
+      for (const t of s.targets) {
+        const b = rectOf(t.box || t.el);
+        if (e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 12 && e.clientY <= b.bottom + 12) over = t;
+      }
+      return over && Object.assign(over, { ok: true });
+    },
+    // at is where the card was let go: its flight into place starts there
+    drop(s, t, at) {
+      if (t.kind === "draw") { dropFrom = { rect: at, at: Date.now() }; draw(s.from); }
+      else if (t.kind === "slot") stage(s.id, t.g, at);
+      else if (t.kind === "unstage") stage(s.id, 0, at);
+      else if (t.kind === "discard") { dropFrom = { id: s.id, rect: at, at: Date.now() }; staged.delete(s.id); discard(s.id); }
+      else if (t.kind === "hit") { dropFrom = { id: s.id, rect: at, at: Date.now() }; sel = s.id; hit(t.meld); }
+      else if (t.kind === "swap") { dropFrom = { id: s.id, rect: at, at: Date.now() }; sel = s.id; swap(t.meld); }
+      return true;
+    },
+    onEnd(_, s, r) {
+      for (const t of s.targets || []) t.el.classList.remove("target");
+      s.el.classList.remove("cd-dragging");
+      // no fitting place: the card flew back, and the selection made for the drag goes
+      if (r.started && !r.dropped && s.kind === "hand" && me() && me().laid) { sel = null; renderGame(); }
     }
-    if (!src || !src.el) return;
-    drag = Object.assign(src, { x0: e.clientX, y0: e.clientY, pid: e.pointerId, on: false, touch: e.pointerType !== "mouse" });
-  });
-  document.addEventListener("pointermove", (e) => {
-    if (!drag || e.pointerId !== drag.pid) return;
-    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
-    if (!drag.on) {
-      if (Math.hypot(dx, dy) < 8) return;
-      // in the hand a sideways swipe scrolls on touch screens
-      if (drag.kind === "hand" && drag.touch && Math.abs(dx) > Math.abs(dy)) { drag = null; return; }
-      startDrag();
-    }
-    e.preventDefault();
-    const r = drag.r0;
-    drag.ghost.style.transform = `translate(${r.left + dx}px,${r.top + dy}px)`;
-    let over = null;
-    for (const t of drag.targets) {
-      const b = rectOf(t.box || t.el);
-      if (e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 12 && e.clientY <= b.bottom + 12) over = t;
-    }
-    if (over !== drag.over) {
-      if (drag.over) drag.over.el.classList.remove("over");
-      if (over) over.el.classList.add("over");
-      drag.over = over;
-    }
-  }, { passive: false });
-  function startDrag() {
-    drag.on = true;
-    drag.r0 = rectOf(drag.el);
-    const c = drag.kind === "pile" ? (drag.from === "discard" ? V.top : null) : V.hand.find((x) => x.id === drag.id);
-    const g = document.createElement("div");
-    g.className = "ghost";
-    g.innerHTML = c ? cardHTML(c) : backHTML();
-    g.firstElementChild.style.setProperty("--cw", drag.r0.width + "px");
-    g.style.transform = `translate(${drag.r0.left}px,${drag.r0.top}px)`;
-    document.body.appendChild(g);
-    drag.ghost = g;
-    drag.el.classList.add("dragging");
-    drag.targets = dropTargets(drag);
-    for (const t of drag.targets) t.el.classList.add("target");
-    if (drag.kind === "hand" && me() && me().laid && myTurn() && V.step === "act") { sel = drag.id; for (const t of drag.targets) if (t.kind === "hit") t.el.classList.add("fits"); }
-    document.body.style.cursor = "grabbing";
-  }
-  function stopDrag() {
-    for (const t of drag.targets || []) t.el.classList.remove("target", "over");
-    drag.el.classList.remove("dragging");
-    document.body.style.cursor = "";
-  }
-  // no fitting place: the card flies back where it came from
-  function flyBack() {
-    const g = drag.ghost, from = rectOf(g.firstElementChild), to = drag.r0;
-    const a = g.animate([{ transform: `translate(${from.left}px,${from.top}px)` }, { transform: `translate(${to.left}px,${to.top}px)` }], { duration: 220, easing: "ease-out", fill: "both" });
-    const done = () => g.remove();
-    a.onfinish = done; setTimeout(done, 600);
-  }
-  document.addEventListener("pointerup", (e) => {
-    if (!drag || e.pointerId !== drag.pid) return;
-    const d = drag;
-    if (!d.on) { drag = null; return; }
-    justDragged = Date.now();
-    stopDrag();
-    const t = d.over, at = rectOf(d.ghost.firstElementChild);
-    drag = null;
-    if (!t) { drag = d; flyBack(); drag = null; if (d.kind === "hand" && me() && me().laid) { sel = null; renderGame(); } return; }
-    d.ghost.remove();
-    if (t.kind === "draw") { dropFrom = { rect: at, at: Date.now() }; draw(d.from); }
-    else if (t.kind === "slot") stage(d.id, t.g, at);
-    else if (t.kind === "unstage") stage(d.id, 0, at);
-    else if (t.kind === "discard") { dropFrom = { id: d.id, rect: at, at: Date.now() }; staged.delete(d.id); discard(d.id); }
-    else if (t.kind === "hit") { dropFrom = { id: d.id, rect: at, at: Date.now() }; sel = d.id; hit(t.meld); }
-    else if (t.kind === "swap") { dropFrom = { id: d.id, rect: at, at: Date.now() }; sel = d.id; swap(t.meld); }
-  });
-  document.addEventListener("pointercancel", (e) => {
-    if (!drag || e.pointerId !== drag.pid) return;
-    if (drag.on) { stopDrag(); flyBack(); }
-    drag = null;
   });
 
   // keys: D/A draw, arrows pick a card, Enter throws it, P lays the phase (or suggests), S sorts, Esc cancels

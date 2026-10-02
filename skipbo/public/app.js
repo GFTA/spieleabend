@@ -293,6 +293,7 @@
     onStart() { sel = null; paintSel(); },
     // what lies under the finger: a build pile, or one of my discard piles for a hand card
     target(el, s) {
+      if (!el) return null;
       const b = el.closest("#builds .slot");
       if (b) return { el: b, build: +b.dataset.build, ok: fitsBuild(s.c, +b.dataset.build) };
       const d = el.closest("#myDisc .cd-pile");
