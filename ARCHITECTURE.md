@@ -64,7 +64,13 @@ Fliegen steckt im Modul (`<link href="cards.css">` nach `room-ui.css`, `<script 
   `target(unterDemFinger, quelle)` liefert `{ el, ok, … }`, `drop(quelle, ziel, rect)` führt den Zug aus (`rect` = wo die Karte
   losgelassen wurde, dort startet der Flug). `tap(e)` ist der Klick, der *nicht* das Ende eines Zuges war. Das Spiel
   markiert mögliche Ziele mit `.cd-drop` und ruft am Anfang von `render()` `dnd.defer()` auf, damit ein Neuzeichnen nicht
-  mitten im Ziehen die Karte wegnimmt (`onEnd(true)` = jetzt nachholen).
+  mitten im Ziehen die Karte wegnimmt (`onEnd(true)` = jetzt nachholen; `onEnd(dirty, quelle, { started, dropped })` kommt
+  nach jedem Druck, auch nach Tipp und Abbruch). Weitere Optionen: `slop`, `canStart(quelle, dx, dy)` (`false` = Druck
+  aufgeben, z. B. Wischen zum Scrollen), `release(quelle, e, { started, ms, dist, t })` (`true` = war ein Tipp), `tilt`,
+  `strip`. Zeiger-Events werden zusätzlich am gedrückten Element abgehört (iOS), `dnd.busy` / `dnd.since` helfen beim Ignorieren
+  von Klicks und Neuzeichnen.
+- `Cards.fly({ rect, html, flip, to | frames, dur, delay, hide })`: eine einzelne Karte in der Luft, optional mit echter
+  Drehung (`flip` = Rückseite → Vorderseite), Vorlage für eigene Flugbahnen (`frames`); `flights` baut darauf auf.
 - `Cards.flights({ resolve, off, onLand })`: `add({ src, dst, html, delay, dur, flipTo, sweep })` beim Verarbeiten der
   Events, `run()` nach dem Neuzeichnen, `hide()` nach jedem Neuzeichnen. `resolve(dst)` liefert `{ rect, hide }`; die
   Zielkarte bleibt unsichtbar, bis der Flug gelandet ist. `prefers-reduced-motion` ist eingebaut.

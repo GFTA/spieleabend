@@ -80,8 +80,8 @@ for (const id of ids) {
   if (!/Spieleabend\.look|\bK\.look\(|\.look\(/.test(app)) bad(id, "app.js must call Spieleabend.look() (table design + avatar)");
 
   const cardGame = /class="card\b|\.card\b|cardHTML/.test(app);
-  if (cardGame && /pointerdown/.test(app) && /\bghost\b/i.test(app) && !/\bCards\.dnd\s*\(/.test(app)) warn(id, "app.js drags cards by hand (pointerdown + ghost): use Cards.dnd(...) from shared/cards.js");
-  if (cardGame && /\.animate\(/.test(app) && /\bghost\b/i.test(app) && !/\bCards\.flights\s*\(/.test(app)) warn(id, "app.js flies cards by hand (ghost + animate): use Cards.flights(...) from shared/cards.js");
+  if (cardGame && /pointerdown/.test(app) && /(^|[^-\w])ghost\b/i.test(app) && !/\bCards\.dnd\s*\(/.test(app)) warn(id, "app.js drags cards by hand (pointerdown + ghost): use Cards.dnd(...) from shared/cards.js");
+  if (cardGame && /\.animate\(/.test(app) && /(^|[^-\w])ghost\b/i.test(app) && !/\bCards\.(flights|fly)\s*\(/.test(app)) warn(id, "app.js flies cards by hand (ghost + animate): use Cards.flights(...) or Cards.fly(...) from shared/cards.js");
 
   const docker = read(id, "Dockerfile");
   if (docker && reference && docker !== reference) bad(id, "Dockerfile differs from scripts/game-template/Dockerfile (must be identical in every game)");
