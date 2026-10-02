@@ -27,6 +27,7 @@
   let R = null;           // last online room message
   let watching = false; // in the waiting room, but watching the game that runs
   let V = null;           // view currently on screen
+  let roundFx = null;
   let sel = null;         // selected card id (tap fallback)
   let pendingWild = null;
   let server = null;      // server info once found ({} when only the WebSocket answered)
@@ -247,8 +248,10 @@
     if (kind === "card") return y < dock.top - 10;
     return y > dock.top - 30;
   }
+  Cards.autoFlip("#hand", ".card");
   const dnd = Cards.dnd({
     root: document, slop: 14, tilt: true, strip: ["fresh", "no", "shake"],
+    zones: (s) => s.kind === "card" ? [{ el: $("#discard"), ok: true }, { el: $("#drawPile"), ok: false }] : [{ el: $("#dock"), ok: true }, { el: $("#discard"), ok: false }],
     grab(e) {
       const cardEl = e.target.closest("#hand .card[data-id]"), deckEl = e.target.closest("#drawPile");
       if (cardEl) return { kind: "card", id: +cardEl.dataset.id, el: cardEl };
@@ -399,6 +402,9 @@
     $("#dirText").textContent = `Danach: ${pname(V.next)}`;
     renderRecent();
     $("#drawPile").classList.toggle("can", myTurn() && V.phase === "play");
+    disc.classList.toggle("cd-pulse", myTurn() && sel != null && !dnd.src);
+    const rk = (mode === "online" ? "o" : "l") + ":" + V.round;
+    if (roundFx !== rk) { const first = roundFx === null; roundFx = rk; if (!first || V.deckCount) Cards.shuffle(Cards.rectOf($("#drawPile .card:last-child")), { html: BACK, n: 8 }); }
 
     // dock
     const mine = myTurn();
