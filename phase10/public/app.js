@@ -193,7 +193,8 @@
     if (dealtFor === key) return;
     dealtFor = key;
     const deck = rectOf($("#deckBtn .card:last-child"));
-    [...document.querySelectorAll("#hand .card")].forEach((el, i) => fly(backHTML(), deck, el, i * 55, 360));
+    Cards.shuffle(deck, { html: backHTML(), n: 8 });
+    [...document.querySelectorAll("#hand .card")].forEach((el, i) => fly(backHTML(), deck, el, 650 + i * 55, 360));
     sfx("card");
   }
 
@@ -691,6 +692,7 @@
     }
     return t;
   }
+  Cards.autoFlip("#hand", ".card");
   const dnd = Cards.dnd({
     root: document, strip: ["fresh", "shake"],
     grab(e) {
