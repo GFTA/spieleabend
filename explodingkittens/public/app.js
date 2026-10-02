@@ -452,7 +452,21 @@
   // place sheet: where the defused kitten goes back into the deck
   const posLabel = (p, n) => (p === 0 ? "Ganz oben: die nächste Karte!" : p >= n ? "Ganz unten" : `Als ${p + 1}. Karte von oben`);
   const posRange = $("#posRange");
-  posRange.addEventListener("input", () => { $("#posLab").textContent = posLabel(+posRange.value, +posRange.max); });
+  const GAP = 9;
+  let stageK = 0;
+  function buildStage(n) {
+    stageK = Math.min(n, 12);
+    $("#pStage").innerHTML = '<i class="pc"></i>'.repeat(stageK) + '<i class="pc kit"><b>💣</b></i>';
+    paintStage();
+  }
+  // the kitten slides through the little stack; the cards it passes make room
+  function paintStage() {
+    const n = +posRange.max, f = n ? (+posRange.value / n) * stageK : 0, m = Math.round(f), els = $("#pStage").children;
+    for (let i = 0; i < els.length; i++) {
+      els[i].style.transform = i === stageK ? `translate(34px,34px) translateZ(${((stageK - f) * GAP).toFixed(1)}px)` : `translateZ(${(stageK - (i < m ? i : i + 1)) * GAP}px)`;
+    }
+  }
+  posRange.addEventListener("input", () => { $("#posLab").textContent = posLabel(+posRange.value, +posRange.max); paintStage(); });
   $("#placeSheet .presets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-p]"); if (!b) return;
     const n = +posRange.max, p = b.dataset.p;
@@ -475,6 +489,7 @@
         placeInit = key;
         posRange.max = V.deckN; posRange.value = Math.floor(V.deckN / 2);
         $("#posLab").textContent = posLabel(+posRange.value, V.deckN);
+        buildStage(V.deckN);
       }
     }
   }

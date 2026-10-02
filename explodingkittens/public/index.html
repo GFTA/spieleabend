@@ -175,7 +175,16 @@ h1{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:.01e
 .namegrid button span{font-size:26px;line-height:1}
 .namegrid button:active{background:var(--bg2)}
 .placebox{display:flex;flex-direction:column;gap:10px}
-.placebox input[type=range]{width:100%;accent-color:var(--accent)}
+.pwrap{display:flex;align-items:stretch;gap:6px}
+.pscene{flex:1;height:236px;perspective:800px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:16px;background:rgba(0,0,0,.2)}
+.pcards{position:relative;width:96px;height:132px;transform-style:preserve-3d;transform:translate(-30px,34px) rotateX(58deg) rotateZ(-38deg)}
+.pc{position:absolute;inset:0;border-radius:9px;box-sizing:border-box;border:3px solid #fffdf6;background:repeating-linear-gradient(45deg,#3b2a8c 0 6px,#4a37a8 6px 12px);box-shadow:0 0 0 1px rgba(0,0,0,.35);transition:transform .2s cubic-bezier(.3,.7,.3,1)}
+.pc.kit{background:#7a2a45;border-color:#ff4d5a;display:flex;align-items:center;justify-content:center;font-size:40px;transition-duration:.12s}
+.pc.kit b{transform:rotate(38deg);font-weight:400}
+.pslide{display:flex;flex-direction:column;align-items:center;gap:6px;width:46px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+.ptrack{position:relative;width:44px;flex:1}
+.ptrack input{position:absolute;left:50%;top:50%;width:176px;height:44px;margin:-22px 0 0 -88px;transform:rotate(90deg);accent-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.pc{transition:none}}
 .placebox .poslab{text-align:center;font-weight:800}
 .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .presets button{border:0;border-radius:10px;padding:9px 2px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:700;font-size:13px}
@@ -370,8 +379,11 @@ h1{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:.01e
     <h2>Wohin mit der Katze?</h2>
     <p class="hint">Die Katze kommt zurück in den Stapel. Nur du weißt, wo sie steckt.</p>
     <div class="placebox">
+      <div class="pwrap">
+        <div class="pscene" aria-hidden="true"><div class="pcards" id="pStage"></div></div>
+        <div class="pslide"><span>Oben</span><div class="ptrack"><input type="range" id="posRange" min="0" max="10" value="5" aria-label="Position im Stapel"></div><span>Unten</span></div>
+      </div>
       <div class="poslab" id="posLab"></div>
-      <input type="range" id="posRange" min="0" max="10" value="5" aria-label="Position im Stapel">
       <div class="presets">
         <button type="button" data-p="top">Oben</button><button type="button" data-p="mid">Mitte</button><button type="button" data-p="bot">Unten</button><button type="button" data-p="rnd">Zufall</button>
       </div>
