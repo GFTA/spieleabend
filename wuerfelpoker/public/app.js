@@ -184,6 +184,7 @@
     renderTray();
     renderDock();
     const key = `${V.round}:${V.turn}`;
+    Spieleabend.mine(myTurn());
     if (key !== lastTurnKey && lastTurnKey !== null && myTurn()) { sfx("turn"); buzz([40, 60, 40]); }
     lastTurnKey = key;
     const showEnd = V.phase === "roundEnd" && !hold;
