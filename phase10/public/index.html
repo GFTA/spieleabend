@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="room-ui.css">
+<link rel="stylesheet" href="cards.css">
 <style>
 :root{--cr:#e0393e;--cy:#e8b21c;--cg:#2f9a55;--cb:#2d6fd6;--felt:#1f1a38;--sea:#1f2350}
 /* table designs; "Nacht" is the default without an attribute */
@@ -104,7 +105,7 @@
 .pile .cap{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
 .pile.can button{box-shadow:0 0 0 3px var(--accent),0 0 22px -2px var(--accent);animation:glow 1.4s ease-in-out infinite}
 .pile.target button{box-shadow:0 0 0 3px #fff,0 0 22px -2px #fff}
-.pile.over button{box-shadow:0 0 0 4px #fff,0 0 30px 0 #fff;transform:scale(1.06)}
+.pile.cd-over button{box-shadow:0 0 0 4px #fff,0 0 30px 0 #fff;transform:scale(1.06)}
 @keyframes glow{50%{box-shadow:0 0 0 3px var(--accent),0 0 6px -4px var(--accent)}}
 .pile .empty{position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 2px var(--line)}
 
@@ -120,9 +121,9 @@
 .meld .card{box-shadow:0 2px 5px rgba(0,0,0,.35)}
 .meld .mlabel{font-size:11px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
 .meld.fits{box-shadow:0 0 0 2.5px var(--accent);cursor:pointer}
-.meld.over{box-shadow:0 0 0 3px #fff;transform:scale(1.05)}
+.meld.cd-over{box-shadow:0 0 0 3px #fff;transform:scale(1.05)}
 .meld .card.swap,.meld .card.target{animation:tipglow .7s ease-in-out infinite alternate;box-shadow:0 0 0 2.5px var(--accent),0 0 12px rgba(242,194,48,.6);cursor:pointer}
-.meld .card.over{box-shadow:0 0 0 3px #fff,0 0 14px 2px #fff;transform:scale(1.12);z-index:3}
+.meld .card.cd-over{box-shadow:0 0 0 3px #fff,0 0 14px 2px #fff;transform:scale(1.12);z-index:3}
 /* your own spread: slots to drop the phase into, later the groups you laid */
 .myzone{width:100%;max-width:900px;align-self:center;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:18px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
 .zhead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;flex-wrap:wrap}
@@ -137,17 +138,15 @@
 .slotgroup.bad{box-shadow:inset 0 0 0 2px var(--red)}
 .slotgroup.bad .glabel{color:var(--red)}
 .slotgroup.target{box-shadow:inset 0 0 0 2px var(--accent)}
-.slotgroup.over{box-shadow:inset 0 0 0 3px #fff;background:rgba(255,255,255,.08);transform:scale(1.02)}
+.slotgroup.cd-over{box-shadow:inset 0 0 0 3px #fff;background:rgba(255,255,255,.08);transform:scale(1.02)}
 .slots{display:flex;flex-wrap:wrap;gap:5px;min-height:calc(var(--cw) * 1.5)}
 .slots .card{cursor:grab;touch-action:none}
 .slots .ph{width:var(--cw);aspect-ratio:2/3;border-radius:calc(var(--cw) * .14);box-shadow:inset 0 0 0 2px var(--line);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.04) 6px 12px)}
 .zacts{display:flex;gap:8px;flex-wrap:wrap}
 .zacts .btn{flex:1;padding:10px;font-size:14px;min-width:0}
 .dock.target{box-shadow:0 -3px 0 #fff}
-.dock.over{box-shadow:0 -5px 0 #fff;background:var(--surface)}
-.card.dragging{opacity:.25}
-.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;will-change:transform}
-.ghost .card{box-shadow:0 16px 30px rgba(0,0,0,.55);transform:rotate(-4deg) scale(1.06)}
+.dock.cd-over{box-shadow:0 -5px 0 #fff;background:var(--surface)}
+.cd-held .card{box-shadow:0 16px 30px rgba(0,0,0,.55);transform:rotate(-4deg) scale(1.06)}
 /* dock with the hand */
 .dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .2s,background .2s}
 
@@ -169,7 +168,6 @@
 .hand .card.fresh{transform:translateY(-8px);box-shadow:0 0 0 3px #fff,0 8px 16px rgba(0,0,0,.5)}
 .hand.shake{animation:shake .35s}
 @keyframes shake{25%{translate:-5px 0}50%{translate:5px 0}75%{translate:-3px 0}}
-.flyer{position:fixed;left:0;top:0;z-index:40;pointer-events:none;margin:0!important}
 
 /* ---------- overlays ---------- */
 
@@ -424,6 +422,7 @@
 <script src="kit.js"></script>
 <script src="room-ui.js"></script>
 <script src="home-ui.js"></script>
+<script src="cards.js"></script>
 <script src="game.js"></script>
 <script src="app.js"></script>
 <!-- ARTIFACT-BODY-END -->
