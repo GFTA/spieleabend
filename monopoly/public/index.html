@@ -132,14 +132,12 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 /* middle of the board: dice, banners, cards */
 .mid{grid-area:2/2/11/11;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqw;min-width:0;min-height:0;overflow:hidden;
   background:radial-gradient(circle at 50% 45%,#e4f3e5,#cfe6d2 70%);box-shadow:inset 0 0 0 .2cqw rgba(0,0,0,.35)}
-.mid .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(38deg);padding:.9cqw 3.6cqw;background:#d8262c;border-radius:.8cqw;box-shadow:inset 0 0 0 .3cqw #fff,0 .6cqw 1.6cqw rgba(0,0,0,.28);pointer-events:none}
-.mid .brand span{display:block;font-family:var(--display);font-size:9.5cqw;line-height:1;letter-spacing:.02em;color:#fff}
 .mid .dk{position:absolute;display:grid;place-items:center;width:15cqw;height:10cqw;border-radius:1cqw;transform:rotate(38deg);text-align:center;font-weight:900;font-size:1.5cqw;line-height:1.1;text-transform:uppercase;letter-spacing:.04em;color:#7c3f0a;pointer-events:none}
 .mid .dk.chest{right:9%;top:12%;background:#fde68a;box-shadow:.5cqw .5cqw 0 #e7c85f,1cqw 1cqw 0 #f3dc88,1.5cqw 1.5cqw 1.2cqw rgba(0,0,0,.25)}
 .mid .dk.chance{left:9%;bottom:12%;background:#fdba74;box-shadow:.5cqw .5cqw 0 #ef9a4a,1cqw 1cqw 0 #f6b06a,1.5cqw 1.5cqw 1.2cqw rgba(0,0,0,.25)}
 .mid .dk span{max-width:90%;hyphens:manual}
 .mid .pile{position:absolute;width:13cqw;display:flex;flex-direction:column;align-items:center;gap:.6cqw;pointer-events:none}
-.mid .pile.hotels{left:7%;top:44%}.mid .pile.houses{right:7%;top:36%}
+.mid .pile.hotels{left:9%;top:11%}.mid .pile.houses{right:9%;bottom:11%}
 .mid .heap{position:relative;width:100%;height:7.5cqw}
 .mid .heap i{position:absolute;width:2.6cqw;height:2.3cqw;background:#2f9e44;clip-path:polygon(0 42%,50% 0,100% 42%,100% 100%,0 100%);filter:drop-shadow(0 .2cqw 0 rgba(0,0,0,.35))}
 .mid .pile.hotels .heap i{width:3.4cqw;height:2.1cqw;background:#d8262c;clip-path:polygon(0 30%,50% 0,100% 30%,100% 100%,0 100%)}

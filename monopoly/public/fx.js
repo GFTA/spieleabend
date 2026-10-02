@@ -19,8 +19,7 @@
   const SPOTS = [[8, 30, -12], [36, 6, 8], [62, 34, -4], [22, 52, 14], [50, 56, -16], [76, 8, 10], [88, 52, 6], [12, 8, 4]];
   const pileHTML = (cls, id) => `<div class="pile ${cls}"><div class="heap">${SPOTS.map(([x, y, r]) => `<i style="left:${x}%;top:${y}%;transform:rotate(${r}deg)"></i>`).join("")}</div><b id="${id}"></b></div>`;
   function mountMid() {
-    $("#mid").innerHTML = `<div class="brand"><span>MONOPOLY</span></div>` +
-      `<div class="dk chest"><span>Gemeinschafts&shy;karte</span></div><div class="dk chance"><span>Ereignis&shy;karte</span></div>` +
+    $("#mid").innerHTML = `<div class="dk chest"><span>Gemeinschafts&shy;karte</span></div><div class="dk chance"><span>Ereignis&shy;karte</span></div>` +
       pileHTML("hotels", "pileT") + pileHTML("houses", "pileH") +
       `<div class="dice" id="dice"></div><div class="info" id="info"></div><div class="stage" id="stage"></div>`;
     drawDice(ctx && ctx.view() ? ctx.view().dice : [0, 0], false);
