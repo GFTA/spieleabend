@@ -77,6 +77,10 @@
       place: () => { noise(0, 0.07, 0.22, 2400); tone(520, 0, 0.07, "triangle", 0.1, 380); },
       deal: () => { noise(0, 0.12, 0.16, 3200); tone(700, 0.02, 0.06, "sine", 0.06, 500); },
       shuffle: () => { for (let i = 0; i < 6; i++) noise(i * 0.06, 0.06, 0.16, 1800 + i * 200); },
+      heart: () => { noise(0, 0.1, 0.3, 160); tone(62, 0, 0.14, "sine", 0.3, 40); noise(0.2, 0.1, 0.24, 160); tone(55, 0.2, 0.16, "sine", 0.24, 38); },
+      fuse: () => { for (let i = 0; i < 14; i++) noise(i * 0.07, 0.06, 0.1 + Math.random() * 0.08, 5200 + Math.random() * 2500); },
+      relief: () => { tone(392, 0, 0.35, "sine", 0.1, 330); tone(523, 0.12, 0.5, "triangle", 0.1, 440); },
+      sneak: () => { for (let i = 0; i < 4; i++) tone(300 + (i % 2) * 40, i * 0.2, 0.05, "triangle", 0.05); },
       boom: () => { noise(0, 0.5, 0.5, 400); tone(110, 0, 0.5, "sawtooth", 0.2, 40); tone(70, 0.05, 0.6, "square", 0.12, 30); },
       nope: () => { tone(420, 0, 0.08, "square", 0.1, 300); tone(300, 0.09, 0.16, "square", 0.1, 200); },
       defuse: () => [440, 554, 659, 880].forEach((f, i) => tone(f, i * 0.07, 0.14, "triangle", 0.13)),
@@ -135,6 +139,75 @@
     setTimeout(() => f.remove(), 1200);
   }
 
+  // ---------- effects: sparks, shaking screen, scattering cards, burning fuse, lines between seats ----------
+  function sparks(x, y, n = 24, far = 150) {
+    if (reduce.matches) return;
+    const cols = ["#ffd54a", "#ff8a3d", "#ff4d4d", "#fff4c2"];
+    for (let i = 0; i < n; i++) {
+      const e = document.createElement("i"), a = Math.random() * 6.283, d = far * (0.35 + Math.random() * 0.9), sz = 3 + Math.random() * 5;
+      e.className = "spark";
+      e.style.cssText = `left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:${cols[i % 4]}`;
+      document.body.appendChild(e);
+      const an = e.animate([{ transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(a) * d}px),calc(-50% + ${Math.sin(a) * d + 36}px)) scale(.2)`, opacity: 0 }],
+        { duration: 600 + Math.random() * 600, easing: "cubic-bezier(.1,.7,.3,1)" });
+      an.onfinish = () => e.remove();
+    }
+  }
+  function shake(ms = 520) {
+    if (reduce.matches) return;
+    $("#game").animate([{ translate: "0 0" }, { translate: "-10px 6px" }, { translate: "9px -7px" }, { translate: "-7px -4px" }, { translate: "6px 5px" }, { translate: "-3px 2px" }, { translate: "0 0" }], { duration: ms, easing: "ease-out" });
+  }
+  function redFlash() {
+    if (reduce.matches) return;
+    const e = document.createElement("div"); e.className = "redflash"; document.body.appendChild(e);
+    e.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 650, easing: "ease-out" }).onfinish = () => e.remove();
+  }
+  function scatter(r, html, delay) {
+    if (reduce.matches || !r) return;
+    setTimeout(() => {
+      const g = document.createElement("div");
+      g.className = "cd-ghost";
+      g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--w:${r.width}px;transform-origin:50% 50%`;
+      g.innerHTML = html;
+      document.body.appendChild(g);
+      const dx = (Math.random() - 0.5) * 460, dy = -40 - Math.random() * 200, rot = (Math.random() - 0.5) * 640;
+      g.animate([{ transform: "translate(0,0) rotate(0deg)", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(1.1)`, opacity: 1, offset: 0.55 },
+        { transform: `translate(${dx * 1.15}px,${dy + 220}px) rotate(${rot * 1.2}deg) scale(.9)`, opacity: 0 }], { duration: 1000, easing: "cubic-bezier(.2,.7,.4,1)" }).onfinish = () => g.remove();
+    }, delay);
+  }
+  function fuseFx(ms) {
+    const t = $("#table");
+    if (!t || reduce.matches || $("#game").hidden) return;
+    const r = t.getBoundingClientRect(), w = 150, f = document.createElement("div");
+    f.className = "fusefx";
+    f.style.cssText = `left:${r.left + r.width / 2 - w / 2}px;top:${r.top + r.height / 2}px;width:${w}px`;
+    f.innerHTML = "<i></i><b></b>";
+    document.body.appendChild(f);
+    f.firstChild.animate([{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }], { duration: ms, easing: "linear", fill: "forwards" });
+    f.lastChild.animate([{ left: "100%" }, { left: "0%" }], { duration: ms, easing: "linear", fill: "forwards" });
+    const iv = setInterval(() => { const b = f.lastChild.getBoundingClientRect(); sparks(b.left + b.width / 2, b.top + b.height / 2, 3, 40); }, 110);
+    setTimeout(() => { clearInterval(iv); f.remove(); }, ms + 100);
+  }
+  function seatCenter(pi) {
+    const r = V && pi === V.me ? handBoxRect() : fanRect(pi);
+    return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+  }
+  function linkLine(a, b, label) {
+    const p = seatCenter(a), q = seatCenter(b);
+    if (!p || !q || reduce.matches) return;
+    const len = Math.hypot(q.x - p.x, q.y - p.y), ang = Math.atan2(q.y - p.y, q.x - p.x);
+    const l = document.createElement("div");
+    l.className = "linkline";
+    l.style.cssText = `left:${p.x}px;top:${p.y}px;width:${len}px;transform:rotate(${ang}rad)`;
+    l.innerHTML = `<span style="transform:rotate(${-ang}rad)">${label}</span>`;
+    document.body.appendChild(l);
+    l.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: 420, easing: "ease-out", fill: "both" });
+    setTimeout(() => l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: "forwards" }).onfinish = () => l.remove(), 1700);
+  }
+  let skipAttackCard = false, badgeKey = "", badgeFresh = false;
+  const discRect = () => { const e = $("#disc .card"); return e ? rectOf(e) : null; };
+
   function handleEvents(events, v) {
     if (!v || !events || !events.length) return;
     const me = v.me;
@@ -146,18 +219,21 @@
       if (ev.t === "start") { dealPending = true; h = []; trackHand = []; naming = null; pick = null; sel = null; placeAt = 0; }
       else if (ev.t === "draw") {
         const src = deckRect();
+        const danger = (v.kn + (ev.kitten ? 1 : 0)) / (v.deckN + 1), tense = ev.pi === me && !reduce.matches && danger >= 0.34;
         if (ev.kitten) {
           if (ev.pi === me) h.push("kitten");
           const dst = hasDefuseNext(k) ? { k: "stack", i: 0 } : { k: "seat", pi: ev.pi };
-          fl.add({ html: backHTML(), flipTo: cardHTML("kitten"), src, dst, delay: t, dur: 520 });
-          later(() => { sfx("deal"); if (ev.pi === me) buzz(30); }, t);
-          t += 560;
+          fl.add({ html: backHTML(), flipTo: cardHTML("kitten"), src, dst, delay: t, dur: tense ? 1500 : 520, turn: tense });
+          if (tense) { later(() => sfx("heart"), t); later(() => sfx("heart"), t + 650); }
+          later(() => { sfx("deal"); if (ev.pi === me) buzz(30); }, t + (tense ? 1000 : 0));
+          t += tense ? 1540 : 560;
         } else if (ev.pi === me && v.hand) {
           const rest = h.slice(); let got = null;
           for (const c of v.hand) { const j = rest.indexOf(c); if (j >= 0) rest.splice(j, 1); else { got = c; break; } }
-          if (got) { h.push(got); fl.add({ html: backHTML(), flipTo: cardHTML(got), src, dst: { k: "hand", c: got, nth: 0 }, delay: t, dur: 420 }); }
-          later(() => sfx("deal"), t);
-          t += 300;
+          if (got) { h.push(got); fl.add({ html: backHTML(), flipTo: cardHTML(got), src, dst: { k: "hand", c: got, nth: 0 }, delay: t, dur: tense ? 1500 : 420, turn: tense }); }
+          if (tense) { later(() => sfx("heart"), t); later(() => sfx("heart"), t + 650); }
+          later(() => sfx("deal"), t + (tense ? 1000 : 0));
+          t += tense ? 1540 : 300;
         } else {
           fl.add({ html: backHTML(), src, dst: { k: "seat", pi: ev.pi }, delay: t, dur: 380 });
           later(() => sfx("deal"), t);
@@ -166,24 +242,33 @@
       } else if (ev.t === "defuse") {
         if (ev.pi === me) remove1(h, "defuse");
         fl.add({ html: cardHTML("defuse"), src: srcRect(ev.pi, "defuse", me), dst: { k: "disc" }, delay: t, dur: 450 });
+        const fz = reduce.matches ? 0 : 1000;
         later(() => { sfx("defuse"); toast(ev.pi === me ? "Entschärft! Jetzt versteckst du die Katze." : `${name(ev.pi)} entschärft die Katze.`); }, t + 200);
-        if (ev.pi === me) placeAt = Date.now() + (reduce.matches ? 0 : t + 1000);
-        t += 500;
-      } else if (ev.t === "boom") {
-        const n = ev.pi === me ? Math.min(6, h.length) : Math.min(6, V && V.players[ev.pi] ? V.players[ev.pi].handN : 4);
-        for (let i = 0; i < n; i++) {
-          const c = ev.pi === me ? h[i] : null;
-          fl.add({ html: c ? cardHTML(c) : backHTML(), src: ev.pi === me ? (myCardEl(c) ? rectOf($$("#hand .card").find((e) => e.dataset.taken && e.dataset.c === c)) : handBoxRect()) : fanRect(ev.pi), dst: { k: "disc" }, delay: t + 250 + i * 70, dur: 480 });
+        if (fz) {
+          later(() => { sfx("fuse"); fuseFx(fz); }, t + 380);
+          later(() => { sfx("relief"); flash("😮‍💨"); }, t + 380 + fz);
         }
-        if (ev.pi === me) h = [];
-        later(() => { flash("💥", true); sfx("boom"); buzz([80, 40, 120]); toast(ev.pi === me ? "BUMM! Du bist raus." : `BUMM! ${name(ev.pi)} ist raus.`); }, t + 100);
-        t += 700;
+        if (ev.pi === me) placeAt = Date.now() + (reduce.matches ? 0 : t + 1000 + (fz ? fz + 500 : 0));
+        t += 500 + (fz ? fz + 400 : 0);
+      } else if (ev.t === "boom") {
+        const mineB = ev.pi === me, seat = seatEl(ev.pi);
+        const els = mineB ? $$("#hand .card") : seat ? [...seat.querySelectorAll(".ofan .card")] : [];
+        els.slice(0, 7).forEach((e, i) => scatter(rectOf(e), mineB ? cardHTML(e.dataset.c) : backHTML(), t + i * 60));
+        if (mineB) h = [];
+        const where = seatCenter(ev.pi);
+        later(() => {
+          flash("💥", true); sfx("boom"); buzz([80, 40, 120]); shake(); redFlash();
+          if (where) sparks(where.x, where.y, 36, 200);
+          toast(mineB ? "BUMM! Du bist raus." : `BUMM! ${name(ev.pi)} ist raus.`);
+        }, t + 100);
+        t += 900;
       } else if (ev.t === "place") {
-        fl.add({ html: cardHTML("kitten"), flipTo: backHTML(), src: (() => { const e = $("#stackCards .card"); return e ? rectOf(e) : null; })(), dst: { k: "deck" }, delay: t, dur: 520 });
-        later(() => sfx("place"), t + 300);
+        fl.add({ html: cardHTML("kitten"), flipTo: backHTML(), src: (() => { const e = $("#stackCards .card"); return e ? rectOf(e) : null; })(), dst: { k: "deck" }, delay: t, dur: reduce.matches ? 520 : 1100 });
+        later(() => sfx("sneak"), t);
+        later(() => { sfx("place"); flash("🤫"); }, t + (reduce.matches ? 300 : 900));
         if (ev.pi !== me) later(() => toast(`${name(ev.pi)} versteckt die Katze im Stapel.`), t);
         placeAt = 0;
-        t += 560;
+        t += reduce.matches ? 560 : 1150;
       } else if (ev.t === "play" || ev.t === "combo") {
         const n = ev.t === "combo" ? ev.n : 1;
         for (let i = 0; i < n; i++) {
@@ -207,6 +292,12 @@
         later(() => sfx("deal"), t + 150);
         t += 520;
       } else if (ev.t === "attack") {
+        const sr = (() => { const e = $("#stackCards .card"); return e ? rectOf(e) : null; })();
+        if (sr && !reduce.matches) {
+          skipAttackCard = true;
+          fl.add({ html: cardHTML("attack"), src: sr, dst: { k: "seat", pi: ev.to }, delay: t, dur: 600, hit: true, sweep: discRect });
+          t += 520;
+        }
         later(() => { flash("⚔️"); sfx("zap"); toast(`${name(ev.pi)} ${verb(ev.pi, "greifst", "greift")} an! ${ev.to === me ? "Du musst" : `${name(ev.to)} muss`} zwei Züge machen.`); }, t);
       } else if (ev.t === "skip") {
         later(() => { flash("⏭️"); sfx("zap"); }, t);
@@ -219,8 +310,9 @@
       } else if (ev.t === "future") {
         later(() => { flash("🔮"); if (ev.pi !== me) toast(`${name(ev.pi)} schaut in die Zukunft.`); }, t);
       } else if (ev.t === "favor") {
-        later(() => flash("🎁"), t);
+        later(() => { flash("🎁"); linkLine(ev.target, ev.pi, "🎁"); }, t);
       } else if (ev.t === "steal") {
+        later(() => linkLine(ev.target, ev.pi, ev.miss ? "🤷" : "🖐️"), t);
         if (ev.miss) later(() => toast(`${name(ev.pi)} ${verb(ev.pi, "hast", "hat")} danebengegriffen.`), t);
       } else if (ev.t === "fizzle") {
         later(() => { flash("🚫"); sfx("nope"); toast(ev.pi === me ? "Dein Zug wurde abgewehrt!" : `${name(ev.pi)} wurde abgewehrt!`); }, t);
@@ -234,6 +326,8 @@
     });
     trackHand = v.hand ? v.hand.slice() : [];
   }
+
+  Cards.autoFlip("#hand", ".card");
 
   // where a flight lands, looked up in the freshly drawn table: { rect, hide }
   function resolve(d) {
@@ -254,6 +348,7 @@
   const fl = Cards.flights({
     resolve, off: () => $("#game").hidden,
     onLand(f) {
+      if (f.hit) { shake(380); const c = seatCenter(f.dst.pi); if (c) sparks(c.x, c.y, 14, 90); }
       if (f.dst.k !== "seat" || !V || f.dst.pi === V.me) return;
       const e = seatEl(f.dst.pi);
       if (e) { e.classList.remove("pulse"); void e.offsetWidth; e.classList.add("pulse"); }
@@ -568,7 +663,7 @@
     const act = actor() === i;
     const cls = ["obox", act ? "active" : "", away ? "away" : "", p.out ? "out" : ""].join(" ");
     const fan = p.out ? "" : Array.from({ length: Math.min(p.handN, 7) }, () => '<div class="card back"></div>').join("");
-    const tag = p.out ? "raus" : act && V.phase === "play" && V.owed > 1 ? `${V.owed} Züge` : away ? "offline" : "";
+    const tag = p.out ? "raus" : act && V.phase === "play" && V.owed > 1 ? `<b class="turnsbadge${badgeFresh ? " fresh" : ""}">${V.owed} Züge</b>` : away ? "offline" : "";
     return `<div class="${cls}" data-seat="${i}"><div class="ohead"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
       `<span class="pname">${esc(p.name)}${p.bot ? " 🤖" : ""}</span><span class="owins" title="Siege">${p.wins}</span></div>` +
       `<div class="orow"><span class="ofan">${fan}</span><span class="ocnt">${p.out ? "" : p.handN}</span><span class="otag">${tag}</span></div>${p.out ? '<span class="boom">💥</span>' : ""}</div>`;
@@ -643,11 +738,17 @@
     // the cards that were in the middle go to the discard pile
     if (prevStack && prevStack.round === V.round && !V.stack) {
       const els = [...$$("#stackCards .card"), ...$$("#nopePile .card")];
-      els.forEach((e, i) => fl.add({ html: cardHTML(e.dataset.c), src: rectOf(e), dst: { k: "disc" }, delay: 120 + i * 60, dur: 420 }));
+      els.forEach((e, i) => {
+        if (skipAttackCard && e.dataset.c === "attack") { skipAttackCard = false; return; }
+        fl.add({ html: cardHTML(e.dataset.c), src: rectOf(e), dst: { k: "disc" }, delay: 120 + i * 60, dur: 420 });
+      });
+      skipAttackCard = false;
       if (els.length) setTimeout(() => sfx("place"), 300);
     }
     prevStack = V.stack ? { round: V.round } : null;
 
+    const bk = `${V.round}:${V.turn}:${V.owed}`;
+    badgeFresh = V.phase === "play" && V.owed > 1 && badgeKey !== bk; badgeKey = V.owed > 1 ? bk : "";
     // opponents
     const opps = V.players.map((_, i) => i).filter((i) => i !== V.me);
     $("#opps").innerHTML = opps.map(oppHTML).join("");
@@ -655,7 +756,8 @@
     // table
     const dn = V.deckN, pct = dn ? Math.round((V.kn / dn) * 100) : 0;
     setHTML($("#deck"), dn ? pileCard(backHTML().replace('class="card back"', 'class="card back" style="--i:0;--f:0"'), { count: dn }) : pileCard("", { empty: true }));
-    $("#deck").className = "deck";
+    $("#deck").className = "deck" + (pct >= 34 && V.phase !== "roundEnd" ? " hot" : "");
+    $("#deck").style.setProperty("--beat", (1.7 - Math.min(0.9, pct / 100)).toFixed(2) + "s");
     if (deckShake) { deckShake = false; $("#deck").animate([{ transform: "rotate(-6deg)" }, { transform: "rotate(6deg)" }, { transform: "rotate(-4deg)" }, { transform: "none" }], { duration: 420 }); }
     setHTML($("#stackZone"), stackHTML());
     const discFace = V.discN ? (V.phase === "stack" ? '<div class="card pile" style="--i:0;--f:0"><b>🗑️</b></div>' : cardHTML(V.discTop, { style: "--i:0;--f:0" })) : "";
@@ -696,6 +798,7 @@
 
     // turn change feedback
     const key = `${V.round}:${V.turn}:${V.owed}`;
+    Spieleabend.mine(play && (mode === "online" || V.players.some((p) => p.bot)));
     if (play && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = play ? key : (lastTurn === null ? "" : lastTurn);
     if (!play && V.phase === "play") lastTurn = lastTurn === null ? "" : lastTurn;
@@ -796,6 +899,7 @@
     $("#drawBtn").disabled = !play;
     $("#nopeBtn").hidden = !(V.phase === "stack" && !watch && count("nope") > 0);
     $("#nopeBtn").disabled = !nope_;
+    for (const e of $$("#hand .card")) e.classList.toggle("ready", nope_ && e.dataset.c === "nope");
     $("#playBtn").hidden = !(play && c && !G.isCat(c) && c !== "nope" && c !== "defuse" && !pick);
     if (c) $("#playBtn").textContent = `${G.cardName(c)} spielen`;
     $("#pairBtn").hidden = !(play && c && G.isCat(c) && count(c) >= 2 && !pick);
