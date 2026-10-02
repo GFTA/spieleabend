@@ -222,8 +222,27 @@
     return n;
   }
 
+  Cards.autoFlip("#rack", ".tile");
+  // glowing bar in front of the tile a dragged tile would be inserted before (or after the last one)
+  function snapAt(setEl, e) {
+    for (const t of document.querySelectorAll(".snap, .snap-end")) t.classList.remove("snap", "snap-end");
+    if (!setEl) return;
+    const tiles = [...setEl.querySelectorAll(".tile:not(.cd-dragging)")];
+    const n = posIn(setEl, { left: e.clientX, top: e.clientY, width: 0, height: 0 }, -1);
+    const t = tiles[Math.min(n, tiles.length - 1)];
+    if (t) t.classList.add(n < tiles.length ? "snap" : "snap-end");
+  }
   const dnd = Cards.dnd({
     root: "#game",
+    zones(s) {
+      const z = [{ el: $("#rack"), ok: W ? W.start.has(s.id) : inPrep(s.id) }];
+      for (const el of document.querySelectorAll("#prep .pset, #prepNew")) z.push({ el, ok: true });
+      if (W) {
+        for (const el of document.querySelectorAll("#sets .set")) z.push({ el, ok: !lockedSet(W.sets[+el.dataset.i] || []) });
+        if ($("#newSet")) z.push({ el: $("#newSet"), ok: true });
+      }
+      return z;
+    },
     grab(e) {
       if (!V || inflight || V.me < 0 || V.phase !== "play") return null;
       const el = e.target.closest("#rack .tile, #prep .tile, #sets .tile");
@@ -232,8 +251,11 @@
       if (el.closest("#sets")) return W && !locked(id) ? { el, id } : null;
       return { el, id };
     },
-    target(under, s) {
-      const ps = under.closest("#prep .pset");
+    target(under, s, e) {
+      const ps = under && under.closest("#prep .pset");
+      const set0 = under && W && under.closest("#sets .set");
+      snapAt(ps || (set0 && !lockedSet(W.sets[+set0.dataset.i] || []) ? set0 : null), e);
+      if (!under) return null;
       if (ps) return { el: ps, ok: true, kind: "prep", i: +ps.dataset.i };
       if (under.closest("#prep")) return { el: $("#prepNew"), ok: true, kind: "prep", i: "new" };
       if (under.closest("#rack")) return { el: $("#rack"), ok: W ? W.start.has(s.id) : inPrep(s.id), kind: "rack" };
@@ -251,7 +273,7 @@
       return moveTile(s.id, t.kind, 0, null, rect);
     },
     onStart() { setSel(null); },
-    onEnd(dirty) { if (dirty) render(); },
+    onEnd(dirty) { snapAt(null); if (dirty) render(); },
     tap(e) {
       if (!V || inflight || V.me < 0 || V.phase !== "play" || e.target.closest("button, a")) return;
       const sel = selOf(), tile = e.target.closest("#rack .tile, #sets .tile, #prep .tile");
@@ -359,7 +381,12 @@
     let a = { t: "draw" };
     if (t === "done") {
       const c = check();
-      if (!c.ok) { toast(c.msg); sfx("bad"); return; }
+      if (!c.ok) {
+        toast(c.msg); sfx("bad");
+        const bad = [...document.querySelectorAll("#sets .set.bad, #prep .pset.bad")];
+        for (const el of bad.length ? bad : [$("#doneBtn")]) Spieleabend.flash(el, "wobble", 520);
+        return;
+      }
       a = { t: "commit", table: W.sets.map((s) => s.slice()) };
     }
     if (mode === "online") { inflight = true; setTimeout(() => { inflight = false; }, 3000); }
