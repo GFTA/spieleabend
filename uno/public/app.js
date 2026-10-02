@@ -476,7 +476,7 @@
     $("#challengeBtn").hidden = !(mine && V.canChallenge);
     $("#hintBtn").hidden = !mine;
     $("#sortBtn").hidden = mode === "online" && V.me < 0;
-    $("#sortBtn").textContent = sortMode === "value" ? "⇅ Zahl" : "⇅ Farbe";
+    Spieleabend.sortToggle($("#sortBtn"), sortMode);
     renderClock();
     $("#chaosTag").hidden = !rules().chaos;
     $("#pendingTag").hidden = !V.pending;
