@@ -169,6 +169,26 @@
       for (const a of document.querySelectorAll("[data-start-link]")) a.href = startUrl(a.dataset.startLink);
   });
 
+  // ---------- your turn: breathing screen edge, blinking tab title ----------
+  const desktop = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function mine(on) { document.body.classList.toggle("myturn", !!on); }
+  let titleT = 0;
+  function attention() {
+    if (titleT || (document.hasFocus() && document.visibilityState === "visible")) return;
+    const base = document.title; let n = 0;
+    const stop = () => { clearInterval(titleT); titleT = 0; document.title = base; removeEventListener("focus", stop); document.removeEventListener("visibilitychange", vis); };
+    const vis = () => { if (document.visibilityState === "visible" && document.hasFocus()) stop(); };
+    titleT = setInterval(() => { document.title = n++ % 2 ? base : "🔔 Du bist dran!"; }, 1000);
+    document.title = "🔔 Du bist dran!";
+    addEventListener("focus", stop); document.addEventListener("visibilitychange", vis);
+  }
+  // restart a one-shot CSS animation class on el: "trace" (soft ring for the last move of others), "wobble" (no, not like that)
+  function flash(el, cls = "trace", ms = 2600) {
+    if (!el) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms);
+  }
+
   // ---------- sound and haptics: synthesized effects (no files), the on/off switch, screen wake lock ----------
   // key: where on/off is stored; vol: default loudness of tone(); noiseFilter: "lowpass" | "bandpass";
   // effects: ({tone, noise}) => ({name: (...args) => ...}). Returns { sfx, buzz, isOn, wake }.
@@ -204,7 +224,21 @@
       s.connect(f).connect(g).connect(a.destination); s.start(t); s.stop(t + dur + 0.02);
     }
     const table = effects({ tone, noise });
-    const sfx = (k, ...args) => { if (on && document.visibilityState === "visible") try { table[k](...args); } catch (e) {} };
+    // "turn" = it is your move now. On a PC it is a clearer chime that also rings from a background tab, and the tab title blinks
+    const sfx = (k, ...args) => {
+      if (!on) return;
+      if (k === "turn") {
+        attention();
+        if (document.visibilityState !== "visible" && !desktop()) return;
+        try {
+          if (!desktop()) return table.turn();
+          const v = defVol * 1.25;
+          tone(523, 0, 0.16, "sine", v); tone(659, 0.11, 0.16, "sine", v); tone(784, 0.22, 0.4, "triangle", v); tone(1568, 0.22, 0.3, "sine", v * 0.35);
+        } catch (e) {}
+        return;
+      }
+      if (document.visibilityState === "visible") try { table[k](...args); } catch (e) {}
+    };
     const buzz = (ms) => { if (!on) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
     // the checkbox is drawn by room-ui.js later in the same script run
     const sync = () => { const box = $("#soundOn"); if (box) box.checked = on; };
@@ -231,5 +265,5 @@
     el.title = sortLabel(mode) + " (S)";
     if (!el.firstElementChild) el.innerHTML = SORT_INNER;
   }
-  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, profile: P, toast, confetti, showBubble, sound, dropParams };
+  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, profile: P, toast, confetti, showBubble, sound, dropParams };
 })();

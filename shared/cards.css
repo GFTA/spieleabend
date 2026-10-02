@@ -21,3 +21,10 @@
 .cd-over .cd-pile,.cd-over.cd-pile{transform:scale(1.06)}
 
 @media (prefers-reduced-motion:reduce){.cd-over .cd-pile,.cd-over.cd-pile{transform:none}}
+
+/* every place a dragged card could go lights up, the others step back */
+.cd-zone{transition:opacity .15s,filter .15s}
+body.cd-dragging-on .cd-zone:not(.cd-drop):not(.cd-over){opacity:.42;filter:grayscale(.55)}
+/* a pile the chosen card fits on pulses */
+.cd-pulse{animation:cdpulse 1.15s ease-out infinite}
+@keyframes cdpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 85%,transparent)}100%{box-shadow:0 0 0 14px transparent}}

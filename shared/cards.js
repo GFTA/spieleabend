@@ -5,6 +5,8 @@
 //   Cards.dnd({ root, grab, target, drop, onStart, onEnd, tap })   drag a card, drop it on a target, snap back otherwise
 //   Cards.flights({ resolve, off, onLand })                         animated moves; the target card stays hidden until it lands
 //   Cards.cascade(n, { fmax, room })                                --f/--H for a pile whose cards overlap downwards
+//   Cards.autoFlip(box, sel)                                        a hand that slides smoothly whenever cards come and go (FLIP)
+//   Cards.shuffle(rect, { html, n })                                a riffle shuffle played on a pile
 //   Cards.rectOf(el)                                                plain {left, top, width, height}
 (function (root) {
   "use strict";
@@ -23,13 +25,14 @@
   // target(under, s)  `under` is the element below the finger: return null or { el, ok, ... } (ok: it would accept the card)
   // drop(s, t, rect)  let go on target t (only called when there is one): do the move and return true, or return false to snap back.
   //                   rect is where the card was let go, so the flight into its place can start there
+  // zones(s)          optional: [{ el, ok }] every place a card could go; while dragging those that fit light up (.cd-drop), the rest dim
   // onStart(s)        the drag began (clear selections here)
   // onEnd(dirty)      the drag is over; dirty = a redraw was held back by defer()
   // tap(e)            a click that was not the end of a drag
   function dnd(o) {
     const box = typeof o.root === "string" ? document.querySelector(o.root) : o.root;
     const slop = o.slop || 8;
-    let drag = null, dirty = false, lastDrag = 0, over = null;
+    let drag = null, dirty = false, lastDrag = 0, over = null, zones = [];
     const setOver = (el) => {
       if (over && over !== el) over.classList.remove("cd-over");
       over = el || null;
@@ -71,6 +74,11 @@
       drag.ghost = g; drag.dx = drag.x0 - r.left; drag.dy = drag.y0 - r.top;
       drag.el.classList.add("cd-dragging");
       if (o.onStart) o.onStart(drag.s);
+      if (o.zones) {
+        zones = o.zones(drag.s) || [];
+        for (const z of zones) { z.el.classList.add("cd-zone"); z.el.classList.toggle("cd-drop", !!z.ok); }
+        document.body.classList.add("cd-dragging-on");
+      }
     }
     function targetAt(e) {
       drag.ghost.style.display = "none";
@@ -87,6 +95,7 @@
       drag = null;
       lastDrag = Date.now();
       setOver(null);
+      if (zones.length) { for (const z of zones) z.el.classList.remove("cd-zone", "cd-drop"); zones = []; document.body.classList.remove("cd-dragging-on"); }
       const done = t ? !!o.drop(d.s, t, r) : false;
       if (done) d.ghost.remove();
       else {
@@ -116,6 +125,7 @@
   //   src      rect where the card starts          dst   anything resolve() understands
   //   html     what the flying card looks like     flipTo  html it turns into on the way (a card drawn face down)
   //   delay    ms until it takes off, dur ms in the air
+  //   turn     true: the card lifts off, turns over slowly (needs flipTo) and only then flies on (a tense draw)
   //   sweep    () => rect: after landing the card flies on to this rect and fades (a completed pile is cleared)
   // Call add() while handling the events, run() after the table is redrawn, hide() after every redraw.
   function flights(o) {
@@ -160,7 +170,22 @@
           { transform: `translate(${ex}px,${ey}px) scale(${sw.width / s.width * 0.8})`, opacity: 0.1, offset: 1 }
         ];
       }
-      if (f.flipTo) setTimeout(() => { g.innerHTML = f.flipTo; }, f.dur * 0.45);
+      if (f.turn && f.flipTo) {
+        const cx = d.left + d.width / 2 - (s.left + s.width / 2), cy = d.top + d.height / 2 - (s.top + s.height / 2);
+        g.style.transformOrigin = "50% 50%";
+        const mid = `translate(${cx * 0.12}px,${cy * 0.12 - s.height * 0.55}px) scale(${sc * 1.45})`, fin = `translate(${cx}px,${cy}px) scale(${sc})`;
+        const T = (tr, ry) => `${tr} perspective(700px) rotateY(${ry}deg)`;
+        kf = [
+          { transform: T("translate(0,0) scale(1)", 0), offset: 0 },
+          { transform: T(mid, 0), offset: 0.3, easing: "ease-in-out" },
+          { transform: T(mid, 90), offset: 0.5 },
+          { transform: T(mid, -90), offset: 0.5 },
+          { transform: T(mid, 0), offset: 0.68, easing: "ease-out" },
+          { transform: T(mid, 0), offset: 0.8, easing: "cubic-bezier(.2,.7,.3,1)" },
+          { transform: T(fin, 0), offset: 1 }
+        ];
+      }
+      if (f.flipTo) setTimeout(() => { g.innerHTML = f.flipTo; }, f.dur * (f.turn ? 0.5 : 0.45));
       const a = g.animate(kf, { duration: f.dur, easing: "cubic-bezier(.2,.7,.3,1)", fill: "forwards" });
       const end = () => {
         g.remove(); f.done = true;
@@ -173,5 +198,58 @@
     return { add(f) { queue.push(f); }, run, hide, clear() { queue.length = 0; } };
   }
 
-  root.Cards = { dnd, flights, cascade, rectOf };
+  // ---------- a hand that slides ----------
+  // Remembers where every card stood; when the hand is redrawn (innerHTML) cards that were there before glide from the old
+  // spot to the new one. Cards are matched by data-id (or data-v, or their look); new cards are the flights' business.
+  function autoFlip(box, sel = ":scope > *") {
+    box = typeof box === "string" ? document.querySelector(box) : box;
+    if (!box) return;
+    let prev = new Map(), pw = 0;
+    const snap = () => {
+      const m = new Map(), seen = {}, b = box.getBoundingClientRect();
+      for (const el of box.querySelectorAll(sel)) {
+        const d = el.dataset;
+        const base = d.id != null ? "i" + d.id : d.v != null ? "v" + d.v : d.c != null ? "c" + d.c : el.textContent + "|" + [...el.classList].filter((c) => !/^(sel|cd-|hot|new|can|ok|dim|bad|pick|fan)/.test(c)).join(".");
+        const k = base + "#" + (seen[base] = (seen[base] || 0) + 1), r = el.getBoundingClientRect();
+        m.set(k, { el, x: r.left - b.left + box.scrollLeft, y: r.top - b.top + box.scrollTop });
+      }
+      return { m, w: b.width };
+    };
+    new MutationObserver(() => {
+      const now = snap();
+      if (!reduce() && now.w && Math.abs(now.w - pw) < 2 && !document.hidden)
+        for (const [k, c] of now.m) {
+          const p = prev.get(k);
+          if (!p || p.el === c.el || c.el.classList.contains("cd-dragging")) continue;
+          const dx = p.x - c.x, dy = p.y - c.y;
+          if (Math.abs(dx) + Math.abs(dy) < 2 || Math.abs(dx) + Math.abs(dy) > 900) continue;
+          c.el.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0 0" }], { duration: 280, easing: "cubic-bezier(.2,.7,.3,1)" });
+        }
+      prev = now.m; pw = now.w;
+    }).observe(box, { childList: true });
+    const first = snap(); prev = first.m; pw = first.w;
+  }
+
+  // ---------- a riffle shuffle on a pile ----------
+  function shuffle(rect, o = {}) {
+    if (reduce() || !rect || !rect.width) return;
+    const n = o.n || 8, w = rect.width;
+    for (let i = 0; i < n; i++) {
+      const g = document.createElement("div");
+      g.className = "cd-ghost";
+      place(g, rect);
+      g.innerHTML = o.html || "";
+      document.body.appendChild(g);
+      const side = i % 2 ? 1 : -1;
+      const a = g.animate([
+        { transform: "translate(0,0) rotate(0deg)", offset: 0 },
+        { transform: `translate(${side * w * 0.85}px,${-rect.height * 0.12}px) rotate(${side * 16}deg)`, offset: 0.42 },
+        { transform: `translate(${side * w * 0.12}px,${-rect.height * 0.04}px) rotate(${side * 3}deg)`, offset: 0.75 },
+        { transform: "translate(0,0) rotate(0deg)", offset: 1 }
+      ], { duration: 640, delay: i * 55, easing: "ease-in-out", fill: "both" });
+      a.onfinish = a.oncancel = () => g.remove();
+    }
+  }
+
+  root.Cards = { dnd, flights, cascade, rectOf, autoFlip, shuffle };
 })(typeof window !== "undefined" ? window : globalThis);
