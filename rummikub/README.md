@@ -10,7 +10,7 @@ Computer-Gegner, Avatare und Tisch-Designs kommen aus `../shared/`, siehe
 - **Erstes Auslegen**: mindestens 30 Punkte (einstellbar: 20 oder ohne Mindestwert), nur aus dem eigenen Ständer, der Tisch bleibt unberührt.
 - **Rundenende**: Wer zuerst seinen Ständer leert, gewinnt und bekommt die Restpunkte der anderen, die anderen bekommen ihre eigenen als Minus (Joker 30). Ist der Vorrat leer und niemand kann mehr legen, gewinnt der kleinste Rest.
 - **Spiel**: eine Runde, bis 2 oder bis 3 Siege. 2 bis 4 Spieler plus Zuschauer.
-- **Bedienung**: Plättchen mit Maus oder Finger auf einen Satz, in den freien Platz („Neuer Satz“) oder zurück auf den Ständer ziehen. Oder antippen, dann das Ziel antippen. Der Zug gilt erst mit „Fertig“, „Zurück“ stellt den Tisch wie zu Beginn des Zuges her. Ungültige Sätze sind rot.
+- **Bedienung**: Plättchen mit Maus oder Finger auf einen Satz, in den freien Platz („Neuer Satz“) oder zurück auf den Ständer ziehen. Oder antippen, dann das Ziel antippen. Der Zug gilt erst mit „Fertig“, „Zurück“ stellt den Tisch wie zu Beginn des Zuges her. Ungültige Sätze sind rot. Im Feld „Vorbereiten“ über dem Ständer kannst du neue Sätze schon planen, auch wenn die anderen dran sind; „Auslegen“ legt die gültigen davon auf den Tisch. Der Schalter „123 / Regenbogen“ sortiert den Ständer nach Zahl oder Farbe (wie in Uno und Phase 10).
 - **Computer**: Leicht (legt nur aus dem Ständer, zieht manchmal trotzdem), Normal (ergänzt Sätze auf dem Tisch) und Profi (baut den ganzen Tisch um, auch Joker-Tausch).
 
 ## Abweichungen von den Originalregeln

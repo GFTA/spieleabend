@@ -38,7 +38,7 @@
   let peek = false;       // round over, looking at the table
   let inflight = false;
   let endHold = 0;        // the round-end sheet waits until the last move has been seen
-  let sortMode = store.get(K.sort) === "num" ? "num" : "color";
+  let sortMode = store.get(K.sort) === "value" || store.get(K.sort) === "num" ? "value" : "color";
   let pend = { old: null, plays: [], draws: [] }; // what the next redraw has to animate
   let dealKey = null, prevRack = new Set();
   let server = null;      // server info once found ({} when only the WebSocket answered)
@@ -77,7 +77,7 @@
     return `<span class="tile t${c} ${cls || ""}"${d} role="img" aria-label="${CNAME[c]} ${G.numOf(id)}"><b>${G.numOf(id)}</b><i>${SYM[c]}</i></span>`;
   }
   const backHTML = '<span class="tile back"><b>R</b></span>';
-  const sortKey = (id) => (G.isJoker(id) ? 1e6 + id : sortMode === "num" ? (G.numOf(id) * 4 + G.colorOf(id)) * 2 + (id % 2) : (G.colorOf(id) * 14 + G.numOf(id)) * 2 + (id % 2));
+  const sortKey = (id) => (G.isJoker(id) ? 1e6 + id : sortMode === "value" ? (G.numOf(id) * 4 + G.colorOf(id)) * 2 + (id % 2) : (G.colorOf(id) * 14 + G.numOf(id)) * 2 + (id % 2));
   const sorted = (ids) => ids.slice().sort((a, b) => sortKey(a) - sortKey(b));
 
   // ---------- my turn: a working copy of the table ----------
@@ -103,7 +103,7 @@
   }
   const dirtyW = () => !!W && (W.rack.length !== W.start.size || JSON.stringify(W.sets) !== JSON.stringify(V.table));
 
-  const tileEl = (id) => document.querySelector(`#sets .tile[data-id="${id}"], #rack .tile[data-id="${id}"]`);
+  const tileEl = (id) => document.querySelector(`#sets .tile[data-id="${id}"], #prep .tile[data-id="${id}"], #rack .tile[data-id="${id}"]`);
   const tileRect = (id) => { const el = tileEl(id); return el ? rectOf(el) : null; };
   function tileRects() {
     const o = {};
@@ -111,7 +111,7 @@
     for (const el of document.querySelectorAll("#sets .tile[data-id]")) o[el.dataset.id] = rectOf(el);
     return o;
   }
-  const tileSize = () => { const t = document.querySelector("#rack .tile, #sets .tile"); const w = t ? t.getBoundingClientRect().width : 36; return { w, h: w * 1.38 }; };
+  const tileSize = () => { const t = document.querySelector("#rack .tile, #sets .tile, #prep .tile"); const w = t ? t.getBoundingClientRect().width : 36; return { w, h: w * 1.38 }; };
   const around = (el) => { // a tile-sized rect centred on an element
     if (!el || $("#game").hidden) return null;
     const r = el.getBoundingClientRect(), { w, h } = tileSize();
@@ -129,6 +129,65 @@
     }
   });
 
+  // sets I am preparing: the tiles still belong to my rack, they are only drawn in the prepare zone (works while others play)
+  let prep = [], psel = null;
+  const selOf = () => (W ? W.sel : psel);
+  const setSel = (id) => { if (W) W.sel = id; else psel = id; };
+  const inPrep = (id) => prep.some((s) => s.includes(id));
+  const normPrep = () => { prep = prep.filter((s) => s.length).map((s) => { const a = G.analyze(s); return a ? a.order.slice() : s; }); };
+  const dropFromPrep = (id) => { for (const s of prep) { const k = s.indexOf(id); if (k >= 0) s.splice(k, 1); } normPrep(); };
+  function toPrep(id, i, pos, srcRect) {
+    if (!V || V.me < 0 || V.phase !== "play" || inflight) return false;
+    if (W ? !W.start.has(id) || locked(id) : !V.rack.includes(id)) return false;
+    const dest = i === "new" ? [] : prep[i];
+    if (!dest) return false;
+    const src = srcRect || tileRect(id);
+    if (W) {
+      for (const s of W.sets) { const k = s.indexOf(id); if (k >= 0) s.splice(k, 1); }
+      if (!W.rack.includes(id)) W.rack.push(id);
+      norm();
+    }
+    for (const s of prep) { const k = s.indexOf(id); if (k >= 0) s.splice(k, 1); }
+    dest.splice(pos == null ? dest.length : Math.min(pos, dest.length), 0, id);
+    if (i === "new") prep.push(dest);
+    normPrep(); setSel(null);
+    if (src) fl.add({ src, dst: id, html: tileHTML(id, "", false), delay: 0, dur: srcRect ? 160 : 280 });
+    sfx("place"); buzz(8);
+    render();
+    return true;
+  }
+  function toRack(id, srcRect) {
+    if (W) return moveTile(id, "rack", 0, null, srcRect);
+    if (!inPrep(id)) return false;
+    const src = srcRect || tileRect(id);
+    dropFromPrep(id); psel = null;
+    if (src) fl.add({ src, dst: id, html: tileHTML(id, "", false), delay: 0, dur: srcRect ? 160 : 280 });
+    sfx("place"); buzz(8);
+    render();
+    return true;
+  }
+  function clearPrep() {
+    const ids = prep.flat(), rects = {};
+    if (!ids.length) return;
+    for (const id of ids) rects[id] = tileRect(id);
+    prep = []; psel = null; sfx("pop");
+    ids.forEach((id, k) => { if (rects[id]) fl.add({ src: rects[id], dst: id, html: tileHTML(id, "", false), delay: k * 35, dur: 380 }); });
+    render();
+  }
+  function layPrep() {
+    if (!W || inflight) return;
+    const ready = prep.filter((s) => G.analyze(s));
+    if (!ready.length) { toast("Noch kein gültiger Satz vorbereitet."); return; }
+    const ids = ready.flat(), rects = {};
+    for (const id of ids) rects[id] = tileRect(id);
+    prep = prep.filter((s) => !ready.includes(s));
+    for (const s of ready) { for (const id of s) { const k = W.rack.indexOf(id); if (k >= 0) W.rack.splice(k, 1); } W.sets.push(s.slice()); }
+    W.sel = null; norm();
+    ids.forEach((id, k) => { if (rects[id]) fl.add({ src: rects[id], dst: id, html: tileHTML(id, "", false), delay: k * 50, dur: 420 }); });
+    sfx("place"); buzz(10);
+    render();
+  }
+
   // move one tile: to a set (at position pos), to a new set, or back to the rack
   function moveTile(id, kind, i, pos, srcRect) {
     if (!W || !V) return false;
@@ -137,6 +196,7 @@
     if (kind === "rack" && !W.start.has(id)) return false;
     if (locked(id)) return false;
     const src = srcRect || tileRect(id);
+    dropFromPrep(id);
     for (const s of W.sets) { const k = s.indexOf(id); if (k >= 0) s.splice(k, 1); }
     const rk = W.rack.indexOf(id); if (rk >= 0) W.rack.splice(rk, 1);
     if (kind === "rack") W.rack.push(id);
@@ -165,48 +225,60 @@
   const dnd = Cards.dnd({
     root: "#game",
     grab(e) {
-      if (!W || inflight) return null;
-      const el = e.target.closest("#rack .tile, #sets .tile");
+      if (!V || inflight || V.me < 0 || V.phase !== "play") return null;
+      const el = e.target.closest("#rack .tile, #prep .tile, #sets .tile");
       if (!el) return null;
       const id = +el.dataset.id;
-      return locked(id) ? null : { el, id };
+      if (el.closest("#sets")) return W && !locked(id) ? { el, id } : null;
+      return { el, id };
     },
     target(under, s) {
+      const ps = under.closest("#prep .pset");
+      if (ps) return { el: ps, ok: true, kind: "prep", i: +ps.dataset.i };
+      if (under.closest("#prep")) return { el: $("#prepNew"), ok: true, kind: "prep", i: "new" };
+      if (under.closest("#rack")) return { el: $("#rack"), ok: W ? W.start.has(s.id) : inPrep(s.id), kind: "rack" };
+      if (!W) return null;
       const set = under.closest("#sets .set");
       if (set) return { el: set, ok: !lockedSet(W.sets[+set.dataset.i] || []), kind: "set", i: +set.dataset.i };
-      if (under.closest("#rack")) return { el: $("#rack"), ok: W.start.has(s.id), kind: "rack" };
       if (under.closest("#arena")) return { el: $("#newSet"), ok: true, kind: "new" };
       return null;
     },
     drop(s, t, rect) {
       if (!t.ok) return false;
+      if (t.kind === "prep") return toPrep(s.id, t.i, t.i === "new" ? null : posIn(t.el, rect, s.id), rect);
+      if (t.kind === "rack") return toRack(s.id, rect);
       if (t.kind === "set") return moveTile(s.id, "set", t.i, posIn(t.el, rect, s.id), rect);
       return moveTile(s.id, t.kind, 0, null, rect);
     },
-    onStart() { if (W) W.sel = null; },
+    onStart() { setSel(null); },
     onEnd(dirty) { if (dirty) render(); },
     tap(e) {
-      if (!W || inflight || e.target.closest("button, a")) return;
-      const tile = e.target.closest("#rack .tile, #sets .tile");
-      if (tile) {
-        const id = +tile.dataset.id, inRack = !!tile.closest("#rack");
-        if (W.sel != null && W.sel !== id && !(inRack && W.rack.includes(W.sel))) {
-          if (inRack) { if (!moveTile(W.sel, "rack")) toast("Dieser Stein lag schon auf dem Tisch und bleibt dort."); return; }
-          const set = tile.closest(".set"), i = +set.dataset.i;
-          if (lockedSet(W.sets[i])) { toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); return; }
-          moveTile(W.sel, "set", i, [...set.querySelectorAll(".tile")].filter((t) => +t.dataset.id !== W.sel).indexOf(tile) + 1);
-          return;
-        }
-        if (locked(id)) { toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); return; }
-        W.sel = W.sel === id ? null : id;
-        render();
+      if (!V || inflight || V.me < 0 || V.phase !== "play" || e.target.closest("button, a")) return;
+      const sel = selOf(), tile = e.target.closest("#rack .tile, #sets .tile, #prep .tile");
+      const pset = e.target.closest("#prep .pset"), inSets = e.target.closest("#sets, #arena");
+      if (!W && inSets) return;
+      const tid = tile ? +tile.dataset.id : null;
+      if (tile && sel === tid) { setSel(null); render(); return; }
+      if (sel == null) {
+        if (!tile) return;
+        if (locked(tid)) { toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); return; }
+        setSel(tid); render();
         return;
       }
-      if (W.sel == null) return;
-      const set = e.target.closest("#sets .set");
-      if (set) { if (!moveTile(W.sel, "set", +set.dataset.i)) toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); }
-      else if (e.target.closest("#rack")) { if (!moveTile(W.sel, "rack")) toast("Dieser Stein lag schon auf dem Tisch und bleibt dort."); }
-      else if (e.target.closest("#arena")) moveTile(W.sel, "new");
+      const rackIds = W ? W.rack : V.rack, selInRack = rackIds.includes(sel) && !inPrep(sel);
+      const noRack = () => toast("Dieser Stein lag schon auf dem Tisch und bleibt dort.");
+      if (pset) {
+        const pos = tile ? [...pset.querySelectorAll(".tile")].filter((t) => +t.dataset.id !== sel).indexOf(tile) + 1 : null;
+        if (!toPrep(sel, +pset.dataset.i, pos)) noRack();
+      } else if (e.target.closest("#prep")) { if (!toPrep(sel, "new")) noRack(); }
+      else if (e.target.closest("#rack")) {
+        if (selInRack) { if (tile) { setSel(tid); render(); } return; }
+        if (!toRack(sel)) noRack();
+      } else if (e.target.closest("#sets .set")) {
+        const set = e.target.closest("#sets .set"), i = +set.dataset.i;
+        if (lockedSet(W.sets[i])) { toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); return; }
+        moveTile(sel, "set", i, tile ? [...set.querySelectorAll(".tile")].filter((t) => +t.dataset.id !== sel).indexOf(tile) + 1 : null);
+      } else if (e.target.closest("#arena")) moveTile(sel, "new");
     }
   });
 
@@ -328,7 +400,7 @@
       if (!R.view || (waiting && !watching)) { V = null; W = null; showScreen("lobby"); UI.renderLobby(); $("#roundEnd").hidden = true; }
       else { V = R.view; showScreen("game"); renderGame(); }
     } else {
-      V = null; W = null;
+      V = null; W = null; prep = []; psel = null;
       $("#roundEnd").hidden = true;
       showScreen("home"); renderHome();
     }
@@ -347,13 +419,35 @@
       `<span class="pwins" title="Siege">${p.wins}</span></div>`;
   }
 
+  function renderPrep() {
+    const z = $("#prep");
+    z.hidden = V.me < 0 || V.phase !== "play";
+    if (z.hidden) { z.innerHTML = ""; return; }
+    const play = canPlay(), valid = prep.filter((s) => G.analyze(s));
+    const pts = valid.reduce((n, s) => n + G.analyze(s).value, 0), first = !me().melded && V.meld > 0;
+    const info = !prep.length ? (play ? "Hierher ziehen oder antippen" : "Schon planen: hierher ziehen")
+      : `${valid.length}/${prep.length} gültig${first ? ` · ${pts}/${V.meld} Pkt${pts >= V.meld ? " ✓" : ""}` : ""}`;
+    const sets = prep.map((s, i) => {
+      const a = G.analyze(s), st = a ? "ok" : s.length >= 3 ? "bad" : "";
+      return `<div class="pset ${st}" data-i="${i}">${a ? `<span class="pv">${a.value}</span>` : ""}${s.map((id) => tileHTML(id, ["cd-draggable", selOf() === id ? "sel" : ""].join(" "))).join("")}</div>`;
+    }).join("");
+    z.innerHTML = `<div class="phead"><b>Vorbereiten</b><small>${info}</small><span class="pbtns">` +
+      (prep.length ? '<button class="btn" type="button" data-p="clear">Zurück</button>' : "") +
+      `<button class="btn${play && valid.length ? " btn-primary" : ""}" type="button" data-p="lay"${play && valid.length ? "" : " disabled"}>Auslegen</button></span></div>` +
+      `<div class="psets">${sets}<div class="pnew" id="prepNew">+ Neuer Satz</div></div>`;
+  }
+
   function renderGame() {
     if (V.phase !== "roundEnd") peek = false;
-    if (V.round !== (renderGame.round || 0)) { renderGame.round = V.round; fresh = new Set(); }
+    if (V.round !== (renderGame.round || 0)) { renderGame.round = V.round; fresh = new Set(); prep = []; psel = null; }
     const play = canPlay();
     if (!play) W = null;
     else if (!W || W.key !== `${V.round}:${V.turn}`) W = newW();
     else if (W.sel != null && !W.rack.includes(W.sel) && !W.sets.some((s) => s.includes(W.sel))) W.sel = null;
+    const rackNow = W ? W.rack : V.rack;
+    if (V.phase !== "play" || V.me < 0) prep = [];
+    else { prep = prep.map((s) => s.filter((id) => rackNow.includes(id))).filter((s) => s.length); normPrep(); }
+    if (psel != null && (W || !rackNow.includes(psel))) psel = null;
 
     $("#plates").innerHTML = V.players.map((_, i) => plateHTML(i)).join("");
     $("#roundInfo").innerHTML = `Runde <b>${V.round}</b> · ${V.goal === 1 ? "eine Runde" : `bis ${V.goal} Siege`}`;
@@ -372,10 +466,10 @@
 
     // my rack
     $(".rackrow").hidden = V.me < 0;
-    const rackIds = sorted(W ? W.rack : V.rack);
-    $("#rack").innerHTML = rackIds.map((id) => tileHTML(id, [W ? "cd-draggable" : "", W && W.sel === id ? "sel" : ""].join(" "))).join("");
-    $("#sortColor").setAttribute("aria-pressed", String(sortMode === "color"));
-    $("#sortNum").setAttribute("aria-pressed", String(sortMode === "num"));
+    const rackIds = sorted(rackNow.filter((id) => !inPrep(id))), live = V.phase === "play" && V.me >= 0;
+    $("#rack").innerHTML = rackIds.map((id) => tileHTML(id, [live ? "cd-draggable" : "", selOf() === id ? "sel" : ""].join(" "))).join("");
+    renderPrep();
+    Spieleabend.sortToggle($("#sortBtn"), sortMode);
     $("#pool b").textContent = V.pool;
     $("#pool").title = `${V.pool} Steine im Vorrat`;
 
@@ -446,8 +540,14 @@
   $("#doneBtn").addEventListener("click", () => play("done"));
   $("#drawBtn").addEventListener("click", () => play("draw"));
   $("#resetBtn").addEventListener("click", () => { if (canPlay() && !inflight) { W = null; sfx("pop"); render(); } });
+  $("#prep").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-p]");
+    if (!b || b.disabled) return;
+    if (b.dataset.p === "lay") layPrep(); else clearPrep();
+  });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
-  for (const [id, m] of [["#sortColor", "color"], ["#sortNum", "num"]]) $(id).addEventListener("click", () => { sortMode = m; store.set(K.sort, m); if (V) render(); });
+  const toggleSort = () => { sortMode = sortMode === "value" ? "color" : "value"; store.set(K.sort, sortMode); if (V) render(); };
+  $("#sortBtn").addEventListener("click", toggleSort);
 
   // keys: Enter is done, Z draws, Esc closes
   document.addEventListener("keydown", (e) => {
@@ -458,6 +558,7 @@
     const k = e.key.toLowerCase();
     if (k === "enter") { e.preventDefault(); play("done"); }
     else if (k === "z") { e.preventDefault(); play("draw"); }
+    else if (k === "s") toggleSort();
   });
 
   // ---------- reactions (online) ----------
@@ -619,7 +720,7 @@
   });
 
   function startLocal(state) {
-    L = state; mode = "local"; peek = false; W = null; dealKey = null; prevRack = new Set();
+    L = state; mode = "local"; peek = false; W = null; prep = []; psel = null; dealKey = null; prevRack = new Set();
     store.set(K.local, L); render(); wake(); scheduleBot();
   }
   $("#startLocal").addEventListener("click", () => {
