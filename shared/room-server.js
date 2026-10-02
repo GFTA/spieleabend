@@ -547,6 +547,19 @@ module.exports = function roomServer(g) {
         for (const s of sockets.get(room.code) || []) if (s.pid != null) send(s, { t: "react", pi: ws.pid, e: msg.e, name: ws.pid === -1 ? ws.watchName : undefined });
         return;
       }
+      case "nudge": { // a gentle "your move" for the player whose turn it is (people only, one every 20 s per sender)
+        const S = room && room.state;
+        if (!S || ws.pid == null || ws.pid < 0 || !inGame(room, ws.pid) || S.phase === "roundEnd") return;
+        const cur = S.cur, target = Number.isInteger(cur) ? room.members[cur] : null;
+        if (!target || cur === ws.pid || !inGame(room, cur)) return;
+        if (target.bot) return err("Der Computer braucht keinen Anstoß.");
+        const now = Date.now();
+        if (now - (ws.lastNudge || 0) < 20000) return err("Du hast gerade erst angestupst. Gib ihnen einen Moment.");
+        ws.lastNudge = now;
+        for (const s of sockets.get(room.code) || []) if (s.pid === cur) send(s, { t: "nudge", name: room.members[ws.pid].name });
+        send(ws, { t: "nudged", name: target.name });
+        return;
+      }
       case "end": { // host ends the game and returns everyone to the waiting room
         if (!room || !isHost) return;
         toLobby(room);

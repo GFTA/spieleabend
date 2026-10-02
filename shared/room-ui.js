@@ -27,6 +27,8 @@
   ICONS.sliders = SVG('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>');
   ICONS.chat = SVG('<path d="M4 5h16v11H9l-5 4z"/>', ' stroke-linejoin="round"');
   ICONS.share = SVG('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/>', ' stroke-linejoin="round"');
+  ICONS.bell = SVG('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>', ' stroke-linejoin="round"');
+  ICONS.vol = SVG('<path d="M4 9.5v5h4l5 4v-13l-5 4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/>', ' stroke-linejoin="round"');
   const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
 
   // ---------- markup ----------
@@ -76,6 +78,7 @@
   menu.innerHTML = `
   <div class="sheet">
     <h2>${menu.dataset.title || "Punktestand"}</h2>
+    <div class="roominfo" id="roomInfo" hidden></div>
     <ol class="${menu.dataset.scores || "scores"}" id="menuScores"></ol>
     <div class="hint" id="menuRules"></div>
     <div class="rules"><details><summary>${menu.dataset.rulesTitle || "Spielregeln"}</summary>${rulesHTML}</details></div>
@@ -90,6 +93,7 @@
     </div>
   </div>`;
   // chat during a game: a button in the top bar next to the menu, and a sheet with the whole log
+  $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="nudgeBtn" type="button" aria-label="Anstupsen: Du bist dran" title="Anstupsen: Du bist dran" hidden>${ICONS.bell}</button>`);
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="chatBtn" type="button" aria-label="Chat" title="Chat" hidden>${ICONS.chat}<span class="badge" id="chatBadge" hidden></span></button>`);
   // settings (design, avatar, colour, sound): a button in the game's top bar, a floating one on the start and waiting screens
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="setBtn" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>`);
@@ -97,7 +101,12 @@
   <div class="overlay" id="settings" hidden><div class="sheet"><h2>Einstellungen</h2>
     <div class="look" id="lookSettings"></div>
     <div class="label">Avatar &amp; Farbe</div><div class="avgrid" id="setAvGrid"></div>
-    <label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+    <div class="setrow"><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+      <div class="volrow">${ICONS.vol}<input class="range" type="range" id="soundVol" min="0" max="100" step="5" value="100" aria-label="Lautstärke"></div></div>
+    <label class="toggle" for="calmOn"><input type="checkbox" id="calmOn"><span>Weniger Bewegung<small>Keine Flug- und Wackel-Animationen</small></span></label>
+    <label class="toggle" for="contrastOn"><input type="checkbox" id="contrastOn"><span>Hoher Kontrast<small>Kräftigere Schrift und Rahmen</small></span></label>
+    <label class="toggle" id="notifyRow" for="notifyOn" hidden><input type="checkbox" id="notifyOn"><span>Benachrichtigung bei deinem Zug<small>Wenn dieser Tab im Hintergrund ist</small></span></label>
+    <div class="setmore"><button class="btn btn-ghost" id="fsBtn" type="button" hidden>Vollbild</button><button class="btn btn-ghost" id="keysBtn" type="button" hidden>Tastenkürzel</button></div>
     <button class="btn btn-primary btn-block" id="settingsClose" type="button">Fertig</button></div></div>`);
   document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
     <button class="btn btn-primary btn-block" id="chatClose" type="button"><span class="onphone">Weiterspielen</span><span class="ondesk">Chat einklappen</span></button></div></div>`);
@@ -142,6 +151,7 @@
     const partyHref = () => startUrl(`?party=${R().party}`);
 
     // ---------- connection: one socket, reconnects on its own, rejoins with the stored secret ----------
+    let pingAt = 0, rtt = 0;
     let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null, lastRx = 0, probeT = null, dropped = false;
     function connect() {
       if (ws && ws.readyState <= 1) return;
@@ -224,6 +234,16 @@
         chat = m.list || []; unread = 0; renderChat();
       } else if (m.t === "chat") {
         addChat(m.line);
+      } else if (m.t === "pong") {
+        if (pingAt) { rtt = Date.now() - pingAt; pingAt = 0; paintRoomInfo(); }
+      } else if (m.t === "nudge") {
+        const K = window.Spieleabend;
+        app.toast(`${m.name} stupst dich an: Du bist dran!`);
+        K.say(`${m.name} stupst dich an. Du bist dran.`);
+        if (K.sounds) { K.sounds.sfx("turn"); K.sounds.buzz(220); }
+        K.notify(`${m.name} wartet auf dich`, baseTitle);
+      } else if (m.t === "nudged") {
+        app.toast(`${m.name} wurde angestupst.`);
       } else if (m.t === "error") {
         if (app.on.error) app.on.error(m);
         app.toast(m.msg);
@@ -247,14 +267,39 @@
       renderBadge();
       turnCue();
       renderLeaveVote();
+      nudgeCheck();
     }
+
+    // ---------- nudge: after 20 s of waiting for a person, a bell in the top bar pokes them (the server checks again) ----------
+    let nudgeKey = "", nudgeSince = 0, nudgeT = 0;
+    function nudgeCheck() {
+      const v = V(), r = R(), btn = $("#nudgeBtn");
+      const ok = app.mode() === "online" && !!v && !!r && v.me >= 0 && Number.isInteger(v.cur) && v.cur !== v.me && v.phase !== "roundEnd" &&
+        !!r.members[v.cur] && !r.members[v.cur].bot && !(r.members[r.you] && r.members[r.you].lobby);
+      const key = ok ? `${v.cur}|${v.phase}|${v.log ? v.log.length : 0}` : "";
+      if (key !== nudgeKey) { nudgeKey = key; nudgeSince = Date.now(); }
+      clearTimeout(nudgeT);
+      const wait = nudgeSince + 20000 - Date.now();
+      if (!ok || wait > 0) { btn.hidden = true; if (ok) nudgeT = setTimeout(nudgeCheck, wait + 50); return; }
+      if (btn.hidden) { btn.hidden = false; btn.classList.remove("ring"); void btn.offsetWidth; btn.classList.add("ring"); }
+      btn.title = `${r.members[v.cur].name} anstupsen`; btn.setAttribute("aria-label", btn.title);
+    }
+    $("#nudgeBtn").addEventListener("click", () => {
+      send({ t: "nudge" });
+      $("#nudgeBtn").hidden = true; nudgeSince = Date.now(); clearTimeout(nudgeT); nudgeT = setTimeout(nudgeCheck, 20050);
+    });
 
     // the tab title says when it is my turn while the tab is in the background (phones: the task switcher)
     const baseTitle = document.title;
+    let wasMine = false;
     function turnCue() {
+      const K = window.Spieleabend, hidden = document.visibilityState === "hidden";
       const v = V(), mine = app.mode() === "online" && !!v && v.me >= 0 && v.cur === v.me && (v.phase === "play" || v.phase === "drawn");
-      const want = mine && document.visibilityState === "hidden" ? `● Du bist dran · ${baseTitle}` : baseTitle;
+      const want = mine && hidden ? `● Du bist dran · ${baseTitle}` : baseTitle;
       if (document.title !== want) document.title = want;
+      K.badge(mine && hidden);
+      if (mine && !wasMine) { K.say("Du bist dran."); if (hidden) K.notify("Du bist dran", baseTitle); }
+      wasMine = mine;
     }
     document.addEventListener("visibilitychange", turnCue);
 
@@ -518,7 +563,73 @@
       const P = window.Spieleabend.profile, grid = $("#setAvGrid");
       const paintHome = () => { const b = $("#myAvatar"); if (b) { b.textContent = P.get().av; b.style.background = P.get().col || ""; } };
       const fill = () => { grid.innerHTML = window.Spieleabend.pickerHTML(app.avatars, P.get().av, P.get().col); };
-      const open = () => { fill(); $("#settings").hidden = false; };
+      const K = window.Spieleabend;
+      const syncPrefs = () => {
+        $("#calmOn").checked = K.calm(); $("#contrastOn").checked = K.pref("contrast", false);
+        $("#notifyOn").checked = K.pref("notify", false) && Notification.permission === "granted";
+        $("#fsBtn").textContent = document.fullscreenElement ? "Vollbild beenden" : "Vollbild";
+      };
+      const open = () => { fill(); syncPrefs(); $("#settings").hidden = false; };
+      $("#calmOn").addEventListener("change", (e) => P.setPrefs({ motion: e.target.checked ? false : null }));
+      $("#contrastOn").addEventListener("change", (e) => P.setPrefs({ contrast: e.target.checked }));
+      if ("Notification" in window) $("#notifyRow").hidden = false;
+      $("#notifyOn").addEventListener("change", async (e) => {
+        const box = e.target;
+        if (!box.checked) { P.setPrefs({ notify: false }); return; }
+        let perm = Notification.permission;
+        if (perm === "default") { try { perm = await Notification.requestPermission(); } catch (err) { perm = "denied"; } }
+        box.checked = perm === "granted";
+        P.setPrefs({ notify: box.checked });
+        if (!box.checked) app.toast("Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Seiteneinstellungen.");
+      });
+      const fullscreen = () => {
+        if (!document.fullscreenEnabled) return;
+        (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => app.toast("Vollbild geht hier nicht."));
+      };
+      if (document.fullscreenEnabled) { $("#fsBtn").hidden = false; $("#fsBtn").addEventListener("click", fullscreen); document.addEventListener("fullscreenchange", syncPrefs); }
+      if (matchMedia("(hover: hover) and (pointer: fine)").matches) $("#keysBtn").hidden = false;
+      $("#keysBtn").addEventListener("click", () => { $("#settings").hidden = true; keysSheet(); });
+
+      // ---------- keyboard: Alt plus a letter (the games use the plain letters), "?" for the list ----------
+      function keysSheet() {
+        let o = $("#keysSheet");
+        if (!o) {
+          o = document.createElement("div"); o.className = "overlay"; o.id = "keysSheet"; o.hidden = true;
+          o.innerHTML = `<div class="sheet"><h2>Tastenkürzel</h2><dl class="keyslist">` +
+            `<dt><kbd>Alt</kbd> + <kbd>M</kbd></dt><dd>Menü</dd><dt><kbd>Alt</kbd> + <kbd>O</kbd></dt><dd>Einstellungen</dd>` +
+            `<dt><kbd>Alt</kbd> + <kbd>C</kbd></dt><dd>Chat (online)</dd><dt><kbd>Alt</kbd> + <kbd>K</kbd></dt><dd>Ton an oder aus</dd>` +
+            `<dt><kbd>Alt</kbd> + <kbd>V</kbd></dt><dd>Vollbild</dd><dt><kbd>Alt</kbd> + <kbd>H</kbd> oder <kbd>?</kbd></dt><dd>Diese Liste</dd>` +
+            `<dt><kbd>Esc</kbd></dt><dd>Schließt das offene Fenster</dd></dl>` +
+            `<p class="hint">Welche Tasten das Spiel selbst kennt, steht in seinen Regeln.</p>` +
+            `<button class="btn btn-primary btn-block" id="keysClose" type="button">Schließen</button></div>`;
+          document.body.appendChild(o);
+          const close = () => { o.hidden = true; };
+          o.addEventListener("click", (e) => { if (e.target === o) close(); });
+          $("#keysClose").addEventListener("click", close);
+          document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !o.hidden) { close(); e.stopPropagation(); } }, true);
+        }
+        o.hidden = !o.hidden;
+      }
+      const usable = (el) => !!el && !el.hidden && el.getClientRects().length > 0;
+      const blocker = (id) => [...document.querySelectorAll(".overlay")].some((o) => !o.hidden && o.id !== "chat" && o.id !== id);
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey || e.metaKey || e.isComposing) return;
+        const typing = !!(e.target.closest && e.target.closest("input, textarea, select, [contenteditable]"));
+        let run = null;
+        if (e.altKey && !e.shiftKey) {
+          run = {
+            KeyM: () => { if (!$("#menu").hidden) $("#menuClose").click(); else if (usable($("#menuBtn")) && !blocker("menu")) $("#menuBtn").click(); },
+            KeyO: () => { if (!$("#settings").hidden) $("#settingsClose").click(); else if (!blocker("settings")) (usable($("#setBtn")) ? $("#setBtn") : $("#setFab")).click(); },
+            KeyC: () => { if (usable($("#chatBtn")) && !blocker("chat")) $("#chatBtn").click(); },
+            KeyK: () => { const b = $("#soundOn"); b.checked = !b.checked; b.dispatchEvent(new Event("change", { bubbles: true })); app.toast(b.checked ? "Ton an" : "Ton aus"); },
+            KeyV: fullscreen,
+            KeyH: () => { if (!blocker("keysSheet")) keysSheet(); }
+          }[e.code];
+        } else if (e.key === "?" && !typing && !e.altKey) run = () => { if (!blocker("keysSheet")) keysSheet(); };
+        if (!run) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        run();
+      }, true);
       $("#setBtn").addEventListener("click", open);
       $("#setFab").addEventListener("click", open);
       $("#settingsClose").addEventListener("click", () => { $("#settings").hidden = true; });
@@ -577,6 +688,8 @@
       $("#hostBox").hidden = !hb.children.length;
       $("#hostBox details").open = !!(r && r.members.some((m) => !m.bot && !m.online)); // someone dropped out: show what the host can do
       $("#menuLeave").hidden = mode !== "online";
+      paintRoomInfo();
+      if (mode === "online" && ws && ws.readyState === 1) { pingAt = Date.now(); ws.send('{"t":"ping"}'); }
       $("#menu").hidden = false;
     }
     $("#menuBtn").addEventListener("click", openMenu);
@@ -590,6 +703,45 @@
       leaveArm = setTimeout(() => b.classList.remove("btn-danger"), 3500);
     });
     $("#menuClose").addEventListener("click", () => { $("#menu").hidden = true; });
+
+    // ---------- room info at the top of the menu: code, link, spectators, connection ----------
+    function paintRoomInfo() {
+      const r = R(), box = $("#roomInfo");
+      if (!r || app.mode() !== "online" || !r.code) { box.hidden = true; return; }
+      const seen = r.watchers || [];
+      box.innerHTML = `<span>Raum</span><span class="rc">${esc(r.code)}</span><button type="button" data-copy>Link kopieren</button>` +
+        `<span class="meta">${seen.length ? `Zuschauer: ${seen.map(esc).join(", ")} · ` : ""}Verbindung: <span class="ping">${rtt ? `${rtt} ms` : "…"}</span></span>`;
+      box.hidden = false;
+    }
+    $("#roomInfo").addEventListener("click", async (e) => {
+      if (!e.target.closest("[data-copy]")) return;
+      const url = `${location.origin}${location.pathname}?r=${R().code}`;
+      try { await navigator.clipboard.writeText(url); app.toast("Link kopiert."); } catch (err) { app.toast("Kopieren geht hier nicht."); }
+    });
+
+    // ---------- a new version of the game was deployed while this page was open ----------
+    (function updateWatch() {
+      const meta = document.querySelector('meta[name$="-version"]');
+      if (!meta || !/^https?:$/.test(location.protocol)) return;
+      let shown = false, dismissed = false, last = 0;
+      async function check() {
+        if (shown || dismissed || document.visibilityState !== "visible" || Date.now() - last < 60000) return;
+        last = Date.now();
+        try {
+          const j = await (await fetch("/info", { cache: "no-store" })).json();
+          if (!j || !j.version || j.version === meta.content) return;
+          shown = true;
+          document.body.insertAdjacentHTML("beforeend", `<div id="updateBar" role="status"><span>Neue Version verfügbar</span><button type="button" data-reload>Jetzt laden</button><button type="button" class="x" data-close aria-label="Später">✕</button></div>`);
+          $("#updateBar").addEventListener("click", (e) => {
+            if (e.target.closest("[data-reload]")) location.reload();
+            else if (e.target.closest("[data-close]")) { dismissed = true; $("#updateBar").remove(); }
+          });
+        } catch (err) {}
+      }
+      document.addEventListener("visibilitychange", check);
+      setInterval(check, 5 * 60000);
+      setTimeout(check, 30000);
+    })();
 
     // ---------- boot: is there a game server behind this address, and was I sent a room code (?r=) ----------
     // Ask twice over HTTP (some ad blockers eat such requests), then simply try the WebSocket.

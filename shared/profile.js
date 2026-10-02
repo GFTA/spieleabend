@@ -1,6 +1,8 @@
-// The player profile, shared by every game and the start page: name, avatar, colour and the
-// per-game statistics. It lives in one cookie for .cool-kidz.net (so all game subdomains see
-// the same profile) with a localStorage copy as fallback; the newer of the two wins.
+// The player profile, shared by every game and the start page: name, avatar, colour, the
+// settings that should follow the player into every game (table design, sound, volume,
+// less motion, high contrast, turn notifications) and the per-game statistics. It lives in one
+// cookie for .cool-kidz.net (so all game subdomains see the same profile) with a localStorage
+// copy as fallback; the newer of the two wins.
 (function () {
   "use strict";
   const A = window.SAAvatars;
@@ -9,9 +11,24 @@
   const listeners = [];
   const int = (x) => Math.max(0, Math.floor(+x) || 0);
 
+  // settings that travel with the player: table design, sound on/off, volume 0-100, less motion,
+  // high contrast, turn notifications. A key that is missing means "not chosen yet".
+  function cleanPrefs(x) {
+    const o = {};
+    if (!x || typeof x !== "object") return o;
+    if (typeof x.table === "string" && /^[a-z]{2,12}$/.test(x.table)) o.table = x.table;
+    if (typeof x.sound === "boolean") o.sound = x.sound;
+    if (x.vol != null && Number.isFinite(+x.vol)) o.vol = Math.min(100, Math.max(0, Math.round(+x.vol)));
+    if (typeof x.motion === "boolean") o.motion = x.motion;
+    if (typeof x.contrast === "boolean") o.contrast = x.contrast;
+    if (typeof x.notify === "boolean") o.notify = x.notify;
+    return o;
+  }
+
   function clean(p) {
-    const o = { v: 1, name: "", av: "", col: "", u: 0, stats: {} };
+    const o = { v: 1, name: "", av: "", col: "", u: 0, pf: {}, stats: {} };
     if (!p || typeof p !== "object") return o;
+    o.pf = cleanPrefs(p.pf);
     o.name = String(p.name || "").slice(0, 18);
     o.av = A.AVATARS.includes(p.av) ? p.av : "";
     o.col = A.isColor(p.col) ? p.col : "";
@@ -33,14 +50,23 @@
   }
   function fromStorage() { try { return JSON.parse(localStorage.getItem(LS) || "null"); } catch (e) { return null; } }
   function load() {
-    const a = clean(fromCookie()), b = clean(fromStorage());
-    return b.u > a.u ? b : a;
+    const a = clean(fromCookie()), b = clean(fromStorage()), win = b.u > a.u ? b : a, other = win === a ? b : a;
+    // a cookie that had to drop the result keys to fit: take them back from the copy of the same state
+    if (other.u === win.u) for (const g of Object.keys(win.stats)) if (!win.stats[g].k && other.stats[g] && other.stats[g].g === win.stats[g].g) win.stats[g].k = other.stats[g].k;
+    return win;
   }
   function save(p) {
     p.u = Date.now();
     const json = JSON.stringify(p);
     try { localStorage.setItem(LS, json); } catch (e) {}
-    try { document.cookie = `${COOKIE}=${encodeURIComponent(json)}; Path=/; Max-Age=157680000; SameSite=Lax${DOMAIN}${location.protocol === "https:" ? "; Secure" : ""}`; } catch (e) {}
+    // a cookie holds about 4 KB: with many games played, leave the result keys and the zeros out of it (clean() fills them in, the localStorage copy keeps the keys)
+    let enc = encodeURIComponent(json);
+    if (enc.length > 3600) {
+      const slim = JSON.parse(json);
+      for (const g of Object.keys(slim.stats)) slim.stats[g] = Object.fromEntries(Object.entries(slim.stats[g]).filter(([k, v]) => k !== "k" && v));
+      enc = encodeURIComponent(JSON.stringify(slim));
+    }
+    try { document.cookie = `${COOKIE}=${enc}; Path=/; Max-Age=157680000; SameSite=Lax${DOMAIN}${location.protocol === "https:" ? "; Secure" : ""}`; } catch (e) {}
     for (const f of listeners) try { f(p); } catch (e) {}
   }
   function update(fn) { const p = load(); fn(p); save(p); return p; }
@@ -54,6 +80,16 @@
         if (patch.name != null) p.name = String(patch.name).slice(0, 18);
         if (patch.av != null && A.AVATARS.includes(patch.av)) p.av = patch.av;
         if (patch.col != null && (patch.col === "" || A.isColor(patch.col))) p.col = patch.col;
+      });
+    },
+    // the settings that follow the player (see cleanPrefs): only what was chosen
+    prefs() { return Object.assign({}, load().pf); },
+    // patch: any of { table, sound, vol, motion, contrast, notify }; invalid values are ignored, null forgets a choice
+    setPrefs(patch) {
+      return update((p) => {
+        const ok = cleanPrefs(patch), next = Object.assign({}, p.pf);
+        for (const k of Object.keys(patch || {})) { if (patch[k] === null) delete next[k]; else if (k in ok) next[k] = ok[k]; }
+        p.pf = cleanPrefs(next);
       });
     },
     // one finished game (or round, as the game counts it); the same key twice is ignored (page reloads)
@@ -85,7 +121,7 @@
     },
     // one game's statistics, or (without argument) all of them
     reset(game) { return update((p) => { if (game) delete p.stats[game]; else p.stats = {}; }); },
-    // name, avatar, colour and statistics
-    resetAll() { return update((p) => { p.name = ""; p.av = ""; p.col = ""; p.stats = {}; }); }
+    // name, avatar, colour, settings and statistics
+    resetAll() { return update((p) => { p.name = ""; p.av = ""; p.col = ""; p.pf = {}; p.stats = {}; }); }
   };
 })();

@@ -118,3 +118,27 @@ body:has(#game:not([hidden])) .setfab{display:none}
 .leavevotetally .bot{color:var(--accent)}
 .leavevotetally .wait{color:var(--green)}
 .leavevoteacts{display:flex;flex-direction:column;gap:8px}
+
+/* ---------- settings sheet extras, room info, shortcuts, update bar, nudge ---------- */
+.setrow{display:flex;flex-direction:column;gap:6px}
+.setrow .volrow{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line)}
+.setrow .volrow svg{width:20px;height:20px;flex:none;color:var(--muted)}
+.setrow .volrow input{flex:1;min-width:0}
+.setrow .volrow input:disabled{opacity:.45}
+.setmore{display:flex;flex-wrap:wrap;gap:8px}
+.setmore .btn{flex:1;min-width:130px;padding:11px 14px;font-size:14px}
+.roominfo{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);font-size:14px}
+.roominfo .rc{font-family:var(--display);font-size:22px;letter-spacing:.1em;color:var(--accent)}
+.roominfo button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:13px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);color:var(--text);cursor:pointer}
+.roominfo .meta{color:var(--muted);flex-basis:100%;font-size:13px}
+.roominfo .ping{font-variant-numeric:tabular-nums}
+.keyslist{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;margin:0;font-size:14px}
+.keyslist dt{white-space:nowrap}
+.keyslist dd{margin:0;color:var(--muted)}
+.keyslist kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:6px;padding:2px 7px;box-shadow:inset 0 0 0 1px var(--line)}
+#updateBar{position:fixed;z-index:70;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);display:flex;align-items:center;gap:12px;max-width:calc(100% - 24px);padding:10px 12px 10px 16px;border-radius:16px;background:#fff;color:#1a1426;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+#updateBar button{border:0;border-radius:10px;padding:8px 12px;font-weight:800;font-size:14px;background:#1a1426;color:#fff;cursor:pointer}
+#updateBar button.x{background:transparent;color:#5b6479;padding:8px}
+#nudgeBtn.ring svg{animation:nudge .6s ease-in-out 2}
+@keyframes nudge{0%,100%{rotate:0deg}25%{rotate:-18deg}75%{rotate:18deg}}
+@media (max-width:420px){#updateBar{flex-wrap:wrap;justify-content:center;text-align:center}}

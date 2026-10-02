@@ -1,7 +1,9 @@
 // Shared browser base of every Spieleabend game, loaded first (before room-ui.js, game.js
 // and app.js): local storage, the table design and size (with the ?table= hand-off from the
 // start page), name and avatar (?name=&av= hand-off, avatar picker), toast, confetti,
-// reaction bubbles, sound/haptics/wake lock and the link back to the start page. app.js uses it as window.Spieleabend.
+// reaction bubbles, sound/haptics/wake lock, the settings that follow the player into every game
+// (profile prefs: table, sound, volume, less motion, high contrast, notifications), dialog focus
+// handling and the link back to the start page. app.js uses it as window.Spieleabend.
 (function () {
   "use strict";
   const $ = (s) => document.querySelector(s);
@@ -24,10 +26,14 @@
   const SIZES = [["0.85", "Klein"], ["1", "Normal"], ["1.15", "Groß"]];
   // key: where the choice is stored; sizeLabel: "Größe", "Kartengröße", ...; onChange: redraw after a change
   function look({ key, sizeLabel = "Größe", onChange }) {
-    const cur = Object.assign({ table: "night", size: "1" }, store.get(key) || {});
-    // came here from the games.cool-kidz.net start page with a design already picked there
-    const qTable = new URLSearchParams(location.search).get("table");
-    if (qTable && TABLES.some((x) => x[0] === qTable)) { cur.table = qTable; store.set(key, cur); }
+    const saved = store.get(key) || {}, cur = Object.assign({ table: "night", size: "1" }, saved);
+    const known = (t) => TABLES.some((x) => x[0] === t);
+    // order: hand-off from the start page (?table=), the table chosen in any game or the start page
+    // (profile), what this game stored before, the system's light/dark setting
+    const qTable = new URLSearchParams(location.search).get("table"), pTable = P.prefs().table;
+    if (qTable && known(qTable)) { cur.table = qTable; store.set(key, cur); P.setPrefs({ table: qTable }); }
+    else if (pTable && known(pTable)) cur.table = pTable;
+    else if (!saved.table && matchMedia("(prefers-color-scheme: light)").matches) cur.table = "light";
     dropParams("table");
     function apply() {
       const root = document.documentElement, t = TABLES.find((x) => x[0] === cur.table) || TABLES[0];
@@ -49,7 +55,7 @@
       if (!t && !z) return;
       if (t) cur.table = t.dataset.table;
       if (z) cur.size = z.dataset.size;
-      store.set(key, cur); apply(); render();
+      store.set(key, cur); if (t) P.setPrefs({ table: cur.table }); apply(); render();
       if (onChange) onChange();
     }); }
     apply();
@@ -58,6 +64,46 @@
 
   // ---------- name and avatar (the profile: shared/profile.js) ----------
   const P = window.SAProfile, COLORS = window.SAAvatars.COLORS;
+
+  // ---------- settings that follow the player (profile prefs) ----------
+  const pref = (k, d) => { const v = P.prefs()[k]; return v === undefined ? d : v; };
+  const calm = () => pref("motion", true) === false; // "less motion" chosen by hand, on top of the system setting
+  const REDUCE = /prefers-reduced-motion:\s*reduce/;
+  const nativeMatchMedia = window.matchMedia.bind(window);
+  // every game asks matchMedia("(prefers-reduced-motion: reduce)") before it animates: say yes when the player chose less motion
+  window.matchMedia = (q) => calm() && REDUCE.test(q)
+    ? { matches: true, media: String(q), onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }
+    : nativeMatchMedia(q);
+  if (Element.prototype.animate) {
+    const nativeAnimate = Element.prototype.animate;
+    Element.prototype.animate = function (kf, opts) {
+      if (calm()) opts = typeof opts === "number" ? 1 : Object.assign({}, opts, { duration: 1, delay: 0, endDelay: 0, iterations: 1 });
+      return nativeAnimate.call(this, kf, opts);
+    };
+  }
+  function applyPrefs() {
+    const root = document.documentElement;
+    if (calm()) root.dataset.motion = "off"; else delete root.dataset.motion;
+    if (pref("contrast", false)) root.dataset.contrast = "high"; else delete root.dataset.contrast;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) { const bg = getComputedStyle(root).getPropertyValue("--bg").trim(); if (bg) meta.setAttribute("content", bg); }
+  }
+  applyPrefs();
+  P.onChange(applyPrefs);
+
+  // screen reader announcements: a polite live region (toasts are one themselves)
+  let liveEl = null;
+  function say(text) {
+    if (!text) return;
+    if (!liveEl) {
+      liveEl = document.createElement("div");
+      liveEl.setAttribute("role", "status"); liveEl.setAttribute("aria-live", "polite");
+      liveEl.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap";
+      document.body.appendChild(liveEl);
+    }
+    liveEl.textContent = "";
+    setTimeout(() => { liveEl.textContent = text; }, 40);
+  }
   // The name and avatar to start with: a hand-off from the start page (?name=&av=), else the
   // profile, else what this game stored before (which the profile then adopts).
   function identity({ me, avatar, avatars }) {
@@ -127,7 +173,9 @@
   let toastT = null;
   function toast(msg) {
     if (!msg) return;
-    const t = $("#toast"); t.textContent = msg; t.classList.remove("off");
+    const t = $("#toast");
+    if (!t.getAttribute("role")) { t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); }
+    t.textContent = msg; t.classList.remove("off");
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.add("off"), 2800);
   }
   function confetti() {
@@ -182,6 +230,40 @@
     document.title = "🔔 Du bist dran!";
     addEventListener("focus", stop); document.addEventListener("visibilitychange", vis);
   }
+  // a desktop notification when it is my turn and the tab is in the background (only if the player allowed it in the settings)
+  let note = null;
+  function notify(title, body) {
+    if (!pref("notify", false) || !("Notification" in window) || Notification.permission !== "granted" || document.visibilityState === "visible") return;
+    try {
+      if (note) note.close();
+      note = new Notification(title, { body, tag: "spieleabend-turn" });
+      note.onclick = () => { window.focus(); note.close(); };
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && note) { try { note.close(); } catch (e) {} note = null; } });
+  // a red dot on the tab icon while it is my turn
+  let iconBase = null, iconType = "", iconDot = null, dotWanted = false;
+  function badge(on) {
+    dotWanted = !!on;
+    const link = document.querySelector('link[rel~="icon"]');
+    if (!link) return;
+    if (iconBase === null) { iconBase = link.href; iconType = link.type; }
+    const show = () => { link.type = "image/png"; link.href = iconDot; };
+    if (!on) { if (link.href !== iconBase) { link.href = iconBase; link.type = iconType; } return; }
+    if (iconDot) return show();
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const cv = document.createElement("canvas"); cv.width = cv.height = 64;
+        const c = cv.getContext("2d");
+        c.drawImage(img, 0, 0, 64, 64);
+        c.beginPath(); c.arc(48, 16, 14, 0, 6.3); c.fillStyle = "#e0393e"; c.fill(); c.lineWidth = 4; c.strokeStyle = "#fff"; c.stroke();
+        iconDot = cv.toDataURL("image/png");
+        if (dotWanted) show();
+      } catch (e) {}
+    };
+    img.src = iconBase;
+  }
   // restart a one-shot CSS animation class on el: "trace" (soft ring for the last move of others), "wobble" (no, not like that)
   function flash(el, cls = "trace", ms = 2600) {
     if (!el) return;
@@ -211,7 +293,7 @@
   // key: where on/off is stored; vol: default loudness of tone(); noiseFilter: "lowpass" | "bandpass";
   // effects: ({tone, noise}) => ({name: (...args) => ...}). Returns { sfx, buzz, isOn, wake }.
   function sound({ key, vol: defVol = 0.18, noiseFilter = "lowpass", effects }) {
-    let on = store.get(key) !== false, actx = null, noiseBuf = null, lock = null;
+    let on = pref("sound", store.get(key) !== false), actx = null, noiseBuf = null, lock = null, volMul = pref("vol", 100) / 100;
     function audio() {
       if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
       if (actx.state === "suspended") actx.resume().catch(() => {});
@@ -220,7 +302,9 @@
     // iOS only unlocks audio inside a touch
     document.addEventListener("pointerdown", () => { if (on) audio(); }, { once: true, capture: true });
     function tone(freq, start, dur, type = "sine", vol = defVol, to) {
+      if (volMul < 0.01) return;
       const a = audio(); if (!a) return;
+      vol *= volMul;
       const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
       o.type = type; o.frequency.setValueAtTime(freq, t);
       if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
@@ -230,7 +314,9 @@
       o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
     }
     function noise(start, dur, vol, freq) {
+      if (volMul < 0.01) return;
       const a = audio(); if (!a) return;
+      vol *= volMul;
       if (!noiseBuf) {
         noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
         const d = noiseBuf.getChannelData(0);
@@ -258,18 +344,83 @@
       if (document.visibilityState === "visible") try { table[k](...args); } catch (e) {}
     };
     const buzz = (ms) => { if (!on) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
-    // the checkbox is drawn by room-ui.js later in the same script run
-    const sync = () => { const box = $("#soundOn"); if (box) box.checked = on; };
+    // the checkbox and the volume slider are drawn by room-ui.js later in the same script run
+    const sync = () => {
+      const box = $("#soundOn"), vol = $("#soundVol");
+      if (box) box.checked = on;
+      if (vol) { vol.value = String(Math.round(volMul * 100)); vol.disabled = !on; }
+    };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sync); else sync();
     document.addEventListener("change", (e) => {
-      if (!e.target || e.target.id !== "soundOn") return;
-      on = e.target.checked; store.set(key, on); if (on) { audio(); sfx("pop"); }
+      if (!e.target) return;
+      if (e.target.id === "soundOn") { on = e.target.checked; store.set(key, on); P.setPrefs({ sound: on }); sync(); if (on) { audio(); sfx("pop"); } }
+      else if (e.target.id === "soundVol") sfx("pop");
+    });
+    document.addEventListener("input", (e) => {
+      if (!e.target || e.target.id !== "soundVol") return;
+      volMul = Math.min(100, Math.max(0, +e.target.value || 0)) / 100; P.setPrefs({ vol: Math.round(volMul * 100) });
     });
     async function wake() {
       try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {}
     }
-    return { sfx, buzz, isOn: () => on, wake };
+    const api = { sfx, buzz, isOn: () => on, wake };
+    window.Spieleabend.sounds = api; // room-ui.js rings it for a nudge
+    return api;
   }
+
+  // ---------- dialogs: every .overlay is a modal dialog for screen readers and the keyboard ----------
+  // focus moves into it when it opens, Tab stays inside, and focus goes back to where it came from when it closes.
+  // The chat overlay is a side bar on wide screens and stays out of that.
+  function dialogs() {
+    const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const shown = (o) => !o.hidden && o.isConnected;
+    const modal = (o) => o.id !== "chat" && !o.dataset.nomodal;
+    const watch = (o) => {
+      if (o.dataset.dlg) return;
+      o.dataset.dlg = "1";
+      const box = o.querySelector(".sheet") || o;
+      if (!box.getAttribute("role") && !o.getAttribute("role")) {
+        box.setAttribute("role", "dialog");
+        if (modal(o)) box.setAttribute("aria-modal", "true");
+        const h = box.querySelector("h2");
+        if (h) { if (!h.id) h.id = (o.id || "dlg" + Math.random().toString(36).slice(2, 7)) + "Title"; box.setAttribute("aria-labelledby", h.id); }
+      }
+      let back = null, was = shown(o);
+      const run = () => {
+        const now = shown(o);
+        if (now === was) return;
+        was = now;
+        if (now && modal(o)) {
+          back = document.activeElement;
+          if (!box.hasAttribute("tabindex")) box.setAttribute("tabindex", "-1");
+          box.style.outline = "none";
+          try { box.focus({ preventScroll: true }); } catch (e) {}
+        } else if (!now && back) {
+          const a = document.activeElement;
+          if ((!a || a === document.body || o.contains(a)) && back.isConnected) try { back.focus({ preventScroll: true }); } catch (e) {}
+          back = null;
+        }
+      };
+      new MutationObserver(run).observe(o, { attributes: true, attributeFilter: ["hidden"] });
+      if (was && modal(o)) { was = false; run(); }
+    };
+    const scan = () => { for (const o of document.querySelectorAll(".overlay")) watch(o); };
+    scan();
+    new MutationObserver(scan).observe(document.body, { childList: true });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const open = [...document.querySelectorAll(".overlay")].filter((o) => shown(o) && modal(o)).pop();
+      if (!open) return;
+      const box = open.querySelector(".sheet") || open;
+      const items = [...box.querySelectorAll(FOCUSABLE)].filter((x) => x.getClientRects().length);
+      if (!items.length) { e.preventDefault(); return; }
+      const first = items[0], last = items[items.length - 1], a = document.activeElement;
+      if (!box.contains(a) || a === box) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+    }, true);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", dialogs); else dialogs();
 
   // Hand sort switch: "123" on one side, a rainbow circle on the other; the lit side is the current order.
   // mode: "value" (by number) or "color". Games keep the click handling and the stored choice themselves.
@@ -283,5 +434,5 @@
     el.title = sortLabel(mode) + " (S)";
     if (!el.firstElementChild) el.innerHTML = SORT_INNER;
   }
-  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams };
+  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams, pref, calm, say, notify, badge, sounds: null };
 })();
