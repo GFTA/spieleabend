@@ -341,6 +341,7 @@
     renderDock();
     $("#felt").classList.toggle("tense", V.phase === "runout");
     const key = `${V.hand}:${V.turn}`;
+    Spieleabend.mine(myTurn() && (mode === "online" || V.players.some((p) => p.bot)));
     if (key !== lastTurnKey && lastTurnKey !== null && myTurn() && (mode === "online" || V.players.some((p) => p.bot))) { sfx("turn"); buzz([40, 60, 40]); }
     lastTurnKey = key;
     const over = V.phase === "roundEnd" && V.last && V.last.over;
