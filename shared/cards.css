@@ -1,0 +1,23 @@
+/* Shared card table styles (cards.js). The card face itself is the game's own. Card width comes from --w,
+   the height is --w * --ar (default 1.4). */
+
+/* a pile whose cards overlap downwards: --i (position in the pile), --f and --H come from Cards.cascade() */
+.cd-pile{position:relative;width:var(--w);height:calc(var(--w) * var(--ar,1.4) * var(--H,1));flex:none}
+.cd-pile.empty{border-radius:calc(var(--w) * .13);box-shadow:inset 0 0 0 2px var(--line);background:rgba(255,255,255,.04)}
+.cd-pile .card{position:absolute;left:0;top:calc(var(--i,0) * var(--f,0) * var(--w) * var(--ar,1.4))}
+.cd-pile .cnt{position:absolute;right:-5px;bottom:-5px;z-index:3;min-width:1.5em;padding:1px 5px;border-radius:999px;background:var(--surface);color:var(--text);font:800 clamp(11px,2.9vw,13px)/1.4 var(--body,Figtree,sans-serif);text-align:center;box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums;pointer-events:none}
+.mini .cd-pile .cnt,.cd-pile.mini .cnt{right:-4px;bottom:-4px;font-size:11px;padding:0 4px}
+
+/* the card under the finger and the cards in flight */
+.cd-ghost{position:fixed;z-index:52;pointer-events:none;transform-origin:0 0;margin:0;filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
+.cd-ghost .card{position:static}
+.cd-dragging{opacity:.25}
+.cd-sent{opacity:.3}
+.cd-draggable{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+
+/* drop targets: .cd-drop = a card could go here, .cd-over = the dragged card is above it */
+.cd-drop{filter:drop-shadow(0 0 7px var(--accent))}
+.cd-drop .cd-pile.empty,.cd-drop.cd-pile.empty{box-shadow:inset 0 0 0 2.5px var(--accent)}
+.cd-over .cd-pile,.cd-over.cd-pile{transform:scale(1.06)}
+
+@media (prefers-reduced-motion:reduce){.cd-over .cd-pile,.cd-over.cd-pile{transform:none}}
