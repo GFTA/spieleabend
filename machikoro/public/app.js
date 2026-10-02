@@ -376,6 +376,7 @@
     acts.hidden = !acts.children.length;
 
     const key = `${V.round}:${V.turn}:${V.cur}:${V.step}`;
+    Spieleabend.mine(canPlay() && (mode === "online" || V.players.some((p) => p.bot)));
     if (canPlay() && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = key;
 
