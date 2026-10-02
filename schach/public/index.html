@@ -77,6 +77,8 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 @keyframes born{from{transform:scale(.3);opacity:0}}
 .pc.crowned .pcs{animation:crown .6s cubic-bezier(.2,.8,.3,1.4)}
 @keyframes crown{from{transform:scale(.2) rotate(-40deg)}}
+.chkpop{position:absolute;left:50%;top:50%;z-index:12;pointer-events:none;padding:.18em .7em;border-radius:14px;background:rgba(224,57,62,.94);color:#fff;font-weight:900;font-size:calc(var(--cell) * .7);letter-spacing:.02em;box-shadow:0 8px 30px rgba(0,0,0,.5);transform:translate(-50%,-50%);animation:chkpop 1.25s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes chkpop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-6deg)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotate(2deg)}30%{transform:translate(-50%,-50%) scale(1) rotate(0)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
 .pc.gone .pcs{transform:scale(.2);opacity:0}
 .pc.moving{z-index:3}
 .pc.sel .pcs{transform:translateY(-5%) scale(1.07)}

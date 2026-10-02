@@ -307,6 +307,13 @@
     paintSel();
   }
 
+  function checkPop() {
+    const d = document.createElement("div");
+    d.className = "chkpop"; d.textContent = "Schach!"; d.setAttribute("aria-hidden", "true");
+    boardEl.appendChild(d);
+    setTimeout(() => d.remove(), 1300);
+  }
+
   // one move on the board: the piece slides over, a captured piece fades out, a castling rook follows, a promoted pawn changes
   function runAnim(a) {
     const el = pcEls.get(a.from);
@@ -326,7 +333,7 @@
       if (rook) pcEls.set(a.castle[1], rook);
       if (a.promo) { el._v = a.promo | (el._v & 8); el.innerHTML = pieceSVG(a.promo); el.classList.add("crowned"); sfx("king"); }
       else if (a.check) sfx("check");
-      if (a.check && V && V.phase === "play") toast("Schach!");
+      if (a.check && V && V.phase === "play") checkPop();
       animating = false;
       if (animQ.length && runAnim(animQ.shift())) return;
       animQ.length = 0;
@@ -334,7 +341,7 @@
     };
     if (victim) {
       pcEls.delete(a.capSq);
-      setTimeout(() => { victim.classList.add("gone"); setTimeout(() => victim.remove(), 280); }, a.manual ? 100 : 130);
+      setTimeout(() => Spieleabend.toss(victim, el), a.manual ? 100 : 130);
     }
     if (a.manual) el.classList.add("settle");
     setPos(el, a.to);

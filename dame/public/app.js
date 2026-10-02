@@ -316,7 +316,7 @@
     el.classList.add("moving");
     const fade = (sq) => {
       const c = pcEls.get(sq); if (!c) return;
-      pcEls.delete(sq); c.classList.add("gone"); setTimeout(() => c.remove(), 280);
+      pcEls.delete(sq); Spieleabend.toss(c, el);
     };
     const last = path[path.length - 1];
     const finish = () => {
