@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Exploding Kittens">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Exploding Kittens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<link rel="stylesheet" href="cards.css">
+<style>
+:root{--sea:#1f2350;--felt:#2a2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="vulkan"]{--sea:#3a1c1a;--felt:#3d1f18}
+:root[data-table="mint"]{--sea:#cfe9e0;--felt:#d3ecdf}
+:root[data-table="felt"]{--sea:#10363a;--felt:#0f3a2b}
+:root[data-table="ocean"]{--sea:#123057;--felt:#123a66}
+:root[data-table="light"]{--sea:#cfe0f3;--felt:#dfe8f5}
+:root[data-table="blossom"]{--sea:#e6d9f4;--felt:#f4dfe9}
+/* The page itself never scrolls (iOS Safari would slide the whole page); only inner areas do. */
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn:disabled{opacity:.45;cursor:default}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+/* ---------- cards ---------- */
+:root{--w:var(--cw);--cw:min(calc(clamp(44px,12.5vw,58px) * var(--cs)),calc((100vw - 56px) / 5));--mw:calc(clamp(27px,7.4vw,34px) * var(--cs))}
+.card{position:relative;flex:none;width:var(--w);height:calc(var(--w) * 1.4);border-radius:calc(var(--w) * .13);background:var(--bg-c,#fffdf6);color:var(--fg-c,#2a2233);
+  box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#9a8cff),0 2px 5px rgba(0,0,0,.38);display:grid;place-items:center;font-family:var(--body,Figtree,sans-serif);line-height:1;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none}
+.card b{font-weight:400;font-size:calc(var(--w) * .5);pointer-events:none;margin-top:calc(var(--w) * -.14)}
+.card::before{content:attr(data-i);position:absolute;left:calc(var(--w) * .09);top:calc(var(--w) * .06);font-size:calc(var(--w) * .2);pointer-events:none}
+.card .cn{position:absolute;left:0;right:0;bottom:calc(var(--w) * .09);text-align:center;font-weight:800;font-size:calc(var(--w) * .15);letter-spacing:-.01em;white-space:nowrap;pointer-events:none}
+.k-kitten{--bg-c:#1d1626;--fg-c:#fff;--cc:#ff4d5a}
+.k-defuse{--bg-c:#d9f5e2;--cc:#2a9a57;--fg-c:#14502d}
+.k-nope{--bg-c:#ffdcdc;--cc:#d6414b;--fg-c:#7a1118}
+.k-attack{--bg-c:#ffe0c2;--cc:#e8731a;--fg-c:#6b3000}
+.k-skip{--bg-c:#d6e6ff;--cc:#2c6bd8;--fg-c:#12306b}
+.k-favor{--bg-c:#ffd9ec;--cc:#d6429a;--fg-c:#6b1448}
+.k-shuffle{--bg-c:#e6dcff;--cc:#7a5cff;--fg-c:#2d1a73}
+.k-future{--bg-c:#d2f3f3;--cc:#1fa3a3;--fg-c:#0c4a4a}
+.k-cat1{--bg-c:#fff1cf;--cc:#e0a21a;--fg-c:#5a3d00}
+.k-cat2{--bg-c:#ffe3e3;--cc:#e0525a;--fg-c:#6b1a20}
+.k-cat3{--bg-c:#f0e4d2;--cc:#a9783c;--fg-c:#4d3213}
+.k-cat4{--bg-c:#f1e6ff;--cc:#8f5be0;--fg-c:#3b1a73}
+.k-cat5{--bg-c:#e9eef2;--cc:#6c7f8e;--fg-c:#25323c}
+.k-cat1,.k-cat2,.k-cat3,.k-cat4,.k-cat5{background-image:radial-gradient(circle at 80% 18%,rgba(0,0,0,.05) 0 18%,transparent 19%),radial-gradient(circle at 20% 90%,rgba(0,0,0,.05) 0 14%,transparent 15%)}
+.card.back{background:repeating-linear-gradient(45deg,#3b2a8c 0 6px,#4a37a8 6px 12px);box-shadow:inset 0 0 0 calc(var(--w) * .06) #fffdf6,0 2px 5px rgba(0,0,0,.38)}
+.card.back b{font-size:calc(var(--w) * .42);margin:0;filter:grayscale(.2)}
+.card.back::before{content:none}
+.card.pile{--bg-c:#c9c1e6;--cc:#8a7fb5}
+.card.pile b{margin:0;opacity:.6}
+.mini{--w:var(--mw)}
+[data-src]{cursor:grab}
+.hand .card.sel{transform:translateY(calc(var(--w) * -.16));box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#9a8cff),0 0 0 3px var(--accent),0 8px 16px rgba(0,0,0,.45);z-index:2}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roundinfo b{color:var(--text)}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:space-around;gap:12px;padding:10px 12px}
+.opps{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.obox{position:relative;flex:1 1 128px;max-width:210px;display:flex;flex-direction:column;gap:6px;padding:8px 10px 9px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s,transform .15s}
+.obox.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.obox.away{opacity:.55}
+.obox.out{opacity:.5;filter:grayscale(.8)}
+.obox.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{40%{transform:scale(1.05)}}
+.obox.cd-drop{box-shadow:inset 0 0 0 2.5px var(--accent),0 0 12px var(--accent);filter:none;cursor:pointer}
+.obox.cd-over{transform:scale(1.05)}
+.ohead{display:flex;align-items:center;gap:6px;min-width:0}
+.ohead .pav{font-size:20px;line-height:1;flex:none}
+.ohead .pname{flex:1;min-width:0;font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owins{flex:none;min-width:20px;height:20px;padding:0 5px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 1.5px var(--line);font-variant-numeric:tabular-nums}
+.obox.active .owins{background:var(--accent);color:#231a05}
+.orow{display:flex;align-items:center;gap:8px;min-height:calc(var(--mw) * .72 * 1.4)}
+.ofan{display:flex;align-items:center;min-width:calc(var(--mw) * .72);flex:none}
+.ofan .card{--w:calc(var(--mw) * .72);box-shadow:inset 0 0 0 calc(var(--w) * .08) #fffdf6,0 1px 3px rgba(0,0,0,.4)}
+.ofan .card + .card{margin-left:calc(var(--mw) * -.5)}
+.ofan .card b{display:none}
+.ocnt{font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+.otag{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--accent);white-space:nowrap}
+.obox .boom{position:absolute;right:8px;bottom:4px;font-size:22px}
+.table{width:min(100%,460px);display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 12px 12px;border-radius:24px;background:var(--felt);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.32);transition:box-shadow .2s}
+.table.cd-drop{box-shadow:inset 0 0 0 3px var(--accent),0 12px 26px rgba(0,0,0,.32)}
+.table.cd-over{box-shadow:inset 0 0 0 3px var(--accent),0 0 22px var(--accent)}
+.trow{display:flex;align-items:flex-start;justify-content:center;gap:calc(var(--cw) * .3);width:100%}
+.pilebox{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
+.deck.shake{animation:wob .45s}
+@keyframes wob{25%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}}
+#deckBtn{cursor:pointer}
+.stackzone{position:relative;flex:1;max-width:calc(var(--cw) * 2.6);min-height:calc(var(--cw) * 1.4);display:flex;align-items:center;justify-content:center;border-radius:calc(var(--cw) * .13)}
+.stackzone .slot-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:12px;font-weight:700;color:rgba(255,255,255,.35);border-radius:calc(var(--cw) * .13);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
+.stackcards{display:flex;align-items:center;justify-content:center;animation:drop .3s ease-out}
+@keyframes drop{from{transform:scale(1.18);opacity:.4}}
+.stackcards .card + .card{margin-left:calc(var(--w) * -.55)}
+.stackcards .card:nth-child(2){transform:rotate(5deg)}
+.stackcards .card:nth-child(3){transform:rotate(10deg) translateY(2px)}
+.nopepile{position:absolute;right:calc(var(--cw) * -.1);top:calc(var(--cw) * -.28);z-index:2;animation:bounce .4s ease-out}
+.nopepile .card{--w:calc(var(--cw) * .62);transform:rotate(9deg)}
+.nopepile .cnt{position:absolute;right:-6px;bottom:-6px;z-index:3;min-width:1.5em;padding:1px 6px;border-radius:999px;background:var(--red);color:#fff;font:800 13px/1.4 var(--body,Figtree,sans-serif);text-align:center;box-shadow:0 0 0 2px var(--bg)}
+@keyframes bounce{40%{transform:scale(1.25)}}
+.sinfo{min-height:1.35em;font-size:14px;font-weight:700;text-align:center;text-wrap:balance}
+.sinfo small{display:block;font-weight:600;font-size:12px;color:var(--muted)}
+.sinfo .warn{color:#ff9aa0}
+#stackBar{width:min(260px,80%);margin:-4px auto 0}
+#stackBar i{width:100%}
+.danger{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.02em}
+.danger b{font-weight:800;color:#fff}
+.danger.hot b{color:#ff9aa0}
+.peek{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:rgba(0,0,0,.25)}
+.peek[hidden]{display:block;visibility:hidden;height:calc(var(--mw) * 1.15 * 1.4 + 12px);padding:0}
+.peek .cards{display:flex;gap:5px}
+.peek .card{--w:calc(var(--mw) * 1.15)}
+.peek .card:nth-child(1){animation:flipin .45s both}
+.peek .card:nth-child(2){animation:flipin .45s .15s both}
+.peek .card:nth-child(3){animation:flipin .45s .3s both}
+@keyframes flipin{from{transform:rotateY(90deg) scale(.7);opacity:0}}
+.peek span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.cap{font-size:clamp(10px,2.7vw,12px);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
+.lastmove.fresh{animation:pop .35s ease-out}
+.lastmove .old{font-size:12px;color:var(--muted);font-weight:400}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+#flash{position:fixed;z-index:51;pointer-events:none;font-size:84px;line-height:1;transform:translate(-50%,-50%);filter:drop-shadow(0 8px 16px rgba(0,0,0,.5));animation:flash 1.1s ease-out forwards}
+#flash.big{font-size:130px;animation-name:flashbig}
+@keyframes flash{0%{transform:translate(-50%,-50%) scale(.3) rotate(-20deg);opacity:0}25%{transform:translate(-50%,-50%) scale(1.15) rotate(6deg);opacity:1}70%{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:1}100%{transform:translate(-50%,-70%) scale(1);opacity:0}}
+@keyframes flashbig{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}20%{transform:translate(-50%,-50%) scale(1.3);opacity:1}35%{transform:translate(-48%,-52%) scale(1.15)}50%{transform:translate(-52%,-48%) scale(1.25)}100%{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.hand{--w:calc(var(--cw) * 1.1);display:flex;justify-content:safe center;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;
+  min-height:calc(var(--w) * 1.4 + var(--w) * .18 + 6px);padding:calc(var(--w) * .18) 4px 2px}
+.hand::-webkit-scrollbar{display:none}
+.hand .card + .card{margin-left:var(--ov,6px)}
+.hand .card{touch-action:pan-x}
+.hand.empty{min-height:0;padding:0}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:28px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:2px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts .btn{flex:1 1 auto;padding:12px 12px;font-size:15px;white-space:nowrap}
+.btn-nope{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-nope:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+.hero .cards{display:flex;justify-content:center;gap:0;margin:0 auto}
+.hero .cards .card{--w:64px;margin:0 -8px}
+.hero .cards .card:nth-child(1){transform:rotate(-12deg) translateY(6px)}
+.hero .cards .card:nth-child(2){transform:translateY(-4px);z-index:1}
+.hero .cards .card:nth-child(3){transform:rotate(12deg) translateY(6px)}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+.namegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.namegrid button{border:0;border-radius:12px;padding:10px 4px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:700;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.namegrid button span{font-size:26px;line-height:1}
+.namegrid button:active{background:var(--bg2)}
+.placebox{display:flex;flex-direction:column;gap:10px}
+.placebox input[type=range]{width:100%;accent-color:var(--accent)}
+.placebox .poslab{text-align:center;font-weight:800}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.presets button{border:0;border-radius:10px;padding:9px 2px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:700;font-size:13px}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  :root{--cw:calc(70px * var(--cs));--mw:calc(38px * var(--cs))}
+  .arena{padding:10px 24px;gap:18px}
+  .dock{padding:14px 24px 16px}
+  .dock .keys{display:block}
+  .ohead .pname{font-size:15px}
+  .lastmove{font-size:14px}
+  .table{width:min(100%,560px)}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <div class="cards" aria-hidden="true">
+        <div class="card k-defuse" data-i="🧯"><b>🧯</b><span class="cn">Entschärfen</span></div>
+        <div class="card k-kitten" data-i="💣"><b>💣</b><span class="cn">Katze</span></div>
+        <div class="card k-nope" data-i="🚫"><b>🚫</b><span class="cn">Nö!</span></div>
+      </div>
+      <h1>Exploding Kittens</h1>
+      <p class="tagline">Zieh Karten, aber nicht die explodierende Katze! Wer sie ohne Entschärfen erwischt, ist raus. Für 2 bis 5 Spieler, mit Computer-Gegnern.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="row">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Siege und Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Mehrspieler“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem eigenen Server. Öffne dann dessen Adresse. Hier geht nur „Einzelspieler“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="panel" id="oppBox"></div>
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke des Computer-Gegners"></div>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
+    <p class="hint">Wer dran ist, spielt beliebig viele Karten und zieht zum Schluss eine vom Stapel. Steckt darin eine explodierende Katze, brauchst du ein „Entschärfen“, sonst bist du raus. Wer übrig bleibt, gewinnt.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Spielziel</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Spielziel"></div>
+      <div class="label">Computer-Gegner</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke des Computer-Gegners"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="opps" id="opps"></div>
+      <div class="table" id="table">
+        <div class="trow">
+          <div class="pilebox"><div class="deck" id="deck"></div><span class="cap">Stapel</span></div>
+          <div class="stackzone" id="stackZone"></div>
+          <div class="pilebox"><div id="disc"></div><span class="cap">Ablage</span></div>
+        </div>
+        <div class="sinfo" id="stackInfo" aria-live="polite"></div>
+        <div class="turnbar" id="stackBar" hidden><i></i></div>
+        <div class="peek" id="peek" hidden></div>
+        <div class="danger" id="danger"></div>
+      </div>
+      <div class="lastmove" id="lastMove" aria-live="polite"></div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="turnbar" id="turnBar" hidden><i></i></div>
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="hand" id="hand"></div>
+      <div class="acts">
+        <button class="btn btn-primary" id="drawBtn" type="button">Ziehen</button>
+        <button class="btn" id="playBtn" type="button" hidden>Spielen</button>
+        <button class="btn" id="pairBtn" type="button" hidden>Paar</button>
+        <button class="btn" id="tripBtn" type="button" hidden>Drilling</button>
+        <button class="btn btn-primary" id="giveBtn" type="button" hidden>Geben</button>
+        <button class="btn btn-nope" id="nopeBtn" type="button" hidden>Nö!</button>
+        <button class="btn btn-ghost" id="cancelBtn" type="button" hidden>Abbrechen</button>
+        <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
+      </div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="placeSheet" hidden>
+  <div class="sheet">
+    <div class="label">Entschärft!</div>
+    <h2>Wohin mit der Katze?</h2>
+    <p class="hint">Die Katze kommt zurück in den Stapel. Nur du weißt, wo sie steckt.</p>
+    <div class="placebox">
+      <div class="poslab" id="posLab"></div>
+      <input type="range" id="posRange" min="0" max="10" value="5" aria-label="Position im Stapel">
+      <div class="presets">
+        <button type="button" data-p="top">Oben</button><button type="button" data-p="mid">Mitte</button><button type="button" data-p="bot">Unten</button><button type="button" data-p="rnd">Zufall</button>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" id="placeBtn" type="button">Verstecken</button>
+  </div>
+</div>
+
+<div class="overlay" id="nameSheet" hidden>
+  <div class="sheet">
+    <div class="label">Drilling</div>
+    <h2>Welche Karte willst du?</h2>
+    <p class="hint">Hat die Person die Karte, bekommst du sie. Sonst gehst du leer aus.</p>
+    <div class="namegrid" id="nameGrid"></div>
+    <button class="btn btn-ghost btn-block" id="nameCancel" type="button">Abbrechen</button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li><b>Ziel:</b> Als Letzte oder Letzter übrig bleiben. Alle starten mit 7 Karten und einem 🧯 <b>Entschärfen</b>. Im Stapel stecken explodierende Katzen 💣.</li>
+          <li><b>Dein Zug:</b> Spiele beliebig viele Karten (oder keine) und beende den Zug mit <b>Ziehen</b>. Ziehst du eine Katze, brauchst du ein Entschärfen: dann steckst du sie heimlich irgendwo in den Stapel zurück. Ohne Entschärfen bist du raus.</li>
+          <li>🚫 <b>Nö!</b> wehrt jede gerade gespielte Karte ab, auch ein anderes Nö. Du hast dafür ein paar Sekunden Zeit, auch wenn du nicht dran bist.</li>
+          <li>⚔️ <b>Angriff:</b> Dein Zug endet, ohne zu ziehen. Der Nächste muss zwei Züge machen. Mehrere Angriffe addieren sich.</li>
+          <li>⏭️ <b>Aussetzen:</b> Beendet einen Zug, ohne zu ziehen.</li>
+          <li>🎁 <b>Gefallen:</b> Jemand gibt dir eine Karte seiner Wahl.</li>
+          <li>🔀 <b>Mischen:</b> Der Stapel wird neu gemischt. 🔮 <b>Zukunft:</b> Du siehst die obersten drei Karten.</li>
+          <li>🌮🍉🥔🌈🧔 <b>Katzen</b> gibt es nur im Paar: Zwei gleiche klauen eine zufällige Karte. Drei gleiche (Drilling): Du nennst eine Karte, hat die Person sie, bekommst du sie.</li>
+          <li>Karte antippen und dann Tisch oder Person antippen, oder die Karte dorthin ziehen. Tippe auf den Stapel oder „Ziehen“, um zu ziehen.</li>
+          <li>Am Computer: <b>Leertaste</b> zieht, <b>N</b> sagt Nö, <b>Esc</b> schließt Fenster.</li>
+        </ul>
+  </template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Nö!">Nö!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
+<script src="cards.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

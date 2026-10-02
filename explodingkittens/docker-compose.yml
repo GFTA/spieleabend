@@ -1,0 +1,19 @@
+services:
+  explodingkittens:
+    build:
+      context: ..
+      dockerfile: explodingkittens/Dockerfile
+      args:
+        GAME: explodingkittens
+    image: explodingkittens:latest
+    container_name: explodingkittens
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${EXPLODINGKITTENS_PORT:-8099}:8080"
+    volumes:
+      - explodingkittens-data:/data
+
+volumes:
+  explodingkittens-data:

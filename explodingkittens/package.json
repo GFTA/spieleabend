@@ -1,0 +1,17 @@
+{
+  "name": "explodingkittens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exploding Kittens: Spieleabend-Spiel, online mit eigenen Handys oder allein gegen den Computer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js",
+    "build:single": "node scripts/build-single.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "qrcode-generator": "1.4.4",
+    "ws": "8.22.0"
+  }
+}
