@@ -1,0 +1,19 @@
+services:
+  rummikub:
+    build:
+      context: ..
+      dockerfile: rummikub/Dockerfile
+      args:
+        GAME: rummikub
+    image: rummikub:latest
+    container_name: rummikub
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${RUMMIKUB_PORT:-8098}:8080"
+    volumes:
+      - rummikub-data:/data
+
+volumes:
+  rummikub-data:

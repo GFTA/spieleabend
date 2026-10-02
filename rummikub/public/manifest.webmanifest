@@ -1,0 +1,17 @@
+{
+  "name": "Rummikub",
+  "short_name": "Rummikub",
+  "description": "Zahlenplättchen zu Reihen und Gruppen legen, den Tisch umbauen und als Erster den Ständer leeren.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1426",
+  "theme_color": "#1a1426",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
