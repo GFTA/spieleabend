@@ -232,7 +232,7 @@
   let dockFns = [];
   const cardHTML = (idx, extra) => {
     const f = BOARD[idx], color = f.k === "prop" ? GROUPS[f.g].color : "#94a3b8";
-    const sub = f.k === "prop" ? `${GROUPS[f.g].name} · Miete ${M(f.r[0])}` : f.k === "station" ? "Bahnhof · Miete ₥25 bis ₥200" : "Versorgungswerk · 4× oder 10× Augenzahl";
+    const sub = f.k === "prop" ? `${GROUPS[f.g].name} · Miete ${M(f.r[0])}` : f.k === "station" ? "Bahnhof · Miete €25 bis €200" : "Versorgungswerk · 4× oder 10× Augenzahl";
     return `<div class="card" data-info="${idx}" style="--bc:${color}"><i class="sw"></i><div class="ct"><b>${esc(f.n)}</b><br>${sub}${extra ? `<br>${extra}` : ""}</div><div class="big">${M(f.p)}</div></div>`;
   };
   const sideText = (s) => [s.cash ? `${M(s.cash)}` : "", ...s.props.map((i) => BOARD[i].n), s.card ? "Freikarte" : ""].filter(Boolean).join(", ") || "nichts";

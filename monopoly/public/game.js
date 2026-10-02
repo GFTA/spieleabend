@@ -13,9 +13,9 @@
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
-  const CUR = "₥";
+  const CUR = "€";
   const money = (n) => CUR + n;
-  const CASHES = { 1000: "₥1000", 1500: "₥1500", 2500: "₥2500" };
+  const CASHES = { 1000: "€1000", 1500: "€1500", 2500: "€2500" };
   const LIMITS = { 0: "Ohne Limit", 20: "20 Züge", 40: "40 Züge", 60: "60 Züge" }; // turns per player, then the richest wins
   const RULE_DEFAULTS = { goDouble: true, parking: false, auction: true, cash: 1500, limit: 40 };
   const GO_PAY = 200, JAIL_FEE = 50, JAIL_POS = 10, HOUSES = 32, HOTELS = 12;
@@ -78,32 +78,32 @@
       { text: "Rücke zum nächsten Bahnhof vor und zahle dem Besitzer das Doppelte.", near: "station" },
       { text: "Rücke zum nächsten Bahnhof vor und zahle dem Besitzer das Doppelte.", near: "station" },
       { text: "Rücke zum nächsten Versorgungswerk vor. Gehört es jemandem, zahlst du das Zehnfache der Augenzahl.", near: "util" },
-      { text: "Die Bank zahlt dir Dividende: ₥50.", m: 50 },
+      { text: "Die Bank zahlt dir Dividende: €50.", m: 50 },
       { text: "Du kommst aus dem Gefängnis frei. Behalte die Karte.", free: 1 },
       { text: "Gehe drei Felder zurück.", back: 3 },
       { text: "Gehe in das Gefängnis. Gehe nicht über Los.", jail: 1 },
-      { text: "Allgemeine Reparaturen: ₥25 je Haus, ₥100 je Hotel.", rep: [25, 100] },
-      { text: "Strafe für zu schnelles Fahren: ₥15.", m: -15 },
-      { text: "Du bist Vorsitzender des Spielevereins: zahle jedem Mitspieler ₥50.", all: -50 },
-      { text: "Dein Bausparvertrag wird fällig: ₥150.", m: 150 }
+      { text: "Allgemeine Reparaturen: €25 je Haus, €100 je Hotel.", rep: [25, 100] },
+      { text: "Strafe für zu schnelles Fahren: €15.", m: -15 },
+      { text: "Du bist Vorsitzender des Spielevereins: zahle jedem Mitspieler €50.", all: -50 },
+      { text: "Dein Bausparvertrag wird fällig: €150.", m: 150 }
     ],
     chest: [
-      { text: "Bankirrtum zu deinen Gunsten: ₥200.", m: 200 },
-      { text: "Arztrechnung: ₥50.", m: -50 },
-      { text: "Du verkaufst alte Aktien: ₥50.", m: 50 },
+      { text: "Bankirrtum zu deinen Gunsten: €200.", m: 200 },
+      { text: "Arztrechnung: €50.", m: -50 },
+      { text: "Du verkaufst alte Aktien: €50.", m: 50 },
       { text: "Du kommst aus dem Gefängnis frei. Behalte die Karte.", free: 1 },
       { text: "Gehe in das Gefängnis. Gehe nicht über Los.", jail: 1 },
-      { text: "Du hast Geburtstag: jeder Mitspieler schenkt dir ₥25.", all: 25 },
-      { text: "Deine Lebensversicherung wird fällig: ₥100.", m: 100 },
-      { text: "Krankenhausgebühr: ₥100.", m: -100 },
-      { text: "Schulgeld: ₥50.", m: -50 },
-      { text: "Beratungshonorar: ₥25.", m: 25 },
-      { text: "Straßenreparaturen: ₥40 je Haus, ₥115 je Hotel.", rep: [40, 115] },
-      { text: "Du gewinnst den Backwettbewerb: ₥10.", m: 10 },
-      { text: "Erbschaft: ₥100.", m: 100 },
-      { text: "Steuerrückzahlung: ₥20.", m: 20 },
+      { text: "Du hast Geburtstag: jeder Mitspieler schenkt dir €25.", all: 25 },
+      { text: "Deine Lebensversicherung wird fällig: €100.", m: 100 },
+      { text: "Krankenhausgebühr: €100.", m: -100 },
+      { text: "Schulgeld: €50.", m: -50 },
+      { text: "Beratungshonorar: €25.", m: 25 },
+      { text: "Straßenreparaturen: €40 je Haus, €115 je Hotel.", rep: [40, 115] },
+      { text: "Du gewinnst den Backwettbewerb: €10.", m: 10 },
+      { text: "Erbschaft: €100.", m: 100 },
+      { text: "Steuerrückzahlung: €20.", m: 20 },
       { text: "Rücke vor zum Mühlenweg. Kommst du über Los, ziehst du Gehalt ein.", to: 1 },
-      { text: "Flohmarkt: Du verkaufst Krimskrams für ₥30.", m: 30 }
+      { text: "Flohmarkt: Du verkaufst Krimskrams für €30.", m: 30 }
     ]
   };
   const FREE_ID = { chance: CARDS.chance.findIndex((c) => c.free), chest: CARDS.chest.findIndex((c) => c.free) };

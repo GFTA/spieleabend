@@ -35,7 +35,7 @@
       h += `<div class="label">Versorgungswerk · Preis ${M(f.p)}</div><table class="rent"><tr><td>Eins gehört dir</td><td>4 × Augenzahl</td></tr><tr><td>Beide gehören dir</td><td>10 × Augenzahl</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
     } else {
       const text = { go: `Wer über Los zieht, bekommt ${M(G.GO_PAY)}.${V.rules.goDouble ? ` Wer genau darauf landet, bekommt ${M(G.GO_PAY * 2)}.` : ""}`,
-        jail: "Nur zu Besuch, solange du nicht verhaftet wurdest. Raus kommst du mit Pasch, ₥50 oder einer Freikarte.",
+        jail: "Nur zu Besuch, solange du nicht verhaftet wurdest. Raus kommst du mit Pasch, €50 oder einer Freikarte.",
         gojail: "Wer hier landet, geht direkt ins Gefängnis.",
         park: V.rules.parking ? "Steuern und Strafen landen im Jackpot. Wer hier landet, kassiert ihn." : "Hier passiert nichts. Du ruhst dich aus.",
         tax: `Zahle ${M(f.t)} an die Bank.`, chance: "Ziehe eine Ereigniskarte.", chest: "Ziehe eine Gemeinschaftskarte." }[f.k];
