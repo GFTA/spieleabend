@@ -3,8 +3,9 @@
 (() => {
   "use strict";
   const G = window.MonopolyGame, B = window.MonopolyBoard, FX = window.MonopolyFX, SH = window.MonopolySheets;
+  const M = (n) => (G && G.money ? G.money(n) : String(n));
   // An old cached game.js next to a new app.js: reload once without cache instead of breaking.
-  if (!G || !G.botMove || !G.RULE_DEFAULTS || !B || !FX || !SH) {
+  if (!G || !G.botMove || !G.RULE_DEFAULTS || !G.money || !B || !FX || !SH) {
     let tried = false;
     try { tried = sessionStorage.getItem("monopoly.reloaded") === "1"; sessionStorage.setItem("monopoly.reloaded", "1"); } catch (e) {}
     if (!tried) { const u = new URL(location.href); u.searchParams.set("fresh", Date.now()); location.replace(u.toString()); }
@@ -190,7 +191,7 @@
     const tag = p.out ? "pleite" : p.bot ? "Computer" : away ? "offline" : i === V.me ? "du" : "";
     const meta = [tag, p.jail > 0 ? "⛓️" : "", mine ? `🏠${mine}` : "", p.cards.length ? "🔓" : ""].filter(Boolean).join(" ");
     return `<div class="${cls}" data-seat="${i}" style="--sc:${B.SEATS[i % B.SEATS.length]}"><span class="pav" aria-hidden="true">${p.avatar}</span>` +
-      `<span class="pinfo"><span class="pname">${esc(p.name)}</span><span class="pcash">${shown[i]}</span><span class="pmeta">${meta || "&nbsp;"}</span></span>` +
+      `<span class="pinfo"><span class="pname">${esc(p.name)}</span><span class="pcash">${M(shown[i])}</span><span class="pmeta">${meta || "&nbsp;"}</span></span>` +
       (V.goal > 1 ? `<span class="pwins" title="Siege">${p.wins}</span>` : "") + `</div>`;
   };
 
@@ -208,7 +209,7 @@
 
     if (!busy) {
       B.update(V); B.syncTokens(V, true);
-      FX.drawDice(V.dice, false, true);
+      FX.drawDice(V.dice, false, true); FX.piles(V);
       const lm = $("#lastMove"), lines = V.log.slice(-2), k = lines.join("\n");
       if (lm.dataset.k !== k) { lm.dataset.k = k; lm.innerHTML = lines.map((l, i) => `<div${i < lines.length - 1 ? ' class="old"' : ""}>${esc(l)}</div>`).join(""); }
     } else B.syncTokens(V, false);
@@ -231,10 +232,10 @@
   let dockFns = [];
   const cardHTML = (idx, extra) => {
     const f = BOARD[idx], color = f.k === "prop" ? GROUPS[f.g].color : "#94a3b8";
-    const sub = f.k === "prop" ? `${GROUPS[f.g].name} · Miete ${f.r[0]}` : f.k === "station" ? "Bahnhof · Miete 25 bis 200" : "Versorgungswerk · 4× oder 10× Augenzahl";
-    return `<div class="card" data-info="${idx}" style="--bc:${color}"><i class="sw"></i><div class="ct"><b>${esc(f.n)}</b><br>${sub}${extra ? `<br>${extra}` : ""}</div><div class="big">${f.p}</div></div>`;
+    const sub = f.k === "prop" ? `${GROUPS[f.g].name} · Miete ${M(f.r[0])}` : f.k === "station" ? "Bahnhof · Miete ₥25 bis ₥200" : "Versorgungswerk · 4× oder 10× Augenzahl";
+    return `<div class="card" data-info="${idx}" style="--bc:${color}"><i class="sw"></i><div class="ct"><b>${esc(f.n)}</b><br>${sub}${extra ? `<br>${extra}` : ""}</div><div class="big">${M(f.p)}</div></div>`;
   };
-  const sideText = (s) => [s.cash ? `${s.cash} Geld` : "", ...s.props.map((i) => BOARD[i].n), s.card ? "Freikarte" : ""].filter(Boolean).join(", ") || "nichts";
+  const sideText = (s) => [s.cash ? `${M(s.cash)}` : "", ...s.props.map((i) => BOARD[i].n), s.card ? "Freikarte" : ""].filter(Boolean).join(", ") || "nichts";
 
   function renderDock(busy) {
     dockFns = [];
@@ -258,32 +259,32 @@
         if (T.to === V.me) { who = "Tauschangebot für dich"; acts.push(btn("Annehmen", "btn-primary", () => act({ t: "accept" })), btn("Ablehnen", "", () => act({ t: "reject" }))); }
         else if (T.from === V.me) { who = "Du wartest auf eine Antwort"; acts.push(btn("Zurückziehen", "", () => act({ t: "cancel" }))); }
       } else if (V.auction) {
-        const A = V.auction, bid = A.bid ? `${A.bid} von ${esc(V.players[A.who].name)}` : "noch keins";
+        const A = V.auction, bid = A.bid ? `${M(A.bid)} von ${esc(V.players[A.who].name)}` : "noch keins";
         now = cardHTML(A.idx, `<b>Versteigerung</b> · Höchstgebot: ${bid}`);
         who = mine ? "Du bist beim Bieten dran" : `${P.name} bietet`;
         if (mine) {
           const cash = V.players[V.me].cash;
-          for (const d of [10, 50, 100]) if (A.bid + d <= cash) acts.push(btn(`Bieten ${A.bid + d}`, d === 10 ? "btn-primary" : "", () => act({ t: "bid", amount: A.bid + d })));
+          for (const d of [10, 50, 100]) if (A.bid + d <= cash) acts.push(btn(`Bieten ${M(A.bid + d)}`, d === 10 ? "btn-primary" : "", () => act({ t: "bid", amount: A.bid + d })));
           acts.push(btn("Passen", "btn-ghost", () => act({ t: "pass" })));
         }
       } else if (V.step === "buy") {
         const f = BOARD[V.buy];
         now = cardHTML(V.buy);
-        if (mine) { who = `${f.n} kaufen?`; acts.push(btn(`Kaufen für ${f.p}`, "btn-primary", () => act({ t: "buy" })), btn(V.rules.auction ? "Versteigern" : "Nein", "", () => act({ t: "decline" }))); }
+        if (mine) { who = `${f.n} kaufen?`; acts.push(btn(`Kaufen für ${M(f.p)}`, "btn-primary", () => act({ t: "buy" })), btn(V.rules.auction ? "Versteigern" : "Nein", "", () => act({ t: "decline" }))); }
       } else if (V.step === "debt") {
         const D = V.debt, to = D.to < 0 ? "die Bank" : V.players[D.to].name;
-        now = `<div class="card"><div class="ct"><b>${esc(V.players[D.pi].name)}</b> schuldet ${esc(to)} <b>${D.amount}</b>.</div></div>`;
+        now = `<div class="card"><div class="ct"><b>${esc(V.players[D.pi].name)}</b> schuldet ${esc(to)} <b>${M(D.amount)}</b>.</div></div>`;
         if (mine) {
-          who = `Du musst ${D.amount} zahlen`; hint = `Dir fehlen ${Math.max(0, D.amount - V.players[V.me].cash)}. Verkaufe Häuser oder beleihe Grundstücke.`;
+          who = `Du musst ${M(D.amount)} zahlen`; hint = `Dir fehlen ${M(Math.max(0, D.amount - V.players[V.me].cash))}. Verkaufe Häuser oder beleihe Grundstücke.`;
           acts.push(btn("Grundstücke verwalten", "btn-primary", () => SH.open("manage")), btn("Pleite gehen", "btn-danger", () => act({ t: "bankrupt" })));
         }
       } else if (mine && V.step === "roll") {
         const jail = P.jail > 0;
         who = jail ? "Du sitzt im Gefängnis" : V.doubles > 0 ? "Pasch! Nochmal würfeln" : "Du bist dran";
-        hint = jail ? `Pasch würfeln, ${G.JAIL_FEE} zahlen oder eine Freikarte nutzen.` : "";
+        hint = jail ? `Pasch würfeln, ${M(G.JAIL_FEE)} zahlen oder eine Freikarte nutzen.` : "";
         acts.push(btn(jail ? "Würfeln (Pasch?)" : "Würfeln", "btn-primary", () => act({ t: "roll" })));
         if (jail) {
-          acts.push(btn(`${G.JAIL_FEE} zahlen`, "", () => act({ t: "payJail" }), P.cash < G.JAIL_FEE));
+          acts.push(btn(`${M(G.JAIL_FEE)} zahlen`, "", () => act({ t: "payJail" }), P.cash < G.JAIL_FEE));
           if (P.cards.length) acts.push(btn("Freikarte", "", () => act({ t: "useCard" })));
         }
       } else if (mine && V.step === "after") {
@@ -343,7 +344,7 @@
     const w = worths(), order = V.players.map((p, i) => i).sort((a, b) => w[b] - w[a]);
     el.innerHTML = order.map((i) => {
       const p = V.players[i], you = i === V.me ? " (du)" : "";
-      return `<li class="${winners.includes(i) ? "win" : ""}"><span>${avi(p.avatar)}${esc(p.name)}${you}<small>${p.out ? "pleite" : `${p.cash} Bargeld`}</small></span><b>${p.out ? "–" : w[i]}</b></li>`;
+      return `<li class="${winners.includes(i) ? "win" : ""}"><span>${avi(p.avatar)}${esc(p.name)}${you}<small>${p.out ? "pleite" : `${M(p.cash)} Bargeld`}</small></span><b>${p.out ? "–" : M(w[i])}</b></li>`;
     }).join("");
   }
   function renderRoundEnd() {
@@ -401,7 +402,7 @@
         LOOK.render();
         if (V) scoreList($("#menuScores"), []);
         const mr = $("#menuRules");
-        if (mr && V) mr.textContent = `Startgeld ${V.rules.cash} · ${V.rules.limit ? `Zeitlimit ${V.rules.limit} Züge` : "ohne Zeitlimit"}${V.rules.goDouble ? " · doppelt auf Los" : ""}${V.rules.parking ? " · Jackpot" : ""}${V.rules.auction ? " · Versteigerung" : ""}.`;
+        if (mr && V) mr.textContent = `Startgeld ${M(V.rules.cash)} · ${V.rules.limit ? `Zeitlimit ${V.rules.limit} Züge` : "ohne Zeitlimit"}${V.rules.goDouble ? " · doppelt auf Los" : ""}${V.rules.parking ? " · Jackpot" : ""}${V.rules.auction ? " · Versteigerung" : ""}.`;
       },
       local(box) {
         box.append(

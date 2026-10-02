@@ -27,14 +27,14 @@
       const [c, r] = gridPos(i), side = sideOf(i), kind = f.k;
       const band = kind === "prop" ? `<i class="band" style="--bc:${G.GROUPS[f.g].color}"><u></u></i>` : "";
       let tx;
-      if (kind === "prop") tx = `<span class="nm">${soft(f.n)}</span><b class="pr">${f.p}</b>`;
+      if (kind === "prop") tx = `<span class="nm">${soft(f.n)}</span><b class="pr">${G.money(f.p)}</b>`;
       else if (kind === "go") tx = `<span class="go">LOS</span><span class="ar">➜</span>`;
       else if (kind === "park") tx = `<span class="ic">${ICON.park}</span><span class="nm">Frei Parken</span><b class="pot"></b>`;
       else if (kind === "jail") tx = `<span class="ic">${ICON.jail}</span><span class="nm">Gefängnis</span>`;
       else if (kind === "gojail") tx = `<span class="ic">${ICON.gojail}</span><span class="nm">Ab ins Gefängnis</span>`;
-      else if (kind === "tax") tx = `<span class="ic">${ICON.tax}</span><span class="nm">${soft(f.n)}</span><b class="pr">${f.t}</b>`;
+      else if (kind === "tax") tx = `<span class="ic">${ICON.tax}</span><span class="nm">${soft(f.n)}</span><b class="pr">${G.money(f.t)}</b>`;
       else if (kind === "chance" || kind === "chest") tx = `<span class="ic">${ICON[kind]}</span><span class="nm">${soft(f.n)}</span>`;
-      else tx = `<span class="ic">${iconOf(f, i)}</span><span class="nm">${soft(f.n)}</span><b class="pr">${f.p}</b>`;
+      else tx = `<span class="ic">${iconOf(f, i)}</span><span class="nm">${soft(f.n)}</span><b class="pr">${G.money(f.p)}</b>`;
       const inner = band + `<span class="tx">${tx}</span>`;
       h += `<button type="button" class="cell s-${side} k-${kind}" data-i="${i}" style="grid-column:${c};grid-row:${r}" aria-label="${esc(f.n)}">${inner}</button>`;
     });
@@ -63,7 +63,7 @@
       }
     });
     const pot = cells[20].querySelector(".pot");
-    pot.textContent = V.rules.parking && V.pot ? `${V.pot} €` : "";
+    pot.textContent = V.rules.parking && V.pot ? G.money(V.pot) : "";
   }
 
   function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), 900); }

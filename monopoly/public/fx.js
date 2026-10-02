@@ -4,6 +4,7 @@
   "use strict";
   const G = window.MonopolyGame, B = window.MonopolyBoard;
   const $ = (s) => document.querySelector(s);
+  const M = (n) => G.money(n);
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   let ctx = null, queue = [], running = false, timer = null, quiet = false;
   const idleCbs = [];
@@ -14,9 +15,20 @@
     for (let i = 0; i < 9; i++) pips += `<i${(PIPS[value] || []).includes(i) ? ' class="on"' : ""}></i>`;
     return `<div class="die ${cls || ""}" aria-label="${value ? "Würfel zeigt " + value : "Würfel"}">${pips}</div>`;
   }
+  // scattered little houses / hotels for the bank's piles (fixed positions, so it never jumps around)
+  const SPOTS = [[8, 30, -12], [36, 6, 8], [62, 34, -4], [22, 52, 14], [50, 56, -16], [76, 8, 10], [88, 52, 6], [12, 8, 4]];
+  const pileHTML = (cls, id) => `<div class="pile ${cls}"><div class="heap">${SPOTS.map(([x, y, r]) => `<i style="left:${x}%;top:${y}%;transform:rotate(${r}deg)"></i>`).join("")}</div><b id="${id}"></b></div>`;
   function mountMid() {
-    $("#mid").innerHTML = `<div class="brand">MONOPOLY</div><div class="dice" id="dice"></div><div class="info" id="info"></div><div class="stage" id="stage"></div>`;
+    $("#mid").innerHTML = `<div class="brand"><span>MONOPOLY</span></div>` +
+      `<div class="dk chest"><span>Gemeinschafts&shy;karte</span></div><div class="dk chance"><span>Ereignis&shy;karte</span></div>` +
+      pileHTML("hotels", "pileT") + pileHTML("houses", "pileH") +
+      `<div class="dice" id="dice"></div><div class="info" id="info"></div><div class="stage" id="stage"></div>`;
     drawDice(ctx && ctx.view() ? ctx.view().dice : [0, 0], false);
+    if (ctx && ctx.view()) piles(ctx.view());
+  }
+  function piles(v) {
+    const h = $("#pileH"), t = $("#pileT");
+    if (h) h.textContent = v.houses; if (t) t.textContent = v.hotels;
   }
   function drawDice(d, tumble, unlessSame) {
     const el = $("#dice"); if (!el) return;
@@ -70,18 +82,18 @@
         B.restart(cell(0), "glow");
         if (e.exact) {
           B.burst(0, ["🪙", "⭐", "✨", "💰"], e.bonus ? 24 : 14);
-          B.floatText(0, `+${amount}`, "gold");
-          banner(`LOS!<small>${e.bonus ? `Doppelt: +${amount}` : `+${amount}`}</small>`, "", 1300);
+          B.floatText(0, `+${M(amount)}`, "gold");
+          banner(`LOS!<small>${e.bonus ? `Doppelt: +${M(amount)}` : `+${M(amount)}`}</small>`, "", 1300);
           ctx.sfx(e.bonus ? "jackpot" : "coin"); ctx.buzz([20, 40, 20]);
         } else {
-          B.coins(0, plate(e.to), 4); B.floatText(0, `+${amount}`, "plus"); ctx.sfx("coin");
+          B.coins(0, plate(e.to), 4); B.floatText(0, `+${M(amount)}`, "plus"); ctx.sfx("coin");
         }
         return 1500;
       }
       if (e.why === "parking") {
         ctx.cash(e.to, amount);
         B.restart(cell(20), "glow"); B.burst(20, ["🪙", "💰", "✨"], 18); B.coins(20, plate(e.to), 5);
-        banner(`Jackpot!<small>+${amount}</small>`, "", 1200); ctx.sfx("jackpot");
+        banner(`Jackpot!<small>+${M(amount)}</small>`, "", 1200); ctx.sfx("jackpot");
         return 1300;
       }
       const from = e.from < 0 ? (e.idx != null ? cell(e.idx) : $("#mid")) : plate(e.from);
@@ -89,8 +101,8 @@
       if (e.from >= 0) ctx.cash(e.from, -amount);
       if (e.to >= 0) ctx.cash(e.to, amount);
       B.coins(from, to, amount >= 300 ? 6 : amount >= 100 ? 4 : 2);
-      if (e.from >= 0) B.floatText(plate(e.from), `−${amount}`, "minus");
-      if (e.to >= 0) B.floatText(plate(e.to), `+${amount}`, "plus");
+      if (e.from >= 0) B.floatText(plate(e.from), `−${M(amount)}`, "minus");
+      if (e.to >= 0) B.floatText(plate(e.to), `+${M(amount)}`, "plus");
       if (e.why === "rent" && e.idx != null) B.restart(cell(e.idx), "glow");
       if (e.to === v.me) ctx.sfx("coin"); else if (e.from === v.me) ctx.sfx("pay"); else ctx.sfx("coin");
       return 500;
@@ -123,13 +135,13 @@
       return 1100;
     },
     auction(e) { B.restart(cell(e.idx), "glow"); ctx.sfx("pop"); banner("Versteigerung!", "dark", 900); return 1000; },
-    bid(e, v) { B.floatText(plate(e.pi), `${e.amount}`, "gold"); ctx.sfx("coin"); return 400; },
+    bid(e, v) { B.floatText(plate(e.pi), M(e.amount), "gold"); ctx.sfx("coin"); return 400; },
     pass(e, v) { B.floatText(plate(e.pi), "passt", ""); return 300; },
     auctionEnd() { return 300; },
     build(e, v) { ctx.board(v); B.floatText(cell(e.idx), e.level === 5 ? "🏨" : "🏠", "gold"); ctx.sfx("build"); return 550; },
     sell(e, v) { ctx.board(v); B.floatText(cell(e.idx), "verkauft", ""); ctx.sfx("pay"); return 450; },
     mortgage(e, v) { ctx.board(v); B.floatText(cell(e.idx), e.on ? "Hypothek" : "ausgelöst", ""); ctx.sfx("pay"); return 450; },
-    debt(e, v) { B.restart(plate(e.pi), "bad"); ctx.sfx("bad"); info(`${who(v, e.pi)} ${e.pi === v.me ? "hast" : "hat"} Schulden (${e.amount})`); return 500; },
+    debt(e, v) { B.restart(plate(e.pi), "bad"); ctx.sfx("bad"); info(`${who(v, e.pi)} ${e.pi === v.me ? "hast" : "hat"} Schulden (${M(e.amount)})`); return 500; },
     bankrupt(e, v) {
       ctx.board(v); ctx.tokens(v); ctx.sfx("bad"); ctx.buzz([80, 40, 80]);
       banner(`${esc(v.players[e.pi].name)} ist pleite!`, "red", 1500);
@@ -172,7 +184,7 @@
 
   window.MonopolyFX = {
     init(c) { ctx = c; },
-    mountMid, drawDice, info, push, skip, dieHTML,
+    mountMid, piles, drawDice, info, push, skip, dieHTML,
     busy: () => running,
     onIdle: (f) => idleCbs.push(f)
   };

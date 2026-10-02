@@ -3,6 +3,7 @@
   "use strict";
   const G = window.MonopolyGame, B = window.MonopolyBoard, BOARD = G.BOARD, GROUPS = G.GROUPS;
   const $ = (s) => document.querySelector(s);
+  const M = (n) => G.money(n);
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   let ctx = null, kind = null, arg = null;
   let T = null; // trade being put together { to, give, take }
@@ -25,19 +26,19 @@
     if (f.k === "prop") {
       const here = pr ? pr.houses : -1, labels = ["Miete", "Mit Farbgruppe", "1 Haus", "2 Häuser", "3 Häuser", "4 Häuser", "Hotel"];
       const rows = [f.r[0], f.r[0] * 2, f.r[1], f.r[2], f.r[3], f.r[4], f.r[5]];
-      h += `<div class="label" style="color:${colorOf(idx)}">${GROUPS[f.g].name} · Preis ${f.p}</div><table class="rent">` +
-        rows.map((r, i) => `<tr class="${pr && (i === 0 ? here === 0 : i === 1 ? false : here === i - 1) ? "here" : ""}"><td>${labels[i]}</td><td>${r}</td></tr>`).join("") +
-        `<tr><td>Haus / Hotel kostet</td><td>${f.h}</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
+      h += `<div class="label" style="color:${colorOf(idx)}">${GROUPS[f.g].name} · Preis ${M(f.p)}</div><table class="rent">` +
+        rows.map((r, i) => `<tr class="${pr && (i === 0 ? here === 0 : i === 1 ? false : here === i - 1) ? "here" : ""}"><td>${labels[i]}</td><td>${M(r)}</td></tr>`).join("") +
+        `<tr><td>Haus / Hotel kostet</td><td>${M(f.h)}</td></tr><tr><td>Hypothek</td><td>${M(G.mortgageValue(idx))}</td></tr></table>`;
     } else if (f.k === "station") {
-      h += `<div class="label">Bahnhof · Preis ${f.p}</div><table class="rent"><tr><td>1 Bahnhof</td><td>25</td></tr><tr><td>2 Bahnhöfe</td><td>50</td></tr><tr><td>3 Bahnhöfe</td><td>100</td></tr><tr><td>4 Bahnhöfe</td><td>200</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
+      h += `<div class="label">Bahnhof · Preis ${M(f.p)}</div><table class="rent"><tr><td>1 Bahnhof</td><td>${M(25)}</td></tr><tr><td>2 Bahnhöfe</td><td>${M(50)}</td></tr><tr><td>3 Bahnhöfe</td><td>${M(100)}</td></tr><tr><td>4 Bahnhöfe</td><td>${M(200)}</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
     } else if (f.k === "util") {
-      h += `<div class="label">Versorgungswerk · Preis ${f.p}</div><table class="rent"><tr><td>Eins gehört dir</td><td>4 × Augenzahl</td></tr><tr><td>Beide gehören dir</td><td>10 × Augenzahl</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
+      h += `<div class="label">Versorgungswerk · Preis ${M(f.p)}</div><table class="rent"><tr><td>Eins gehört dir</td><td>4 × Augenzahl</td></tr><tr><td>Beide gehören dir</td><td>10 × Augenzahl</td></tr><tr><td>Hypothek</td><td>${G.mortgageValue(idx)}</td></tr></table>`;
     } else {
-      const text = { go: `Wer über Los zieht, bekommt ${G.GO_PAY}.${V.rules.goDouble ? ` Wer genau darauf landet, bekommt ${G.GO_PAY * 2}.` : ""}`,
-        jail: "Nur zu Besuch, solange du nicht verhaftet wurdest. Raus kommst du mit Pasch, 50 oder einer Freikarte.",
+      const text = { go: `Wer über Los zieht, bekommt ${M(G.GO_PAY)}.${V.rules.goDouble ? ` Wer genau darauf landet, bekommt ${M(G.GO_PAY * 2)}.` : ""}`,
+        jail: "Nur zu Besuch, solange du nicht verhaftet wurdest. Raus kommst du mit Pasch, ₥50 oder einer Freikarte.",
         gojail: "Wer hier landet, geht direkt ins Gefängnis.",
         park: V.rules.parking ? "Steuern und Strafen landen im Jackpot. Wer hier landet, kassiert ihn." : "Hier passiert nichts. Du ruhst dich aus.",
-        tax: `Zahle ${f.t} an die Bank.`, chance: "Ziehe eine Ereigniskarte.", chest: "Ziehe eine Gemeinschaftskarte." }[f.k];
+        tax: `Zahle ${M(f.t)} an die Bank.`, chance: "Ziehe eine Ereigniskarte.", chest: "Ziehe eine Gemeinschaftskarte." }[f.k];
       h += `<p class="hint">${text}</p>`;
     }
     if (ownable(idx)) {
@@ -56,11 +57,11 @@
     let rows = [], hi = -1, foot = "";
     if (f.k === "prop") {
       const labels = ["Miete", "Komplett", "1 Haus", "2 Häuser", "3 Häuser", "4 Häuser", "Hotel"];
-      rows = [f.r[0], f.r[0] * 2, f.r[1], f.r[2], f.r[3], f.r[4], f.r[5]].map((r, k) => [labels[k], r]);
+      rows = [f.r[0], f.r[0] * 2, f.r[1], f.r[2], f.r[3], f.r[4], f.r[5]].map((r, k) => [labels[k], M(r)]);
       hi = pr.houses > 0 ? pr.houses + 1 : G.ownsSet(V, me, f.g) ? 1 : 0;
-      foot = `<span>Haus / Hotel ${f.h}</span>`;
+      foot = `<span>Haus / Hotel ${M(f.h)}</span>`;
     } else if (f.k === "station") {
-      rows = [["1 Bahnhof", 25], ["2 Bahnhöfe", 50], ["3 Bahnhöfe", 100], ["4 Bahnhöfe", 200]];
+      rows = [["1 Bahnhof", M(25)], ["2 Bahnhöfe", M(50)], ["3 Bahnhöfe", M(100)], ["4 Bahnhöfe", M(200)]];
       hi = mine.filter((j) => BOARD[j].k === "station").length - 1;
     } else rows = [["Eins gehört dir", "4 × Zahl"], ["Beide gehören dir", "10 × Zahl"]], hi = mine.filter((j) => BOARD[j].k === "util").length - 1;
     const marks = f.k === "prop" && pr.houses ? (pr.houses === 5 ? `<em class="hotel"></em>` : "<em></em>".repeat(pr.houses)) : "";
@@ -68,29 +69,29 @@
     return `<button type="button" class="deed${i === selIdx ? " sel" : ""}${pr.mort ? " mort" : ""}" data-sel="${i}" style="--bc:${c};--ink:${ink(c)}" aria-pressed="${i === selIdx}">` +
       `<span class="dh"><b>${icon}${esc(f.n)}</b><i class="dm">${marks}</i></span>` +
       `<span class="dr">${rows.map((r, k) => `<span class="${k === hi ? "now" : ""}"><span>${r[0]}</span><b>${r[1]}</b></span>`).join("")}</span>` +
-      `<span class="df">${foot}<span>Hypothek ${G.mortgageValue(i)}</span></span>${pr.mort ? `<span class="stamp">Beliehen</span>` : ""}</button>`;
+      `<span class="df">${foot}<span>Hypothek ${M(G.mortgageValue(i))}</span></span>${pr.mort ? `<span class="stamp">Beliehen</span>` : ""}</button>`;
   }
   function manageHTML() {
     const V = v(), me = V.me, mine = G.ownedBy(V, me).sort(order), ok = canManage(V);
     const buildOk = ok && (V.step === "roll" || V.step === "after"), sellOk = ok && ["roll", "after", "debt"].includes(V.step);
     if (!mine.includes(selIdx)) selIdx = mine.length ? mine[0] : null;
-    let h = `<h2>Meine Grundstücke</h2><div class="label">Kasse ${V.players[me].cash} · Bank: ${V.houses} Häuser, ${V.hotels} Hotels</div>`;
+    let h = `<h2>Meine Grundstücke</h2><div class="label">Kasse ${M(V.players[me].cash)} · Bank: ${V.houses} Häuser, ${V.hotels} Hotels</div>`;
     if (!ok) h += `<p class="hint">Bauen und beleihen geht nur in deinem Zug.</p>`;
-    if (V.step === "debt" && ok) h += `<p class="hint"><b>Du schuldest ${V.debt.amount}.</b> Verkaufe Häuser oder beleihe Grundstücke, dann wird automatisch bezahlt.</p>`;
+    if (V.step === "debt" && ok) h += `<p class="hint"><b>Du schuldest ${M(V.debt.amount)}.</b> Verkaufe Häuser oder beleihe Grundstücke, dann wird automatisch bezahlt.</p>`;
     if (!mine.length) return h + `<p class="hint">Dir gehört noch nichts.</p><button class="btn btn-primary btn-block" data-close>Fertig</button>`;
     const groups = [];
     for (const i of mine) { const r = rank(i); (groups[groups.length - 1] && groups[groups.length - 1].r === r ? groups[groups.length - 1] : groups[groups.push({ r, l: [] }) - 1]).l.push(i); }
     h += `<div class="deck">` + groups.map((g) => `<div class="grp"><div class="gh" style="color:${colorOf(g.l[0])}">${groupName(BOARD[g.l[0]])} · ${g.l.length}/${g.r < 8 ? GROUPS[g.r].m.length : g.r === 8 ? 4 : 2}</div><div class="stack">${g.l.map((i) => deedHTML(i, V, mine)).join("")}</div></div>`).join("") + `</div>`;
     if (groups.length > 1) h += `<div class="dots">` + groups.map((g, k) => `<button type="button" data-g="${k}" aria-label="${groupName(BOARD[g.l[0]])}" style="--bc:${colorOf(g.l[0])}"></button>`).join("") + `</div>`;
     const i = selIdx, f = BOARD[i], pr = V.props[i];
-    const st = pr.mort ? `beliehen, auslösen ${G.unmortgageCost(i)}` : pr.houses === 5 ? "Hotel" : pr.houses ? `${pr.houses} ${pr.houses === 1 ? "Haus" : "Häuser"}` : "";
+    const st = pr.mort ? `beliehen, auslösen ${M(G.unmortgageCost(i))}` : pr.houses === 5 ? "Hotel" : pr.houses ? `${pr.houses} ${pr.houses === 1 ? "Haus" : "Häuser"}` : "";
     const btn = (a, label, bad) => `<button class="btn ${bad ? "off" : ""}" data-a="${a}" data-i="${i}">${label}</button>`;
     let bs = "";
     if (f.k === "prop" && !pr.mort) {
-      bs += btn("build", `+ Haus ${f.h}`, buildOk ? G.buildError(V, me, i) : "x");
-      if (pr.houses) bs += btn("sell", `− Haus ${f.h / 2}`, sellOk ? G.sellError(V, me, i) : "x");
+      bs += btn("build", `+ Haus ${M(f.h)}`, buildOk ? G.buildError(V, me, i) : "x");
+      if (pr.houses) bs += btn("sell", `− Haus ${M(f.h / 2)}`, sellOk ? G.sellError(V, me, i) : "x");
     }
-    bs += pr.mort ? btn("unmortgage", `Auslösen ${G.unmortgageCost(i)}`, buildOk ? G.unmortError(V, me, i) : "x") : btn("mortgage", `Hypothek ${G.mortgageValue(i)}`, sellOk ? G.mortError(V, me, i) : "x");
+    bs += pr.mort ? btn("unmortgage", `Auslösen ${M(G.unmortgageCost(i))}`, buildOk ? G.unmortError(V, me, i) : "x") : btn("mortgage", `Hypothek ${M(G.mortgageValue(i))}`, sellOk ? G.mortError(V, me, i) : "x");
     h += `<div class="trow" style="--bc:${colorOf(i)}"><div class="nmx">${esc(f.n)}${st ? `<small>${st}</small>` : ""}</div>${bs}</div>`;
     return h + `<button class="btn btn-primary btn-block" data-close>Fertig</button>`;
   }
@@ -110,7 +111,7 @@
       (V.players[pi].cards.length ? `<button type="button" class="chip" data-s="${side}" data-card aria-pressed="${!!T[side].card}">🔓 Freikarte</button>` : "") + `</div>`;
   }
   function cashStep(side, max) {
-    return `<div class="step"><button data-s="${side}" data-d="-50">−50</button><button data-s="${side}" data-d="-10">−10</button><b>${T[side].cash}</b><button data-s="${side}" data-d="10">+10</button><button data-s="${side}" data-d="50">+50</button></div><div class="hint">höchstens ${max}</div>`;
+    return `<div class="step"><button data-s="${side}" data-d="-50">−50</button><button data-s="${side}" data-d="-10">−10</button><b>${M(T[side].cash)}</b><button data-s="${side}" data-d="10">+10</button><button data-s="${side}" data-d="50">+50</button></div><div class="hint">höchstens ${M(max)}</div>`;
   }
   function tradeHTML() {
     const V = v(), me = V.me, others = V.players.map((p, i) => i).filter((i) => i !== me && !V.players[i].out);

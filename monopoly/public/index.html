@@ -130,11 +130,24 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .tok.out{opacity:.25;filter:grayscale(1)}
 .tok.injail>span::after{content:"";position:absolute;inset:-.4cqw;border-radius:50%;background:repeating-linear-gradient(90deg,transparent 0 20%,rgba(30,27,40,.85) 20% 28%)}
 /* middle of the board: dice, banners, cards */
-.mid{grid-area:2/2/11/11;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3cqw;min-width:0;min-height:0}
-.mid .brand{font-family:var(--display);font-size:7cqw;letter-spacing:.04em;color:var(--accent);transform:rotate(-3deg);text-shadow:0 .5cqw 0 rgba(0,0,0,.35)}
-.mid .dice{display:flex;gap:3cqw;min-height:11cqw}
-.mid .die{--d:11cqw}
-.mid .info{font-size:2.4cqw;font-weight:700;color:var(--text);opacity:.85;text-align:center;max-width:60cqw;min-height:2.6cqw}
+.mid{grid-area:2/2/11/11;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqw;min-width:0;min-height:0;overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#e4f3e5,#cfe6d2 70%);box-shadow:inset 0 0 0 .2cqw rgba(0,0,0,.35)}
+.mid .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(38deg);padding:.9cqw 3.6cqw;background:#d8262c;border-radius:.8cqw;box-shadow:inset 0 0 0 .3cqw #fff,0 .6cqw 1.6cqw rgba(0,0,0,.28);pointer-events:none}
+.mid .brand span{display:block;font-family:var(--display);font-size:9.5cqw;line-height:1;letter-spacing:.02em;color:#fff}
+.mid .dk{position:absolute;display:grid;place-items:center;width:15cqw;height:10cqw;border-radius:1cqw;transform:rotate(38deg);text-align:center;font-weight:900;font-size:1.5cqw;line-height:1.1;text-transform:uppercase;letter-spacing:.04em;color:#7c3f0a;pointer-events:none}
+.mid .dk.chest{right:9%;top:12%;background:#fde68a;box-shadow:.5cqw .5cqw 0 #e7c85f,1cqw 1cqw 0 #f3dc88,1.5cqw 1.5cqw 1.2cqw rgba(0,0,0,.25)}
+.mid .dk.chance{left:9%;bottom:12%;background:#fdba74;box-shadow:.5cqw .5cqw 0 #ef9a4a,1cqw 1cqw 0 #f6b06a,1.5cqw 1.5cqw 1.2cqw rgba(0,0,0,.25)}
+.mid .dk span{max-width:90%;hyphens:manual}
+.mid .pile{position:absolute;width:13cqw;display:flex;flex-direction:column;align-items:center;gap:.6cqw;pointer-events:none}
+.mid .pile.hotels{left:7%;top:44%}.mid .pile.houses{right:7%;top:36%}
+.mid .heap{position:relative;width:100%;height:7.5cqw}
+.mid .heap i{position:absolute;width:2.6cqw;height:2.3cqw;background:#2f9e44;clip-path:polygon(0 42%,50% 0,100% 42%,100% 100%,0 100%);filter:drop-shadow(0 .2cqw 0 rgba(0,0,0,.35))}
+.mid .pile.hotels .heap i{width:3.4cqw;height:2.1cqw;background:#d8262c;clip-path:polygon(0 30%,50% 0,100% 30%,100% 100%,0 100%)}
+.mid .pile b{padding:.2cqw 1.2cqw;border-radius:99px;background:#fff;color:#1a1426;font-size:1.8cqw;box-shadow:0 .2cqw .6cqw rgba(0,0,0,.25)}
+.mid .dice{position:relative;z-index:2;display:flex;gap:2cqw;min-height:8.5cqw}
+.mid .die{--d:8.5cqw}
+.mid .info{position:absolute;left:50%;bottom:2.5cqw;transform:translateX(-50%);white-space:nowrap;z-index:2;font-size:2.2cqw;font-weight:800;color:#1a1426;text-align:center;max-width:60cqw;padding:.5cqw 1.8cqw;border-radius:99px;background:rgba(255,255,255,.88);box-shadow:0 .3cqw 1cqw rgba(0,0,0,.2)}
+.mid .info:empty{visibility:hidden}
 .stage{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:5}
 .banner{padding:1.6cqw 4cqw;border-radius:2.4cqw;font-family:var(--display);font-size:5.4cqw;text-align:center;line-height:1.1;background:var(--accent);color:#231a05;box-shadow:0 1cqw 0 rgba(0,0,0,.3),0 2cqw 4cqw rgba(0,0,0,.4);animation:bin .5s cubic-bezier(.2,1.7,.4,1);max-width:70cqw}
 .banner small{display:block;font-family:inherit;font-size:.5em;margin-top:.4em}
