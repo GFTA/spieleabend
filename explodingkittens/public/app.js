@@ -464,6 +464,7 @@
       return el && grabbable(el.dataset.c) ? { el, c: el.dataset.c } : null;
     },
     onStart() { sel = null; pick = null; paintSel(); },
+    zones(s) { return [{ el: $("#table"), ok: tableOk(s.c) }, ...$$("#opps .obox").map((e) => ({ el: e, ok: seatOk(s.c, +e.dataset.seat) }))]; },
     target(el, s) {
       const box = el.closest("#opps .obox");
       if (box) { const seat = +box.dataset.seat; return { el: box, seat, ok: seatOk(s.c, seat) }; }
