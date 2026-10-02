@@ -46,6 +46,7 @@ betrifft, auch das Bot-Timing (`Game.botPlan`, s. „Bots & Zug-Timer“);
 | `kit.js` | `window.Spieleabend`: `store`, `look()` (Design + Größe inkl. `?table=`-Übernahme, `LOOK.render()`/`.apply()`/`.get()`), `identity()` (Profil + `?name=`/`?av=`), `avatarPicker()`/`pickerHTML()`, `profile`, `toast`, `confetti`, `showBubble`, Startseiten-Link im WLAN |
 | `avatars.js` / `profile.js` | Avatar-Liste, Farben; Profil mit Statistik (s. „Profil, Avatar & Statistik“) |
 | `room-ui.css` / `room-ui.js` | Warteraum und Spielmenü (s. u.) |
+| `cards.css` / `cards.js` | Kartentisch-Mechanik für alle Kartenspiele (s. „Karten: `shared/cards.js`“) |
 
 Reihenfolge in `index.html`: `kit.css`, `room-ui.css`, dann der eigene `<style>` (Spielfarben
 und alles Spielspezifische, darf gemeinsame Regeln überschreiben); Scripts `kit.js`,
@@ -54,6 +55,21 @@ sie in allen Spielen gleich ist **und** keine Spielregel sie durch die neue Reih
 überschreiben würde (Beispiel: `.btn-primary` bleibt im Spiel, weil das Basis-`.btn` pro
 Spiel verschieden ist). Die Abschnitte unten beschreiben die Konventionen; die Code-Beispiele
 stehen so in `shared/kit.*`.
+
+**Karten: `shared/cards.js` (`window.Cards`).** Wie eine Karte aussieht und was erlaubt ist, bleibt im Spiel; Ziehen und
+Fliegen steckt im Modul (`<link href="cards.css">` nach `room-ui.css`, `<script src="cards.js">` nach `home-ui.js`):
+
+- `Cards.dnd({ root, grab, target, drop, onStart, onEnd, tap })`: Maus und Touch, Geist unter dem Finger, Ablageziele
+  mit `.cd-over` (liegt darüber) und Rückschnappen, wenn `drop` `false` liefert. `grab(e)` liefert `{ el, … }` oder `null`,
+  `target(unterDemFinger, quelle)` liefert `{ el, ok, … }`, `drop(quelle, ziel, rect)` führt den Zug aus (`rect` = wo die Karte
+  losgelassen wurde, dort startet der Flug). `tap(e)` ist der Klick, der *nicht* das Ende eines Zuges war. Das Spiel
+  markiert mögliche Ziele mit `.cd-drop` und ruft am Anfang von `render()` `dnd.defer()` auf, damit ein Neuzeichnen nicht
+  mitten im Ziehen die Karte wegnimmt (`onEnd(true)` = jetzt nachholen).
+- `Cards.flights({ resolve, off, onLand })`: `add({ src, dst, html, delay, dur, flipTo, sweep })` beim Verarbeiten der
+  Events, `run()` nach dem Neuzeichnen, `hide()` nach jedem Neuzeichnen. `resolve(dst)` liefert `{ rect, hide }`; die
+  Zielkarte bleibt unsichtbar, bis der Flug gelandet ist. `prefers-reduced-motion` ist eingebaut.
+- `Cards.cascade(n, { fmax, room })` für Stapel, deren Karten nach unten überlappen (`.cd-pile` mit `--i/--f/--H`).
+- Muster: `skipbo/public/app.js`. Antippen als Alternative zum Ziehen bleibt Sache des Spiels (`tap`).
 
 **Einheitliche Startbildschirme (`#home`):** Titel (`h1`), Hero, Breite (`#home>*`, max. 560 px)
 und Abstände kommen aus `kit.css`; ein Spiel setzt nur Hero-Größe (`.hero .board{--cell:…}`)

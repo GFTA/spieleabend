@@ -46,7 +46,7 @@ Gemeinsames in `shared/`, Werkzeuge in `scripts/`. Neue Spiele heißen klein ges
 4. `server.js` ist ein dünner Adapter um `../shared/room-server.js`. `app.js` nutzt `RoomUI`, `HomeUI` und `Spieleabend.*`. Nichts davon selbst nachbauen.
 5. Das Rundenende läuft **immer** über `UI.roundEndFooter`, danach genau einmal `profile.result(...)` und bei Sieg `confetti()`.
 6. Kein Hot-Seat. Einzelspieler ist Mensch plus Computer-Gegner (`HomeUI({ min: 0 })`, wenn das Spiel auch allein Spaß macht).
-7. Alles, was sich bewegt, ist sichtbar animiert, auch Bot-Züge und Züge der anderen.
+7. Alles, was sich bewegt, ist sichtbar animiert, auch Bot-Züge und Züge der anderen. Karten ziehen, ablegen und fliegen lassen **immer** über `shared/cards.js` (`Cards.dnd`, `Cards.flights`, `Cards.cascade`), nie mit eigenem Ghost-/Pointer-Code.
 8. Die Engine muss schnell sein (keine Sekunden-Generatoren) und Computer-Gegner spielen in Menschen-Tempo. Beides braucht einen Test.
 9. Eingaben zeigen sofort Wirkung (optimistisch), Uhren laufen vom Server-Wert aus.
 10. **Jede Aktion vom Client ist feindlich**: Die Engine prüft in `act` alles. Nachschlagen in Tabellen nur mit `Object.prototype.hasOwnProperty.call(TABELLE, key)` oder über `Map`/`Object.create(null)`, nie mit `TABELLE[a.id]`: `"constructor"`, `"__proto__"` oder `"toString"` sind sonst gültige Schlüssel. Zahlen mit `Number.isInteger` und Bereich prüfen, Strings auf Typ. Dazu gehört ein Test mit solchen Nachrichten.
@@ -84,7 +84,7 @@ Privat bleibt privat: keine IPs, Hostnamen des eigenen Servers oder Secrets im R
 - **Rundenende immer mit `UI.roundEndFooter({ over, next })`**, darin stecken Revanche, „Zurück zum Start“ und die
   Abstimmung. Danach `Spieleabend.profile.result(...)` und bei Sieg `confetti()`, genau einmal pro Runde.
 - **Skriptreihenfolge in `index.html`**: `kit.css`, `room-ui.css`, `avatars.js`, `profile.js`, `kit.js`, `room-ui.js`,
-  `home-ui.js`, `game.js`, `app.js`. Gemeinsames liegt in `shared/`. Wird dort etwas geändert, betrifft es alle Spiele gleichzeitig:
+  `home-ui.js`, `game.js`, `app.js` (Kartenspiele laden zusätzlich `cards.css` nach `room-ui.css` und `cards.js` nach `home-ui.js`). Gemeinsames liegt in `shared/`. Wird dort etwas geändert, betrifft es alle Spiele gleichzeitig:
   Änderungen sind additiv (neue optionale Parameter mit altem Standardwert).
 - **Kein Hot-Seat / „Ein Handy für alle“.** Einzelspieler heißt: Mensch plus Computer-Gegner. Darf ein Spiel auch allein
   Spaß machen, erlaubt `HomeUI({ min: 0 })` null Gegner.
