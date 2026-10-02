@@ -511,6 +511,7 @@
 
     // turn change feedback
     const key = `${V.round}:${V.turn}:${V.cur}`;
+    Spieleabend.mine(play && (mode === "online" || V.players.some((p) => p.bot)));
     if (play && lastTurn !== key && lastTurn !== null && (mode === "online" || V.players.some((p) => p.bot))) { buzz([40, 60, 40]); sfx("turn"); }
     lastTurn = key;
 
