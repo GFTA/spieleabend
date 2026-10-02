@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1a1426"/>
+  <g font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" text-anchor="middle">
+    <g transform="translate(122 296) rotate(-12) translate(-74 -104)">
+      <rect y="8" width="148" height="208" rx="22" fill="#b9a977"/>
+      <rect width="148" height="208" rx="22" fill="#fbf6e6"/>
+      <text x="74" y="128" font-size="108" fill="#1d5fc4">5</text>
+      <circle cx="74" cy="164" r="11" fill="#1d5fc4"/>
+    </g>
+    <g transform="translate(390 296) rotate(12) translate(-74 -104)">
+      <rect y="8" width="148" height="208" rx="22" fill="#b9a977"/>
+      <rect width="148" height="208" rx="22" fill="#fbf6e6"/>
+      <text x="74" y="128" font-size="108" fill="#1d5fc4">7</text>
+      <circle cx="74" cy="164" r="11" fill="#1d5fc4"/>
+    </g>
+    <g transform="translate(256 272) translate(-80 -113)">
+      <rect y="9" width="160" height="226" rx="24" fill="#b79fd6"/>
+      <rect width="160" height="226" rx="24" fill="#f6ecff"/>
+      <circle cx="80" cy="113" r="52" fill="none" stroke="#7a3fb8" stroke-width="12"/>
+      <circle cx="62" cy="98" r="8" fill="#7a3fb8"/><circle cx="98" cy="98" r="8" fill="#7a3fb8"/>
+      <path d="M56 128q24 22 48 0" fill="none" stroke="#7a3fb8" stroke-width="10" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

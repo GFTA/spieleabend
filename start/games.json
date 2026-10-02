@@ -158,5 +158,15 @@
     "url": "https://skipbo.cool-kidz.net/",
     "max": 6,
     "status": "http://skipbo:8080/info"
+  },
+  {
+    "id": "rummikub",
+    "name": "Rummikub",
+    "title": "Rummikub",
+    "desc": "Zahlenplättchen zu Reihen und Gruppen legen, den Tisch umbauen und als Erster den Ständer leeren.",
+    "players": "2–4 Spieler + Zuschauer",
+    "url": "https://rummikub.cool-kidz.net/",
+    "max": 4,
+    "status": "http://rummikub:8080/info"
   }
 ]
