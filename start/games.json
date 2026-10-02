@@ -168,5 +168,15 @@
     "url": "https://rummikub.cool-kidz.net/",
     "max": 4,
     "status": "http://rummikub:8080/info"
+  },
+  {
+    "id": "explodingkittens",
+    "name": "Exploding Kittens",
+    "title": "Exploding Kittens",
+    "desc": "Kartenspiel: Katzen verstecken, „Nö!“ sagen und nicht explodieren",
+    "players": "2–5 Spieler + Zuschauer",
+    "url": "https://kittens.cool-kidz.net/",
+    "max": 5,
+    "status": "http://explodingkittens:8080/info"
   }
 ]
