@@ -188,6 +188,24 @@
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
     setTimeout(() => el.classList.remove(cls), ms);
   }
+  // a captured piece is thrown off the board: it flies away from the piece that took it, spinning, and is removed
+  function toss(el, by, ms = 620) {
+    if (!el) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !el.animate) { el.remove(); return; }
+    const v = el.getBoundingClientRect(), m = by ? by.getBoundingClientRect() : v;
+    let dx = v.left - m.left, dy = v.top - m.top;
+    const L = Math.hypot(dx, dy);
+    if (L < 1) { dx = 1; dy = -1; } else { dx /= L; dy /= L; }
+    const far = v.width * 2.6, spin = (dx >= 0 ? 1 : -1) * (200 + Math.random() * 160);
+    el.style.zIndex = 8; el.style.pointerEvents = "none";
+    const a = el.animate([
+      { translate: "0 0", rotate: "0deg", scale: 1, opacity: 1 },
+      { translate: `${dx * far * 0.5}px ${dy * far * 0.5 - v.width * 0.7}px`, rotate: `${spin * 0.5}deg`, scale: 1.3, opacity: 1, offset: 0.45 },
+      { translate: `${dx * far}px ${dy * far + v.width * 0.5}px`, rotate: `${spin}deg`, scale: 0.55, opacity: 0 }
+    ], { duration: ms, easing: "cubic-bezier(.3,.6,.4,1)", fill: "forwards" });
+    a.onfinish = a.oncancel = () => el.remove();
+    setTimeout(() => el.remove(), ms + 300);
+  }
 
   // ---------- sound and haptics: synthesized effects (no files), the on/off switch, screen wake lock ----------
   // key: where on/off is stored; vol: default loudness of tone(); noiseFilter: "lowpass" | "bandpass";
@@ -265,5 +283,5 @@
     el.title = sortLabel(mode) + " (S)";
     if (!el.firstElementChild) el.innerHTML = SORT_INNER;
   }
-  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, profile: P, toast, confetti, showBubble, sound, dropParams };
+  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams };
 })();
