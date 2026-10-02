@@ -28,6 +28,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Arbeitsanweisung für 
 | Dame | [`dame/`](dame/) | Deutsche Regeln mit Schlagzwang und fliegenden Damen, Ziehen per Drag & Drop, 2 Spieler plus Zuschauer, Computer-Gegner · Port 8094 |
 | Schach | [`schach/`](schach/) | Alle Regeln (Rochade, en passant, Umwandlung), Ziehen per Drag & Drop, optional Schachuhr, 2 Spieler plus Zuschauer, Computer-Gegner · Port 8095 |
 | Monopoly | [`monopoly/`](monopoly/) | Vorlage „Pig“, 2–6 Spieler plus Zuschauer, Computer-Gegner · Port 8092 |
+| Skip-Bo | [`skipbo/`](skipbo/) | Vorrat leer spielen, Ziehen per Drag & Drop, 2–6 Spieler plus Zuschauer, Computer-Gegner · Port 8097 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1a1426"/>
+  <g transform="translate(256 268) scale(1.28) translate(-256 -268)"><g font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" text-anchor="middle">
+    <g transform="translate(190 292) rotate(-22) translate(-72 -112)">
+      <rect width="144" height="224" rx="20" fill="#f4effb"/>
+      <rect x="9" y="9" width="126" height="206" rx="14" fill="#2f6fd6"/>
+      <text x="34" y="78" font-size="58" fill="#fff">3</text>
+    </g>
+    <g transform="translate(322 292) rotate(22) translate(-72 -112)">
+      <rect width="144" height="224" rx="20" fill="#f4effb"/>
+      <rect x="9" y="9" width="126" height="206" rx="14" fill="#d93a43"/>
+      <text x="110" y="78" font-size="58" fill="#fff">7</text>
+    </g>
+    <g transform="translate(256 280) translate(-72 -112)">
+      <rect width="144" height="224" rx="20" fill="#f4effb"/>
+      <rect x="9" y="9" width="126" height="206" rx="14" fill="#f2c230"/>
+      <text x="72" y="140" font-size="64" fill="#1a1426">SB</text>
+      <path d="M72 160l9 18 19 3-14 13 4 19-18-10-18 10 4-19-14-13 19-3z" fill="#1a1426" transform="translate(0 -6) scale(1)"/>
+    </g>
+  </g></g>
+</svg>

@@ -148,5 +148,15 @@
     "url": "https://monopoly.cool-kidz.net/",
     "max": 6,
     "status": "http://monopoly:8080/info"
+  },
+  {
+    "id": "skipbo",
+    "name": "Skip-Bo",
+    "title": "Skip-Bo",
+    "desc": "Vorratsstapel leer spielen: Karten von 1 bis 12 auf die Bauhaufen legen, Skip-Bo-Joker nutzen. Mit Computer-Gegnern.",
+    "players": "2–6 Spieler + Zuschauer",
+    "url": "https://skipbo.cool-kidz.net/",
+    "max": 6,
+    "status": "http://skipbo:8080/info"
   }
 ]
