@@ -598,7 +598,7 @@
     else if (!P) acts.innerHTML = "";
     else acts.innerHTML = (turn && V.step === "act" ? `<button class="btn btn-primary" type="button" data-a="discard"${sel == null ? " disabled" : ""}>Abwerfen</button>` : "") +
       (turn ? '<button class="btn btn-ghost small" type="button" data-a="tip">Tipp</button>' : "") +
-      `<button class="btn btn-ghost small" type="button" data-a="sort">${sortMode === "value" ? "Nach Farbe sortieren" : "Nach Zahl sortieren"}</button>`;
+      Spieleabend.sortToggleHTML(sortMode, 'data-a="sort"');
 
     // hand: everything that is not in the spread
     const hand = $("#hand");
