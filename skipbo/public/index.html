@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="room-ui.css">
+<link rel="stylesheet" href="cards.css">
 <style>
 :root{--sea:#1f2350;--felt:#2a2350}
 /* table designs; "Nacht" is the default without an attribute */
@@ -59,21 +60,8 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .card.back::before{content:"SB";left:50%;top:50%;transform:translate(-50%,-50%);color:#fffdf6;font-size:calc(var(--w) * .34);letter-spacing:.03em}
 .mini{--w:var(--mw)}
 .obox .card,.deckslot .card,#builds .card{touch-action:pan-x pan-y}
-.pile{--n:1;position:relative;width:var(--w);height:calc(var(--w) * 1.4 * var(--H,1));flex:none}
-.pile.empty{border-radius:calc(var(--w) * .13);box-shadow:inset 0 0 0 2px var(--line);background:rgba(255,255,255,.04)}
-.pile .card{position:absolute;left:0;top:calc(var(--i,0) * var(--f,0) * var(--w) * 1.4)}
-.pile .cnt{position:absolute;right:-5px;bottom:-5px;z-index:3;min-width:1.5em;padding:1px 5px;border-radius:999px;background:var(--surface);color:var(--text);font:800 clamp(11px,2.9vw,13px)/1.4 var(--body,Figtree,sans-serif);text-align:center;box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums;pointer-events:none}
-.mini .pile .cnt,.pile.mini .cnt{right:-4px;bottom:-4px;font-size:11px;padding:0 4px}
 [data-src]{cursor:grab}
 .card.sel{transform:translateY(calc(var(--w) * -.16));box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#2c6bd8),0 0 0 3px var(--accent),0 8px 16px rgba(0,0,0,.45)}
-.card.dragging{opacity:.25}
-.card.sent{opacity:.3}
-.ghost{position:fixed;z-index:52;pointer-events:none;transform-origin:0 0;margin:0}
-.ghost .card{position:static;box-shadow:inset 0 0 0 calc(var(--w) * .045) var(--cc,#2c6bd8),0 8px 18px rgba(0,0,0,.5)}
-.ghost.back .card{--cc:#7a5cff}
-.slot.ok .pile,.mydisc .pile.ok2{filter:drop-shadow(0 0 7px var(--accent))}
-.slot.ok .pile.empty,.mydisc .pile.ok2.empty{box-shadow:inset 0 0 0 2.5px var(--accent)}
-.slot.over .pile,.mydisc .pile.over{transform:scale(1.06)}
 /* ---------- game ---------- */
 .topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
 .roundinfo{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -102,7 +90,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .deckslot{display:flex;flex-direction:column;align-items:center;gap:4px}
 .builds{display:flex;gap:calc(var(--cw) * .14)}
 .slot{position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
-.slot .pile.empty::after{content:attr(data-hint);position:absolute;inset:0;display:grid;place-items:center;font:800 calc(var(--w) * .4)/1 var(--display);color:rgba(255,255,255,.22)}
+.slot .cd-pile.empty::after{content:attr(data-hint);position:absolute;inset:0;display:grid;place-items:center;font:800 calc(var(--w) * .4)/1 var(--display);color:rgba(255,255,255,.22)}
 .cap{font-size:clamp(10px,2.7vw,12px);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .lastmove{max-width:min(92%,440px);min-height:2.8em;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:center;font-size:13px;font-weight:600;color:var(--text);opacity:.85;text-wrap:balance}
 .lastmove.fresh{animation:pop .35s ease-out}
@@ -113,7 +101,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 .myboard{display:flex;align-items:flex-start;justify-content:center;gap:calc(var(--cw) * .32)}
 .myboard .grp{display:flex;flex-direction:column;gap:4px;align-items:center}
 .mydisc{display:flex;gap:calc(var(--cw) * .12)}
-.mydisc .pile{cursor:pointer}
+.mydisc .cd-pile{cursor:pointer}
 .hand{display:flex;gap:calc(var(--cw) * .1);justify-content:center;min-height:calc(var(--cw) * 1.4 + 8px);padding-top:calc(var(--cw) * .16)}
 .who{display:flex;align-items:center;gap:10px}
 .who .wav{font-size:28px;line-height:1;flex:none}
@@ -327,6 +315,7 @@ h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01e
 <script src="kit.js"></script>
 <script src="room-ui.js"></script>
 <script src="home-ui.js"></script>
+<script src="cards.js"></script>
 <script src="game.js"></script>
 <script src="app.js"></script>
 </body>

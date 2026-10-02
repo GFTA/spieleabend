@@ -43,8 +43,6 @@
   let levelLocal = G.normLevel(store.get(K.level) || 2);
   let lastTurn = null, confettiFor = null;
   let sel = null;         // { from: "hand"|"stock"|"disc", c, i, idx } the tapped card
-  let drag = null;        // a card being dragged
-  let dirty = false;      // a redraw waited for the end of a drag
   let selfSrc = null;     // where my own dragged card was let go, so the flight starts there
   let trackHand = [];     // my hand as last known, to see which cards were just drawn
   let deckShake = false;
@@ -56,7 +54,7 @@
   const pname = (i) => (i === V.me ? "Du" : V.players[i].name);
   const { toast, confetti, showBubble } = Spieleabend;
   const mine = () => (V && V.me >= 0 ? V.players[V.me] : null);
-  const rectOf = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
+  const rectOf = Cards.rectOf;
   const remove1 = (a, c) => { const k = a.indexOf(c); if (k >= 0) a.splice(k, 1); };
 
   const { sfx, buzz, wake } = Spieleabend.sound({
@@ -83,22 +81,18 @@
   const backHTML = () => '<div class="card back"></div>';
   // a pile of cards, cascading downwards so every number stays readable
   function pileHTML(arr, o = {}) {
-    const n = arr.length;
-    const f = n > 1 ? Math.min(o.fmax || 0.27, (o.room || 1.25) / (n - 1)) : 0;
-    const H = n > 1 ? 1 + (n - 1) * f : 1;
+    const n = arr.length, { f, H } = Cards.cascade(n, o);
     const cards = arr.map((c, k) => cardHTML(c, { style: `--i:${k};--f:${f.toFixed(3)}`, attrs: k === n - 1 && o.src ? `data-src="${o.src}" data-i="${o.i || 0}"` : "" })).join("");
-    return `<div class="pile${n ? "" : " empty"}${o.cls ? " " + o.cls : ""}" style="--H:${H.toFixed(3)}"${o.attrs ? " " + o.attrs : ""}>${cards}${o.count ? `<span class="cnt">${o.count}</span>` : ""}</div>`;
+    return `<div class="cd-pile${n ? "" : " empty"}${o.cls ? " " + o.cls : ""}" style="--H:${H.toFixed(3)}"${o.attrs ? " " + o.attrs : ""}>${cards}${o.count ? `<span class="cnt">${o.count}</span>` : ""}</div>`;
   }
 
   // ---------- events → feedback (every move is animated, also the computer's and other people's) ----------
-  const flights = [];   // flights to start after the next redraw
-  const active = [];    // flights in the air (their target card stays hidden until they land)
 
   function seatEl(pi) { return document.querySelector(`#opps [data-seat="${pi}"]`); }
   // a mini card sized rectangle in the middle of somebody's "cards in hand" badge
   function handRect(pi) {
     const seat = seatEl(pi); if (!seat) return null;
-    const badge = seat.querySelector(".ohand .card"), pile = seat.querySelector(".pile");
+    const badge = seat.querySelector(".ohand .card"), pile = seat.querySelector(".cd-pile");
     if (!badge) return null;
     const b = rectOf(badge), w = pile ? pile.getBoundingClientRect().width : 30;
     return { left: b.left + b.width / 2 - w / 2, top: b.top + b.height / 2 - w * 0.7, width: w, height: w * 1.4 };
@@ -130,13 +124,13 @@
         const src = srcRect(ev.pi, ev.from, ev.c, ev.i, me);
         if (ev.pi === me && ev.from === "hand") remove1(h, ev.c);
         const sweep = events.some((x) => x.t === "clear" && x.to === ev.to);
-        flights.push({ c: ev.c, v: ev.v, src, dst: { k: "build", i: ev.to }, delay: t, dur: sweep ? 1150 : 420, sweep });
+        fl.add({ src, html: cardHTML(ev.c, { v: ev.v }), dst: { k: "build", i: ev.to }, delay: t, dur: sweep ? 1150 : 420, sweep: sweep ? sweepRect : null });
         later(() => sfx("place"), t);
         t += 400;
       } else if (ev.t === "discard") {
         const src = srcRect(ev.pi, "hand", ev.c, 0, me);
         if (ev.pi === me) remove1(h, ev.c);
-        flights.push({ c: ev.c, src, dst: { k: "disc", pi: ev.pi, i: ev.to }, delay: t, dur: 420 });
+        fl.add({ src, html: cardHTML(ev.c), dst: { k: "disc", pi: ev.pi, i: ev.to }, delay: t, dur: 420 });
         later(() => sfx("place"), t);
         t += 400;
       } else if (ev.t === "draw") {
@@ -149,10 +143,10 @@
           h = h.concat(got);
           got.forEach((c, k) => {
             nth[c] = (nth[c] || 0) + 1;
-            flights.push({ c, back: true, flip: true, src, dst: { k: "hand", c, nth: got.filter((x, j) => x === c && j > k).length }, delay: t + k * 110, dur: 380 });
+            fl.add({ html: backHTML(), flipTo: cardHTML(c), src, dst: { k: "hand", c, nth: got.filter((x, j) => x === c && j > k).length }, delay: t + k * 110, dur: 380 });
           });
         } else {
-          for (let k = 0; k < ev.n; k++) flights.push({ back: true, src, dst: { k: "ohand", pi: ev.pi }, delay: t + k * 90, dur: 360 });
+          for (let k = 0; k < ev.n; k++) fl.add({ html: backHTML(), src, dst: { k: "ohand", pi: ev.pi }, delay: t + k * 90, dur: 360 });
         }
         later(() => sfx("deal"), t);
         t += 120 + ev.n * 100;
@@ -177,7 +171,7 @@
   // where a flight lands: { rect, hide } looked up in the freshly drawn table
   function resolve(d) {
     if (d.k === "build") {
-      const p = $(`#builds [data-build="${d.i}"] .pile`);
+      const p = $(`#builds [data-build="${d.i}"] .cd-pile`);
       return p ? { rect: rectOf(p), hide: p.querySelector(".card") } : null;
     }
     if (d.k === "disc") {
@@ -194,59 +188,15 @@
     if (d.k === "ohand") return handRect(d.pi) ? { rect: handRect(d.pi), hide: null } : null;
     return null;
   }
-  function applyHides() {
-    const now = performance.now();
-    for (let i = active.length - 1; i >= 0; i--) {
-      const f = active[i];
-      if (f.done || now > f.until) { active.splice(i, 1); continue; }
-      const r = resolve(f.dst);
-      if (r && r.hide) r.hide.style.visibility = "hidden";
+  const fl = Cards.flights({
+    resolve, off: () => $("#game").hidden,
+    onLand(f) {
+      if (f.dst.k !== "ohand") return;
+      const e = handRect(f.dst.pi) && seatEl(f.dst.pi);
+      if (e) { e.classList.remove("pulse"); void e.offsetWidth; e.classList.add("pulse"); }
     }
-  }
-  function runFlights() {
-    const list = flights.splice(0);
-    if (reduce.matches || $("#game").hidden) return;
-    for (const f of list) {
-      if (!f.src || !resolve(f.dst)) continue;
-      f.until = performance.now() + f.delay + f.dur + 400;
-      active.push(f);
-      setTimeout(() => fly(f), f.delay);
-    }
-    applyHides();
-  }
-  function fly(f) {
-    const to = resolve(f.dst);
-    if (!to) { f.done = true; return; }
-    const s = f.src, d = to.rect;
-    const g = document.createElement("div");
-    g.className = "ghost";
-    g.style.cssText = `left:${s.left}px;top:${s.top}px;width:${s.width}px;height:${s.height}px;--w:${s.width}px`;
-    g.innerHTML = f.back ? backHTML() : cardHTML(f.c, { v: f.v });
-    document.body.appendChild(g);
-    const sc = d.width / s.width, dx = d.left - s.left, dy = d.top - s.top;
-    let kf = [{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx}px,${dy}px) scale(${sc})` }];
-    if (f.sweep) {
-      const deck = $("#deck"), dr = deck ? rectOf(deck) : d, ex = dr.left - s.left, ey = dr.top - s.top;
-      kf = [
-        { transform: "translate(0,0) scale(1)", offset: 0 },
-        { transform: `translate(${dx}px,${dy}px) scale(${sc})`, offset: 0.34, easing: "cubic-bezier(.2,.7,.3,1)" },
-        { transform: `translate(${dx}px,${dy}px) scale(${sc * 1.12})`, offset: 0.52 },
-        { transform: `translate(${ex}px,${ey}px) scale(${dr.width / s.width * 0.8})`, opacity: 0.1, offset: 1 }
-      ];
-    }
-    if (f.back && f.flip) { // a card from the deck turns face up on its way into my hand
-      g.innerHTML = backHTML() + "";
-      setTimeout(() => { g.innerHTML = cardHTML(f.c); }, f.dur * 0.45);
-    }
-    const a = g.animate(kf, { duration: f.dur, easing: "cubic-bezier(.2,.7,.3,1)", fill: "forwards" });
-    const end = () => {
-      g.remove(); f.done = true;
-      const r = resolve(f.dst);
-      if (r && r.hide) r.hide.style.visibility = "";
-      if (f.dst.k === "ohand") { const e = handRect(f.dst.pi) && seatEl(f.dst.pi); if (e) { e.classList.remove("pulse"); void e.offsetWidth; e.classList.add("pulse"); } }
-    };
-    a.onfinish = end; a.oncancel = end;
-  }
+  });
+  const sweepRect = () => { const deck = $("#deck"); return deck ? rectOf(deck) : null; };
 
   // ---------- actions ----------
   function doAct(a) {
@@ -278,7 +228,7 @@
   };
   const fitsBuild = (c, to) => G.fits(c, { length: V.build[to] });
 
-  function markSent(s) { const el = srcEl(s); if (el && mode === "online") el.classList.add("sent"); }
+  function markSent(s) { const el = srcEl(s); if (el && mode === "online") el.classList.add("cd-sent"); }
 
   function playTo(s, to, fromRect) {
     if (!canPlay()) return false;
@@ -324,85 +274,39 @@
   }
   function paintSel() {
     for (const e of $$(".card.sel")) e.classList.remove("sel");
-    const s = drag && drag.started ? drag.src : sel;
-    for (const el of $$("#builds .slot")) el.classList.toggle("ok", !!s && fitsBuild(s.c, +el.dataset.build));
-    for (const el of $$("#myDisc .pile")) el.classList.toggle("ok2", !!s && s.from === "hand");
+    const s = dnd.src || sel;
+    for (const el of $$("#builds .slot")) el.classList.toggle("cd-drop", !!s && fitsBuild(s.c, +el.dataset.build));
+    for (const el of $$("#myDisc .cd-pile")) el.classList.toggle("cd-drop", !!s && s.from === "hand");
     if (sel) { const el = srcEl(sel); if (el) el.classList.add("sel"); }
   }
 
-  const gameEl = $("#game");
-  gameEl.addEventListener("pointerdown", (e) => {
-    const c = e.target.closest("[data-src]");
-    if (!c || e.button > 0 || !canPlay() || drag) return;
-    drag = { el: c, src: srcOf(c), x0: e.clientX, y0: e.clientY, id: e.pointerId, started: false, ghost: null };
+  const dnd = Cards.dnd({
+    root: "#game",
+    grab(e) {
+      const c = e.target.closest("[data-src]");
+      return c && canPlay() ? Object.assign(srcOf(c), { el: c }) : null;
+    },
+    onStart() { sel = null; paintSel(); },
+    // what lies under the finger: a build pile, or one of my discard piles for a hand card
+    target(el, s) {
+      const b = el.closest("#builds .slot");
+      if (b) return { el: b, build: +b.dataset.build, ok: fitsBuild(s.c, +b.dataset.build) };
+      const d = el.closest("#myDisc .cd-pile");
+      return d ? { el: d, disc: +d.dataset.disc, ok: s.from === "hand" } : null;
+    },
+    drop(s, t, rect) {
+      if (t.build != null) return playTo(s, t.build, rect);
+      if (t.ok) return discardTo(s.c, t.disc, rect);
+      toast("Nur Handkarten kommen auf die Ablage.");
+      return false;
+    },
+    onEnd(dirty) { if (dirty) render(); else paintSel(); },
+    tap: (e) => onTap(e)
   });
-  document.addEventListener("pointermove", (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    if (!drag.started) {
-      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
-      startDrag();
-    }
-    e.preventDefault();
-    moveGhost(e);
-    const t = targetAt(e);
-    for (const el of $$(".slot.over, #myDisc .pile.over")) if (el !== (t && t.el)) el.classList.remove("over");
-    if (t && t.ok) t.el.classList.add("over");
-  }, { passive: false });
-  function startDrag() {
-    const r = rectOf(drag.el), g = document.createElement("div");
-    drag.started = true; drag.rect = r;
-    g.className = "ghost";
-    g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--w:${r.width}px`;
-    const clone = drag.el.cloneNode(true);
-    clone.classList.remove("sel", "dragging", "sent"); clone.removeAttribute("data-src"); clone.style.cssText = "";
-    g.appendChild(clone);
-    document.body.appendChild(g);
-    drag.ghost = g; drag.dx = drag.x0 - r.left; drag.dy = drag.y0 - r.top;
-    drag.el.classList.add("dragging");
-    sel = null; paintSel();
-  }
-  function moveGhost(e) { drag.ghost.style.left = e.clientX - drag.dx + "px"; drag.ghost.style.top = e.clientY - drag.dy + "px"; }
-  // what lies under the finger: a build pile, or one of my discard piles for a hand card
-  function targetAt(e) {
-    drag.ghost.style.display = "none";
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    drag.ghost.style.display = "";
-    if (!el) return null;
-    const b = el.closest("#builds .slot");
-    if (b) return { el: b, build: +b.dataset.build, ok: fitsBuild(drag.src.c, +b.dataset.build) };
-    const d = el.closest("#myDisc .pile");
-    if (d) return { el: d.closest(".pile"), disc: +d.dataset.disc, ok: drag.src.from === "hand" };
-    return null;
-  }
-  function endDrag(e, cancelled) {
-    if (!drag || (e && e.pointerId !== drag.id)) return;
-    const d = drag;
-    if (!d.started) { drag = null; return; }
-    const t = !cancelled && e ? targetAt(e) : null;
-    const r = rectOf(d.ghost);
-    drag = null;
-    suppressClick = Date.now();
-    for (const el of $$(".slot.over, #myDisc .pile.over")) el.classList.remove("over");
-    let done = false;
-    if (t && t.build != null) done = playTo(d.src, t.build, r);
-    else if (t && t.disc != null && t.ok) done = discardTo(d.src.c, t.disc, r);
-    else if (t && t.disc != null) toast("Nur Handkarten kommen auf die Ablage.");
-    if (done) d.ghost.remove();
-    else { // snap back
-      d.el.classList.remove("dragging");
-      const a = reduce.matches ? null : d.ghost.animate([{ transform: "none" }, { transform: `translate(${d.rect.left - r.left}px,${d.rect.top - r.top}px)` }], { duration: 200, easing: "ease-out" });
-      if (a) a.onfinish = () => d.ghost.remove(); else d.ghost.remove();
-      if (t && t.build != null && !t.ok) { toast(`Auf Haufen ${t.build + 1} kommt jetzt die ${V.build[t.build] + 1}.`); sfx("bad"); }
-    }
-    if (dirty) { dirty = false; render(); } else paintSel();
-  }
-  document.addEventListener("pointerup", (e) => endDrag(e, false));
-  document.addEventListener("pointercancel", (e) => endDrag(e, true));
 
-  let suppressClick = 0;
-  gameEl.addEventListener("click", (e) => {
-    if (Date.now() - suppressClick < 400 || !V || V.phase !== "play") return;
-    const srcE = e.target.closest("[data-src]"), build = e.target.closest("#builds .slot"), disc = e.target.closest("#myDisc .pile");
+  function onTap(e) {
+    if (!V || V.phase !== "play") return;
+    const srcE = e.target.closest("[data-src]"), build = e.target.closest("#builds .slot"), disc = e.target.closest("#myDisc .cd-pile");
     if (!srcE && !build && !disc) return;
     if (!canPlay()) { toast(V.me < 0 ? "Du schaust zu." : `Warte, ${V.players[V.cur].name} ist dran.`); return; }
     if (sel && sel.from === "hand" && disc) { discardTo(sel.c, +disc.dataset.disc); return; }
@@ -418,7 +322,7 @@
       return;
     }
     toast(sel ? "Auf die Ablage kommen nur Handkarten." : "Tippe zuerst eine Handkarte an, die du ablegen willst.");
-  });
+  }
   $("#passBtn").addEventListener("click", () => { if (canPlay()) doAct({ t: "pass" }); });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
@@ -430,7 +334,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || L.phase !== "play" || !L.players[L.cur].bot) return;
-      if (!$("#menu").hidden || drag) { scheduleBot(); return; } // paused while the menu is open
+      if (!$("#menu").hidden || dnd.busy) { scheduleBot(); return; } // paused while the menu is open
       const pi = L.cur, a = G.botMove(L, pi);
       const res = a ? G.act(L, pi, a) : null;
       if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); store.set(K.local, L); render(); }
@@ -444,7 +348,7 @@
   }
 
   function render() {
-    if (drag && drag.started && mode) { dirty = true; return; }
+    if (mode && dnd.defer()) return;
     if (mode === "local" && L) {
       V = G.view(L, 0);
       showScreen("game");
@@ -490,11 +394,11 @@
     // build piles and the draw pile
     $("#builds").innerHTML = V.build.map((n, i) => {
       const card = n ? cardHTML(V.wild[i] ? 0 : n, { v: V.wild[i] ? n : 0, style: "--i:0;--f:0" }) : "";
-      return `<div class="slot" data-build="${i}"><div class="pile${n ? "" : " empty"}" style="--H:1" data-hint="${n + 1}">${card}</div></div>`;
+      return `<div class="slot" data-build="${i}"><div class="cd-pile${n ? "" : " empty"}" style="--H:1" data-hint="${n + 1}">${card}</div></div>`;
     }).join("");
     const deckN = V.deckN;
     $("#deck").className = "deck" + (deckShake ? " shake" : "");
-    $("#deck").innerHTML = deckN ? `<div class="pile" style="--H:1">${backHTML()}<span class="cnt">${deckN}</span></div>` : '<div class="pile empty"></div>';
+    $("#deck").innerHTML = deckN ? `<div class="cd-pile" style="--H:1">${backHTML()}<span class="cnt">${deckN}</span></div>` : '<div class="cd-pile empty"></div>';
     if (deckShake) { deckShake = false; const dk = $("#deck"); dk.animate([{ transform: "rotate(-6deg)" }, { transform: "rotate(6deg)" }, { transform: "rotate(-4deg)" }, { transform: "none" }], { duration: 420 }); }
 
     // my board and hand
@@ -568,8 +472,8 @@
       }
     }
     paintSel();
-    applyHides();
-    runFlights();
+    fl.hide();
+    fl.run();
   }
 
   // ---------- reactions (online) ----------
@@ -732,7 +636,7 @@
   });
 
   function startLocal(state) {
-    L = state; mode = "local"; peek = false; sel = null; trackHand = []; flights.length = 0;
+    L = state; mode = "local"; peek = false; sel = null; trackHand = []; fl.clear();
     store.set(K.local, L); render(); wake(); scheduleBot();
   }
   $("#startLocal").addEventListener("click", () => {
