@@ -178,5 +178,15 @@
     "url": "https://kittens.cool-kidz.net/",
     "max": 5,
     "status": "http://explodingkittens:8080/info"
+  },
+  {
+    "id": "activity",
+    "name": "Activity",
+    "title": "Activity",
+    "desc": "Zeichnen, Erklären, Pantomime: errate die Begriffe der anderen.",
+    "players": "2–8 Spieler + Zuschauer",
+    "url": "https://activity.cool-kidz.net/",
+    "max": 8,
+    "status": "http://activity:8080/info"
   }
 ]
