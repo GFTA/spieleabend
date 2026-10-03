@@ -53,5 +53,15 @@ test("lists games and reports which servers are up", async () => {
   assert.doesNotMatch(inv, /<b>"x"/);
   assert.match(await (await fetch(base + "/?party=ZZZZ")).text(), /og:title" content="Spieleabend"/);
   assert.strictEqual((await fetch(base + "/og.png")).headers.get("content-type"), "image/png");
+
+  // text is compressed (brotli preferred) and decodes to the same bytes
+  const raw = (enc) => new Promise((resolve, reject) => http.get(base + "/", { headers: { "accept-encoding": enc } }, (res) => {
+    const parts = []; res.on("data", (c) => parts.push(c)); res.on("end", () => resolve({ enc: res.headers["content-encoding"], body: Buffer.concat(parts) }));
+  }).on("error", reject));
+  const zlib = require("zlib"), br = await raw("br, gzip"), none = await raw("identity");
+  assert.strictEqual(br.enc, "br");
+  assert.strictEqual(none.enc, undefined);
+  assert.ok(zlib.brotliDecompressSync(br.body).equals(none.body));
+  assert.ok(br.body.length < none.body.length / 2);
   server.close();
 });

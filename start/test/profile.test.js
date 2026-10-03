@@ -101,7 +101,7 @@ test("profile: with many games the cookie stays small and the result keys surviv
   assert.ok(win.lastCookie.length < 3000, `cookie is ${win.lastCookie.length} bytes`);
   assert.strictEqual(P.get().stats.game05.k, "k".repeat(30) + 5, "the key is still known, a reload does not count the round twice");
   assert.strictEqual(P.result("game05", "k".repeat(30) + 5, { won: false }), false);
-  assert.ok(Object.keys(cookies).length === 1);
+  assert.ok(Object.keys(cookies).filter((k) => k === "sa_profile").length === 1);
 });
 
 test("profile: vibration is a setting of its own", () => {
@@ -128,4 +128,40 @@ test("profile: a backup is validated again on the way in and replaces the profil
   assert.deepStrictEqual([p.name, p.av, p.col, p.stats.uno.w, p.stats.uno.ow, p.pf.table, p.pf.vol], ["Anna", "🦊", "#e0393e", 1, 1, "ocean", 40]);
   const evil = b.P.importAll({ name: "x".repeat(99), av: "<img>", col: "url(x)", stats: { "bad key!": { g: 5 }, uno: { g: -4, w: "9" } }, pf: { table: "<b>", vol: 500 } });
   assert.deepStrictEqual([evil.name.length, evil.av, evil.col, Object.keys(evil.stats).join(), evil.stats.uno.g, evil.stats.uno.w, evil.pf.table, evil.pf.vol], [18, "", "", "uno", 0, 9, undefined, 100]);
+});
+
+test("activity: results, minutes and days go into one short cookie; the streak counts days in a row", () => {
+  const { P, cookies } = browser();
+  assert.deepStrictEqual(plain(P.activity()), { history: [], play: {}, days: [], playedToday: false, streak: 0 });
+  P.result("uno", "k1", { won: true });
+  P.result("uno", "k1", { won: true }); // same key: counted once
+  P.result("catan", "k2", { draw: true });
+  P.result("uno", "k3", {});
+  P.addPlay("uno", 12); P.addPlay("uno", 5); P.addPlay("nope!", 3);
+  const a = plain(P.activity());
+  assert.deepStrictEqual(a.history.map((h) => [h.game, h.res]), [["uno", "l"], ["catan", "d"], ["uno", "w"]], "newest first");
+  assert.deepStrictEqual(a.play, { uno: 17 });
+  assert.strictEqual(a.playedToday, true);
+  assert.strictEqual(a.streak, 1);
+  assert.ok(cookies.sa_act.length < 200);
+  // yesterday and the day before count even when today is still empty; a gap ends the run
+  const today = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+  const withDays = (ns) => browser("vier.cool-kidz.net", { sa_act: encodeURIComponent("__" + ns.map((n) => (today - n).toString(36)).join("~")) }).P.activity();
+  assert.deepStrictEqual(plain([withDays([1, 2]).streak, withDays([1, 2]).playedToday]), [2, false]);
+  assert.strictEqual(withDays([0, 1, 2, 4]).streak, 3);
+  assert.strictEqual(withDays([2, 3]).streak, 0);
+  P.reset();
+  assert.deepStrictEqual(plain(P.activity().history), []);
+});
+
+test("rooms: the cookie remembers where this browser sits, per game, and forgets after six hours", () => {
+  const { P, cookies } = browser();
+  P.setRoom("uno", "ABCD"); P.setRoom("catan", "WXYZ"); P.setRoom("bad id", "ABCD"); P.setRoom("uno", "abc");
+  assert.deepStrictEqual(Object.fromEntries(Object.entries(plain(P.rooms())).map(([g, r]) => [g, r.code])), { catan: "WXYZ" }, "an invalid code leaves that game's room");
+  P.setRoom("catan", null);
+  assert.deepStrictEqual(plain(P.rooms()), {});
+  const old = Math.floor((Date.now() - 7 * 3600 * 1000) / 60000).toString(36);
+  const { P: Q } = browser("vier.cool-kidz.net", { sa_rooms: `uno.ABCD.${old}` });
+  assert.deepStrictEqual(plain(Q.rooms()), {});
+  void cookies;
 });
