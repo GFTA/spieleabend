@@ -29,7 +29,9 @@
   ICONS.share = SVG('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/>', ' stroke-linejoin="round"');
   ICONS.bell = SVG('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>', ' stroke-linejoin="round"');
   ICONS.vol = SVG('<path d="M4 9.5v5h4l5 4v-13l-5 4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/>', ' stroke-linejoin="round"');
-  const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
+  const QUICK = ["👍 Gut gespielt!", "🎉 Glückwunsch!", "⏳ Bin gleich da", "😴 Beeil dich", "🔁 Nochmal?"];
+  const QUICK_ROW = `<div class="quickchat" role="group" aria-label="Schnellnachrichten">${QUICK.map((q) => `<button type="button" data-quick="${q}">${q}</button>`).join("")}</div>`;
+  const CHAT_FORM = QUICK_ROW + `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
 
   // ---------- markup ----------
   const slot =(root, name) => { const t = root.querySelector(`template[data-slot="${name}"]`); return t ? t.innerHTML : ""; };
@@ -100,12 +102,13 @@
   document.body.insertAdjacentHTML("beforeend", `<button class="iconbtn setfab" id="setFab" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>
   <div class="overlay" id="settings" hidden><div class="sheet"><h2>Einstellungen</h2>
     <div class="look" id="lookSettings"></div>
-    <div class="setrow"><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
+    <div class="setrow"><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne</span></label>
       <div class="volrow">${ICONS.vol}<input class="range" type="range" id="soundVol" min="0" max="100" step="5" value="100" aria-label="Lautstärke"></div></div>
     <label class="toggle" for="calmOn"><input type="checkbox" id="calmOn"><span>Weniger Bewegung<small>Keine Flug- und Wackel-Animationen</small></span></label>
     <label class="toggle" for="contrastOn"><input type="checkbox" id="contrastOn"><span>Hoher Kontrast<small>Kräftigere Schrift und Rahmen</small></span></label>
-    <label class="toggle" id="notifyRow" for="notifyOn" hidden><input type="checkbox" id="notifyOn"><span>Benachrichtigung bei deinem Zug<small>Wenn dieser Tab im Hintergrund ist</small></span></label>
-    <div class="setmore"><button class="btn btn-ghost" id="fsBtn" type="button" hidden>Vollbild</button><button class="btn btn-ghost" id="keysBtn" type="button" hidden>Tastenkürzel</button></div>
+    <label class="toggle" id="hapticRow" for="hapticOn" hidden><input type="checkbox" id="hapticOn"><span>Vibration<small>Kurzes Brummen bei deinem Zug</small></span></label>
+    <label class="toggle" id="notifyRow" for="notifyOn" hidden><input type="checkbox" id="notifyOn"><span>Benachrichtigungen<small>Dein Zug und neue Chat-Nachrichten, wenn dieser Tab im Hintergrund ist</small></span></label>
+    <div class="setmore"><button class="btn btn-ghost" id="fsBtn" type="button" hidden>Vollbild</button><button class="btn btn-ghost" id="keysBtn" type="button" hidden>Tastenkürzel</button><button class="btn btn-ghost" id="prefsReset" type="button" data-label="Einstellungen zurücksetzen">Einstellungen zurücksetzen</button></div>
     <button class="btn btn-primary btn-block" id="settingsClose" type="button">Fertig</button></div></div>`);
   document.body.insertAdjacentHTML("beforeend", `<div class="overlay" id="chat" hidden><div class="sheet"><h2>Chat</h2><ol class="chatlog" id="chatLog"></ol>${CHAT_FORM}
     <button class="btn btn-primary btn-block" id="chatClose" type="button"><span class="onphone">Weiterspielen</span><span class="ondesk">Chat einklappen</span></button></div></div>`);
@@ -227,6 +230,7 @@
         if (m.t === "watching") app.toast("Das Spiel läuft schon oder der Raum ist voll: Du schaust zu.");
       } else if (m.t === "room") {
         app.on.room(m);
+        presence(m); timerWarn(m);
       } else if (m.t === "react") {
         app.on.react(m);
       } else if (m.t === "chatlog") {
@@ -249,12 +253,35 @@
       } else if (m.t === "gone" || m.t === "left") {
         // keep the socket: a join or create sent a moment ago is answered on it
         store.del(app.onlineKey);
+        seenOn = null; clearTimeout(warnT);
         chat = []; unread = 0; renderChat();
         app.on.left();
         if (m.t === "gone") app.toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
         app.render();
       }
     }
+    // someone else lost the connection or came back: say so (a phone that sleeps looks like a dropout to the others)
+    let seenOn = null, warnT = 0;
+    function presence(m) {
+      const prev = seenOn;
+      seenOn = { code: m.code, by: new Map(m.members.map((x) => [x.name, x.online])) };
+      if (!prev || prev.code !== m.code) return;
+      m.members.forEach((x, i) => {
+        if (x.bot || i === m.you || !prev.by.has(x.name) || prev.by.get(x.name) === x.online) return;
+        app.toast(x.online ? `${x.name} ist wieder da.` : `${x.name} hat die Verbindung verloren.`);
+      });
+    }
+    // five seconds before my turn timer runs out: two beeps
+    function timerWarn(m) {
+      clearTimeout(warnT); warnT = 0;
+      if (!(m.you >= 0 && m.turnPid === m.you && m.turnLeft > 5500)) return;
+      warnT = setTimeout(() => {
+        const K = window.Spieleabend;
+        if (K.sounds) K.sounds.warn();
+        K.say("Noch fünf Sekunden.");
+      }, m.turnLeft - 5000);
+    }
+
     // runs on every render: the connection pill (only after a short grace period, phones drop
     // sockets all the time) and the chat button
     function update() {
@@ -321,6 +348,11 @@
       if (chat.some((l) => l.id === line.id)) return;
       chat = chat.concat(line).slice(-100);
       const seen = !$("#chat").hidden || !$("#lobby").hidden;
+      if (!mine(line)) {
+        const K = window.Spieleabend, who = line.name || "?";
+        K.say(`${who}: ${line.text}`);
+        K.notify(`${who} im Chat`, line.text.slice(0, 120));
+      }
       if (!mine(line) && !seen) {
         unread++;
         if (app.bubble) app.bubble(line.pi, line.text.length > 30 ? line.text.slice(0, 29) + "…" : line.text, line.name);
@@ -346,6 +378,12 @@
       if (!text) return;
       if (!(ws && ws.readyState === 1)) { app.toast("Keine Verbindung, die Nachricht wurde nicht gesendet."); return; }
       sendChat(text); input.value = "";
+    });
+    document.addEventListener("click", (e) => {
+      const q = e.target.closest("[data-quick]");
+      if (!q) return;
+      if (!(ws && ws.readyState === 1)) { app.toast("Keine Verbindung, die Nachricht wurde nicht gesendet."); return; }
+      sendChat(q.dataset.quick);
     });
     renderChat();
     // on a wide screen the chat is a sidebar on the right that pushes the game aside, the button folds it in and out
@@ -550,13 +588,26 @@
       const K = window.Spieleabend;
       const syncPrefs = () => {
         $("#calmOn").checked = K.calm(); $("#contrastOn").checked = K.pref("contrast", false);
-        $("#notifyOn").checked = K.pref("notify", false) && Notification.permission === "granted";
+        $("#notifyOn").checked = K.pref("notify", false) && "Notification" in window && Notification.permission === "granted";
+        $("#hapticOn").checked = K.pref("haptic", K.sounds ? K.sounds.isOn() : true);
         $("#fsBtn").textContent = document.fullscreenElement ? "Vollbild beenden" : "Vollbild";
       };
       const open = () => { syncPrefs(); $("#settings").hidden = false; };
       $("#calmOn").addEventListener("change", (e) => P.setPrefs({ motion: e.target.checked ? false : null }));
       $("#contrastOn").addEventListener("change", (e) => P.setPrefs({ contrast: e.target.checked }));
       if ("Notification" in window) $("#notifyRow").hidden = false;
+      if (navigator.vibrate) { $("#hapticRow").hidden = false; $("#hapticOn").addEventListener("change", (e) => { P.setPrefs({ haptic: e.target.checked }); if (e.target.checked && K.sounds) K.sounds.buzz(60); }); }
+      // two taps: all choices (design, sound, volume, motion, contrast, vibration, notifications) back to the start
+      $("#prefsReset").addEventListener("click", (e) => {
+        const b = e.currentTarget;
+        if (!b.dataset.armed) {
+          b.dataset.armed = "1"; b.textContent = "Sicher? Nochmal tippen";
+          setTimeout(() => { if (b.isConnected && b.dataset.armed) { delete b.dataset.armed; b.textContent = b.dataset.label; } }, 3000);
+          return;
+        }
+        P.setPrefs({ table: null, sound: true, vol: null, motion: null, contrast: null, notify: null, haptic: null });
+        location.reload();
+      });
       $("#notifyOn").addEventListener("change", async (e) => {
         const box = e.target;
         if (!box.checked) { P.setPrefs({ notify: false }); return; }

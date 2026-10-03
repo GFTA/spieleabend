@@ -1,6 +1,6 @@
 // The player profile, shared by every game and the start page: name, avatar, colour, the
 // settings that should follow the player into every game (table design, sound, volume,
-// less motion, high contrast, turn notifications) and the per-game statistics. It lives in one
+// less motion, high contrast, vibration, notifications) and the per-game statistics. It lives in one
 // cookie for .cool-kidz.net (so all game subdomains see the same profile) with a localStorage
 // copy as fallback; the newer of the two wins.
 (function () {
@@ -12,7 +12,7 @@
   const int = (x) => Math.max(0, Math.floor(+x) || 0);
 
   // settings that travel with the player: table design, sound on/off, volume 0-100, less motion,
-  // high contrast, turn notifications. A key that is missing means "not chosen yet".
+  // high contrast, vibration, notifications. A key that is missing means "not chosen yet".
   function cleanPrefs(x) {
     const o = {};
     if (!x || typeof x !== "object") return o;
@@ -22,6 +22,7 @@
     if (typeof x.motion === "boolean") o.motion = x.motion;
     if (typeof x.contrast === "boolean") o.contrast = x.contrast;
     if (typeof x.notify === "boolean") o.notify = x.notify;
+    if (typeof x.haptic === "boolean") o.haptic = x.haptic;
     return o;
   }
 
@@ -84,7 +85,7 @@
     },
     // the settings that follow the player (see cleanPrefs): only what was chosen
     prefs() { return Object.assign({}, load().pf); },
-    // patch: any of { table, sound, vol, motion, contrast, notify }; invalid values are ignored, null forgets a choice
+    // patch: any of { table, sound, vol, motion, contrast, notify, haptic }; invalid values are ignored, null forgets a choice
     setPrefs(patch) {
       return update((p) => {
         const ok = cleanPrefs(patch), next = Object.assign({}, p.pf);
@@ -121,6 +122,13 @@
     },
     // one game's statistics, or (without argument) all of them
     reset(game) { return update((p) => { if (game) delete p.stats[game]; else p.stats = {}; }); },
+    // a profile taken from a backup code (see profile.html): everything is validated again; returns the new profile or null
+    importAll(obj) {
+      if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+      const c = clean(obj);
+      if (!c.name && !c.av && !Object.keys(c.stats).length && !Object.keys(c.pf).length) return null;
+      return update((p) => { Object.assign(p, c); });
+    },
     // name, avatar, colour, settings and statistics
     resetAll() { return update((p) => { p.name = ""; p.av = ""; p.col = ""; p.pf = {}; p.stats = {}; }); }
   };

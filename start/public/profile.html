@@ -121,6 +121,16 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
       <button class="btn" type="button" id="resetAll" data-confirm="Profil komplett löschen">Ganzes Profil zurücksetzen</button>
     </div>
   </section>
+
+  <section class="card" aria-label="Sicherung">
+    <h2>Sicherung</h2>
+    <p class="hint">Mit dem Code nimmst du Name, Avatar, Statistik und Einstellungen auf ein anderes Gerät mit: dort hier einfügen und wiederherstellen. Der Code enthält deine Werte, gib ihn nur Leuten, denen du vertraust.</p>
+    <div class="row"><button class="btn" type="button" id="bkCopy">Code kopieren</button></div>
+    <label class="hint" for="bkCode">Code einfügen</label>
+    <input class="field" id="bkCode" type="text" autocomplete="off" spellcheck="false" placeholder="SA1.…">
+    <div class="row"><button class="btn" type="button" id="bkRestore" data-confirm="Aktuelles Profil ersetzen">Wiederherstellen</button></div>
+    <p class="hint" id="bkMsg" role="status"></p>
+  </section>
 </main>
 
 <script src="avatars.js"></script>
@@ -203,6 +213,24 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
     $("#achSum").textContent = `${done} von ${ACH.length} freigeschaltet`;
   }
 
+  // backup code: "SA1." plus the profile as base64url JSON
+  const enc = (o) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const dec = (c) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(c.replace(/-/g, "+").replace(/_/g, "/")), (ch) => ch.charCodeAt(0))));
+  const say = (t) => { $("#bkMsg").textContent = t; };
+  $("#bkCopy").addEventListener("click", async () => {
+    const code = "SA1." + enc(P.get());
+    try { await navigator.clipboard.writeText(code); say("Code kopiert. Auf dem anderen Gerät bei „Code einfügen“ eintragen."); }
+    catch (e) { $("#bkCode").value = code; $("#bkCode").select(); say("Kopiere den Code aus dem Feld."); }
+  });
+  function restore() {
+    const raw = $("#bkCode").value.trim();
+    let obj = null;
+    try { if (raw.startsWith("SA1.")) obj = dec(raw.slice(4)); } catch (e) {}
+    const np = obj && P.importAll(obj);
+    if (!np) { say("Der Code ist ungültig."); return; }
+    p = np; $("#name").value = p.name; $("#bkCode").value = "";
+    say("Profil wiederhergestellt. Die Einstellungen gelten ab dem nächsten Laden einer Seite.");
+  }
   // deleting needs a second tap within 3 seconds
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-confirm]"); if (!b) return;
@@ -213,6 +241,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
     }
     if (b.dataset.reset) p = P.reset(b.dataset.reset);
     else if (b.id === "resetStats") p = P.reset();
+    else if (b.id === "bkRestore") restore();
     else if (b.id === "resetAll") { p = P.resetAll(); p = P.set({ av: AVATARS[Math.floor(Math.random() * AVATARS.length)] }); $("#name").value = ""; }
     renderWho(); renderStats(); renderAchs();
   });

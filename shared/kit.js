@@ -336,7 +336,10 @@
       }
       if (document.visibilityState === "visible") try { table[k](...args); } catch (e) {}
     };
-    const buzz = (ms) => { if (!on) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+    // vibration follows the sound switch until the player chooses it on its own
+    const buzz = (ms) => { const h = pref("haptic", null); if (h === null ? !on : !h) return; try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+    // two short beeps: the turn timer is about to run out
+    const warn = () => { if (!on) return; try { tone(880, 0, 0.09, "square", defVol * 0.8); tone(880, 0.17, 0.09, "square", defVol * 0.8); } catch (e) {} buzz(120); };
     // the checkbox and the volume slider are drawn by room-ui.js later in the same script run
     const sync = () => {
       const box = $("#soundOn"), vol = $("#soundVol");
@@ -356,7 +359,7 @@
     async function wake() {
       try { if ("wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); } } catch (e) {}
     }
-    const api = { sfx, buzz, isOn: () => on, wake };
+    const api = { sfx, buzz, warn, isOn: () => on, wake };
     window.Spieleabend.sounds = api; // room-ui.js rings it for a nudge
     return api;
   }
@@ -414,6 +417,21 @@
     }, true);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", dialogs); else dialogs();
+
+  // a strip at the top while the device has no network (the games reconnect on their own afterwards)
+  function netBar() {
+    let bar = null;
+    const sync = () => {
+      if (navigator.onLine === false) {
+        if (bar) return;
+        bar = document.createElement("div"); bar.id = "offlineBar"; bar.setAttribute("role", "status");
+        bar.textContent = "Kein Internet. Sobald das Netz zurück ist, geht es weiter.";
+        document.body.appendChild(bar);
+      } else if (bar) { bar.remove(); bar = null; }
+    };
+    addEventListener("online", sync); addEventListener("offline", sync); sync();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", netBar); else netBar();
 
   // Hand sort switch: "123" on one side, a rainbow circle on the other; the lit side is the current order.
   // mode: "value" (by number) or "color". Games keep the click handling and the stored choice themselves.
