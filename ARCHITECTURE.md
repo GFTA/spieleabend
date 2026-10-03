@@ -257,6 +257,18 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - **Startseite:** Kategorien (`tags` in `games.json`, Chips), Spiel des Tages, Siegbilanz pro Karte, Serie, `?surprise=1` (PWA-Shortcut), `content-visibility`/Lazy-Images.
 - `Cards.dnd(...).abort()` bricht einen laufenden Zug ab (Uno nutzt es beim Tab-Wechsel).
 
+### Interaktives Tutorial (`shared/tutorial.js`, `public/tour.js` je Spiel)
+
+- Jedes Spiel hat `public/tour.js`: `Tutorial.define({ opponents: 1, setup?, steps: [...] })`. `shared/tutorial.js` (+ `tutorial.css`) und `tour.js` werden erst beim Start
+  nachgeladen (`startTutorial()` in `room-ui.js`, Version aus `meta[name$="-version"]`). Starten: Knopf „📖 Tutorial“ unter dem Einzelspieler-Panel, im Spielmenü
+  (`#menuTour`) oder `?tutorial=1` (Startseite: Link „Tutorial“ je Karte). `room-server.js` liefert beide Dateien aus und hasht sie in die Version, `tour.js` ist daher Pflicht.
+- Vom Startbildschirm aus startet das Tutorial ein Übungsspiel (Einzelspieler-Tab, `opponents` Computer-Gegner, `#startLocal`), fragt vorher nach, wenn ein Einzelspiel gespeichert ist,
+  und stellt danach die Gegnerzahl des Spielers zurück. Läuft schon ein Spiel (Menü), erklärt es direkt am Tisch.
+- Schritt: `title`, `text` (HTML), `target` (Selektor, Liste, oder `($) => element|null`; ohne `target` ist es eine Karte über abgedunkeltem Spiel), `place` (`top`|`bottom`),
+  `wait` (`"tap"`: weiter, wenn das Ziel angetippt oder gezogen wurde; `{tap: sel}`; `{until: ($) => bool}`), `idle` (Text, solange das Ziel fehlt, z. B. der Computer dran ist), `pre($)`.
+  Liefert `target` nichts, zeigt die Sprechblase `idle` und der Spieler kann „Überspringen“. Esc oder × beenden, am Ende merkt `sa.tour.done.<spiel>` sich „geschafft“.
+- Meldet das Tutorial nur Selektoren, die im Spiel fehlen, schlägt `scripts/check-games` fehl (jede `#id` muss in `index.html` stehen oder in `app.js` vorkommen).
+
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
 
 - `room-ui.js` baut in **jedem** Spiel oben rechts ein Einstellungen-Sheet
@@ -778,7 +790,7 @@ die README-Tabelle ein (Punkte 1, 2, 4 und 5 unten sind damit erledigt). Danach 
 
 Die einzelnen Schritte, falls man ohne Generator arbeitet:
 
-1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
+1. Ordner mit `server.js` (Adapter für `shared/room-server.js`, s. o.), `public/{index.html,app.js,game.js,tour.js,sw.js,manifest.webmanifest}`, `Dockerfile`, `docker-compose(.tunnel).yml`, `test/` — bestehendes Spiel als Vorlage kopieren, nicht bei null anfangen
 2. `kit.css`/`room-ui.css` und `kit.js`/`room-ui.js` einbinden (Reihenfolge s. o.), `Spieleabend.look()`/`identity()`/`avatarPicker()` aufrufen; aus dem Design-System dazu: sieben `TABLES` (inkl. „Blüte“, „Vulkan“, „Minze“ mit passenden Spielfarben), `data-table`-Overrides, `applyLook()`, `?table=`- und `?name=`/`?av=`-Übernahme, `shared/avatars.js` + `shared/profile.js` einbinden (Profil, Statistik-Hook `profile.result`, „Profil & Statistik“-Link), responsives `.avgrid`, `.avbtn`/`.look`/`.seg.tables`-Markup, `showBubble()`-Overlay für Reaktionen, Hauptaktion fest in der Dock-Leiste
 3. Server: kommt aus `shared/room-server.js` (`IDLE_TTL`/`ROOM_TTL`, `closeRoom()` für Idle-Cleanup (`reason:"idle"`) und den Host-Befehl `{t:"close"}` (`reason:"closed"`), alle Erstell-Einstellungen im Warteraum änderbar, `/info`-Endpunkt im Standard-Shape) — das Spiel liefert nur Engine + Haken
    Client: „Raum für alle schließen“ (Host, Warteraum + Spielmenü), `gone`-Meldung je nach `reason`

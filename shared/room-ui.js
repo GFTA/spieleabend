@@ -84,6 +84,7 @@
     <ol class="${menu.dataset.scores || "scores"}" id="menuScores"></ol>
     <div class="hint" id="menuRules"></div>
     <div class="rules"><details><summary>${menu.dataset.rulesTitle || "Spielregeln"}</summary>${rulesHTML}</details></div>
+    <button class="btn btn-ghost btn-block tourbtn" id="menuTour" type="button">📖 Interaktives Tutorial</button>
     <div class="rules"><details><summary>Spielverlauf</summary>${slot(menu, "history")}<ol class="history" id="menuLog"></ol></details></div>
     ${slot(menu, "settings") ? `<div class="rules"><details><summary>Spiel-Einstellungen</summary>${slot(menu, "settings")}</details></div>` : ""}
     <div id="menuActions"></div>
@@ -758,6 +759,29 @@
       $("#menu").hidden = false;
     }
     $("#menuBtn").addEventListener("click", openMenu);
+    // ---------- interactive tutorial: tutorial.js and the game's tour.js are fetched only when someone asks for it ----------
+    let tourReady = null;
+    function startTutorial() {
+      const meta = document.querySelector('meta[name$="-version"]'), v = meta ? "?v=" + meta.content : "";
+      const css = (href) => new Promise((ok) => { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href + v; l.onload = l.onerror = ok; document.head.append(l); });
+      const js = (src) => new Promise((ok, no) => { const e = document.createElement("script"); e.src = src + v; e.onload = ok; e.onerror = no; document.head.append(e); });
+      if (!tourReady) tourReady = Promise.all([css("tutorial.css"), js("tutorial.js")]).then(() => js("tour.js")).catch((e) => { tourReady = null; throw e; });
+      tourReady.then(() => Spieleabend.gameId).then((id) => { window.Tutorial.gameId = id || ""; return window.Tutorial.begin(); })
+        .catch(() => app.toast("Das Tutorial lässt sich gerade nicht laden."));
+    }
+    $("#menuTour").addEventListener("click", () => { $("#menu").hidden = true; startTutorial(); });
+    if ($("#localPanel")) {
+      const tb = document.createElement("button");
+      tb.type = "button"; tb.className = "btn btn-ghost btn-block tourbtn"; tb.id = "tourBtn"; tb.textContent = "📖 Tutorial: Spiel kennenlernen";
+      tb.addEventListener("click", startTutorial);
+      $("#localPanel").after(tb);
+      Spieleabend.gameId.then((id) => { if (id && store.get("sa.tour.done." + id)) tb.textContent = "📖 Tutorial wiederholen"; });
+      const tq = new URLSearchParams(location.search);
+      if (tq.get("tutorial")) {
+        tq.delete("tutorial"); history.replaceState(null, "", location.pathname + (tq.toString() ? `?${tq}` : ""));
+        setTimeout(startTutorial, 700);
+      }
+    }
     // ?rules=1 (a link from the start page) opens the rules in a sheet of their own: the menu only exists once a game runs
     (function rulesSheet() {
       const q = new URLSearchParams(location.search);

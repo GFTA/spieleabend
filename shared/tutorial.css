@@ -1,0 +1,22 @@
+/* Interactive tutorial (tutorial.js): a spotlight on the element being explained and a speech bubble next to it. */
+.tour{position:fixed;inset:0;z-index:70;pointer-events:none}
+.tour-dim{position:absolute;inset:0;background:rgba(8,6,16,.68);pointer-events:auto}
+.tour-hole{position:absolute;box-shadow:0 0 0 100vmax rgba(8,6,16,.62),0 0 0 3px var(--accent),0 0 22px 4px rgba(242,194,48,.55);animation:tourPulse 1.6s ease-in-out infinite;transition:left .25s,top .25s,width .25s,height .25s}
+@keyframes tourPulse{50%{box-shadow:0 0 0 100vmax rgba(8,6,16,.62),0 0 0 5px var(--accent),0 0 30px 8px rgba(242,194,48,.35)}}
+.tour-bubble{position:absolute;pointer-events:auto;display:flex;flex-direction:column;gap:8px;padding:16px 16px 14px;border-radius:20px;background:var(--bg2);color:var(--text);
+  box-shadow:inset 0 0 0 1.5px var(--line),0 14px 40px rgba(0,0,0,.55);max-height:calc(100% - 24px);overflow-y:auto;-webkit-user-select:none;user-select:none}
+.tour-bubble.pop{animation:tourPop .22s ease-out}
+@keyframes tourPop{from{opacity:0;transform:translateY(6px) scale(.97)}}
+.tour-count{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--muted)}
+.tour-title{margin:0;font:400 20px/1.15 var(--display);color:var(--accent)}
+.tour-text{font-size:15px;line-height:1.45}
+.tour-text b{color:var(--accent)}
+.tour-idle{font-size:13px;color:var(--muted);font-style:italic}
+.tour-bar{display:flex;gap:8px;margin-top:4px}
+.tour-bar .btn{flex:1;padding:11px 14px;font-size:15px}
+.tour-bar .tour-back{flex:0 0 auto}
+.tour-x{position:absolute;top:6px;right:8px;width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:24px;line-height:1}
+.tour-confirm{z-index:75}
+.tourbtn{display:flex;align-items:center;justify-content:center;gap:8px}
+[data-motion="off"] .tour-hole,[data-motion="off"] .tour-bubble.pop{animation:none;transition:none}
+@media (prefers-reduced-motion:reduce){.tour-hole,.tour-bubble.pop{animation:none;transition:none}}
