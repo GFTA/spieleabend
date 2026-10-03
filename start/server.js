@@ -52,7 +52,7 @@ function embed(req, url) {
   const title = p ? `${p.host} lädt dich zum Spieleabend ein` : "Spieleabend";
   const desc = p
     ? `Party ${p.code} · ${p.count} ${p.count === 1 ? "Person ist" : "Leute sind"} schon dabei${p.game ? ` · gerade: ${p.game}` : ""}. Tippen und mitspielen, ohne Anmeldung.`
-    : "Brettspiele und Kartenspiele für den Spieleabend: Uno, Poker, Kniffel, Mensch ärgere dich nicht und mehr. Online mit Freunden, direkt im Browser.";
+    : "20 Brett-, Karten- und Partyspiele für den Spieleabend: Catan, Monopoly, Uno, Poker, Kniffel, Schach und mehr. Online mit Freunden, direkt im Browser, ohne Anmeldung.";
   const link = p ? `${base}/?party=${p.code}` : `${base}/`;
   return [
     `<meta property="og:type" content="website">`, `<meta property="og:site_name" content="Spieleabend">`,
