@@ -12,7 +12,7 @@
 //   });
 //
 // Functions (target, wait.until, pre) get document.querySelector as their argument ($).
-// A step may also have: place ("top" | "bottom"), pre() (runs when the step opens), idle (text while the target is
+// A step may also have: place ("top" | "bottom"), pre() (runs when the step opens), idle (text, or function ($) returning it, while the target is
 // missing, e.g. "Gleich bist du dran"), wait: { tap: "selector" } (press a different element than the highlighted one).
 // target: selector (first visible match), array of selectors (the highlight covers all of them) or a function
 // returning an element / array of elements / null.
@@ -148,7 +148,7 @@
       if (run !== R || !R.step) return;
       const st = R.step, els = resolve(st.target), hasTarget = !!st.target, idle = hasTarget && !els.length;
       q(".tour-idle").hidden = !idle;
-      if (idle) q(".tour-idle").textContent = st.idle || "Gleich bist du dran …";
+      if (idle) { let t = st.idle; if (typeof t === "function") { try { t = t($); } catch (e) { t = ""; } } q(".tour-idle").textContent = t || "Gleich bist du dran …"; }
       if (st.wait && st.wait.until && !R.advancing) {
         let ok = false; try { ok = !!st.wait.until($); } catch (e) { ok = false; }
         if (ok) advanceSoon(st);
