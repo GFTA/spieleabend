@@ -188,5 +188,15 @@
     "url": "https://activity.cool-kidz.net/",
     "max": 8,
     "status": "http://activity:8080/info"
+  },
+  {
+    "id": "catan",
+    "name": "Catan",
+    "title": "Catan",
+    "desc": "Siedeln, handeln, bauen: Wer zuerst 10 Siegpunkte hat, gewinnt.",
+    "players": "2–4 Spieler + Zuschauer",
+    "url": "https://catan.cool-kidz.net/",
+    "max": 4,
+    "status": "http://catan:8080/info"
   }
 ]
