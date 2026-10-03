@@ -7,7 +7,8 @@
     "players": "2–10 Spieler + Zuschauer",
     "url": "https://uno.cool-kidz.net/",
     "max": 10,
-    "status": "http://pass-uno:8080/info"
+    "status": "http://pass-uno:8080/info",
+    "tags": ["karten", "familie"]
   },
   {
     "id": "schiffe",
@@ -17,7 +18,8 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://schiffe.cool-kidz.net/",
     "max": 4,
-    "status": "http://schiffe:8080/info"
+    "status": "http://schiffe:8080/info",
+    "tags": ["brett", "zwei"]
   },
   {
     "id": "viergewinnt",
@@ -27,7 +29,8 @@
     "players": "2 Spieler + Zuschauer",
     "url": "https://vier.cool-kidz.net/",
     "max": 2,
-    "status": "http://viergewinnt:8080/info"
+    "status": "http://viergewinnt:8080/info",
+    "tags": ["brett", "zwei", "schnell"]
   },
   {
     "id": "wuerfelpoker",
@@ -37,7 +40,8 @@
     "players": "2–8 Spieler + Zuschauer",
     "url": "https://wuerfelpoker.cool-kidz.net/",
     "max": 8,
-    "status": "http://wuerfelpoker:8080/info"
+    "status": "http://wuerfelpoker:8080/info",
+    "tags": ["wuerfel", "schnell"]
   },
   {
     "id": "kniffel",
@@ -47,7 +51,8 @@
     "players": "2–8 Spieler + Zuschauer",
     "url": "https://kniffel.cool-kidz.net/",
     "max": 8,
-    "status": "http://kniffel:8080/info"
+    "status": "http://kniffel:8080/info",
+    "tags": ["wuerfel", "familie"]
   },
   {
     "id": "poker",
@@ -57,7 +62,8 @@
     "players": "2–8 Spieler + Zuschauer",
     "url": "https://poker.cool-kidz.net/",
     "max": 8,
-    "status": "http://poker:8080/info"
+    "status": "http://poker:8080/info",
+    "tags": ["karten"]
   },
   {
     "id": "maedn",
@@ -67,7 +73,8 @@
     "players": "2–8 Spieler + Zuschauer",
     "url": "https://mensch.cool-kidz.net/",
     "max": 8,
-    "status": "http://maedn:8080/info"
+    "status": "http://maedn:8080/info",
+    "tags": ["brett", "familie"]
   },
   {
     "id": "hangman",
@@ -77,7 +84,8 @@
     "players": "1–8 Spieler + Zuschauer",
     "url": "https://hangman.cool-kidz.net/",
     "max": 8,
-    "status": "http://hangman:8080/info"
+    "status": "http://hangman:8080/info",
+    "tags": ["denken", "schnell"]
   },
   {
     "id": "phase10",
@@ -87,7 +95,8 @@
     "players": "2–6 Spieler + Zuschauer",
     "url": "https://phase10.cool-kidz.net/",
     "max": 6,
-    "status": "http://phase10:8080/info"
+    "status": "http://phase10:8080/info",
+    "tags": ["karten"]
   },
   {
     "id": "sudoku",
@@ -97,7 +106,8 @@
     "players": "1–8 Spieler + Zuschauer",
     "url": "https://sudoku.cool-kidz.net/",
     "max": 8,
-    "status": "http://sudoku:8080/info"
+    "status": "http://sudoku:8080/info",
+    "tags": ["denken", "solo"]
   },
   {
     "id": "machikoro",
@@ -107,7 +117,8 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://machikoro.cool-kidz.net/",
     "max": 4,
-    "status": "http://machikoro:8080/info"
+    "status": "http://machikoro:8080/info",
+    "tags": ["karten", "wuerfel"]
   },
   {
     "id": "carcassonne",
@@ -117,7 +128,8 @@
     "players": "2–5 Spieler + Zuschauer",
     "url": "https://carcassonne.cool-kidz.net/",
     "max": 5,
-    "status": "http://carcassonne:8080/info"
+    "status": "http://carcassonne:8080/info",
+    "tags": ["brett", "strategie"]
   },
   {
     "id": "dame",
@@ -127,7 +139,8 @@
     "players": "2 Spieler + Zuschauer",
     "url": "https://dame.cool-kidz.net/",
     "max": 2,
-    "status": "http://dame:8080/info"
+    "status": "http://dame:8080/info",
+    "tags": ["brett", "zwei", "strategie"]
   },
   {
     "id": "schach",
@@ -137,7 +150,8 @@
     "players": "2 Spieler + Zuschauer",
     "url": "https://schach.cool-kidz.net/",
     "max": 2,
-    "status": "http://schach:8080/info"
+    "status": "http://schach:8080/info",
+    "tags": ["brett", "zwei", "strategie", "denken"]
   },
   {
     "id": "monopoly",
@@ -147,7 +161,8 @@
     "players": "2–6 Spieler + Zuschauer",
     "url": "https://monopoly.cool-kidz.net/",
     "max": 6,
-    "status": "http://monopoly:8080/info"
+    "status": "http://monopoly:8080/info",
+    "tags": ["brett", "familie", "strategie"]
   },
   {
     "id": "skipbo",
@@ -157,7 +172,8 @@
     "players": "2–6 Spieler + Zuschauer",
     "url": "https://skipbo.cool-kidz.net/",
     "max": 6,
-    "status": "http://skipbo:8080/info"
+    "status": "http://skipbo:8080/info",
+    "tags": ["karten"]
   },
   {
     "id": "rummikub",
@@ -167,7 +183,8 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://rummikub.cool-kidz.net/",
     "max": 4,
-    "status": "http://rummikub:8080/info"
+    "status": "http://rummikub:8080/info",
+    "tags": ["brett", "strategie"]
   },
   {
     "id": "explodingkittens",
@@ -177,7 +194,8 @@
     "players": "2–5 Spieler + Zuschauer",
     "url": "https://kittens.cool-kidz.net/",
     "max": 5,
-    "status": "http://explodingkittens:8080/info"
+    "status": "http://explodingkittens:8080/info",
+    "tags": ["karten", "party"]
   },
   {
     "id": "activity",
@@ -187,7 +205,8 @@
     "players": "2–8 Spieler + Zuschauer",
     "url": "https://activity.cool-kidz.net/",
     "max": 8,
-    "status": "http://activity:8080/info"
+    "status": "http://activity:8080/info",
+    "tags": ["party", "familie"]
   },
   {
     "id": "catan",
@@ -197,6 +216,7 @@
     "players": "2–4 Spieler + Zuschauer",
     "url": "https://catan.cool-kidz.net/",
     "max": 4,
-    "status": "http://catan:8080/info"
+    "status": "http://catan:8080/info",
+    "tags": ["brett", "strategie"]
   }
 ]

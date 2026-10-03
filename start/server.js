@@ -5,6 +5,7 @@
 "use strict";
 
 const http = require("http");
+const zlib = require("zlib");
 const fs = require("fs");
 const path = require("path");
 const { createParties, PartyError } = require("./party.js");
@@ -62,6 +63,24 @@ function embed(req, url) {
   ].join("\n");
 }
 
+// gzip/brotli for text, once per file version
+const squeezed = new Map();
+function sendBody(req, res, code, headers, buf) {
+  const ae = String(req.headers["accept-encoding"] || ""), type = headers["content-type"] || "";
+  if (buf.length > 1024 && /^(text\/|application\/(json|manifest)|image\/svg)/.test(type) && /\b(br|gzip)\b/.test(ae)) {
+    const enc = /\bbr\b/.test(ae) ? "br" : "gzip", k = enc + ":" + req.url;
+    let c = squeezed.get(k);
+    if (!c || !c.raw.equals(buf)) {
+      c = { raw: buf, out: enc === "br" ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9 } }) : zlib.gzipSync(buf, { level: 9 }) };
+      if (squeezed.size > 200) squeezed.clear();
+      squeezed.set(k, c);
+    }
+    res.writeHead(code, Object.assign({}, headers, { "content-encoding": enc, vary: "accept-encoding" }));
+    return res.end(c.out);
+  }
+  res.writeHead(code, headers);
+  res.end(buf);
+}
 const json = (res, code, obj) => { res.writeHead(code, { "content-type": TYPES[".json"], "cache-control": "no-store" }); res.end(JSON.stringify(obj)); };
 function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -113,8 +132,7 @@ const server = http.createServer(async (req, res) => {
     if (e) { res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }); return res.end("Nicht gefunden"); }
     const ext = path.extname(file);
     if (p === "/index.html") body = Buffer.from(String(body).replace("<!--embed-->", () => embed(req, url)));
-    res.writeHead(200, { "content-type": TYPES[ext] || "application/octet-stream", "cache-control": ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=86400" });
-    res.end(body);
+    sendBody(req, res, 200, { "content-type": TYPES[ext] || "application/octet-stream", "cache-control": ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=86400" }, body);
   });
 });
 

@@ -238,7 +238,24 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - Einstellungen-Sheet: „Zurücksetzen“ (zweimal tippen) setzt alle Prefs zurück und lädt neu (`sound:true`, damit alte Spielstände nicht stumm schalten).
 - `SAProfile.importAll(obj)` ersetzt das Profil (läuft durch `clean()`); `profile.html` bietet dafür den Sicherungscode „SA1.“ + Base64url-JSON.
 - Startseite: „🎲 Überrasch mich“ (zufälliges erreichbares Spiel, nicht das zuletzt gespielte), „📲 Als App installieren“ (`beforeinstallprompt`,
-  Hinweis für iOS) und ein leerer Service Worker `sw.js` (cached nichts, macht die Seite installierbar).
+  Hinweis für iOS) und ein Service Worker `sw.js` (Network-first mit Cache-Fallback: die Startseite lädt auch offline; `/party/` und `/status.json` nie gecacht).
+
+### Verbesserungsrunde 3 (Raum, Verlauf, Startseite)
+
+- **Rauswerfen:** `{t:"kick", i}` (nur Host, nur Menschen, nicht sich selbst, nicht im laufenden Spiel) schickt `{t:"left", reason:"kicked"}`,
+  entfernt den Sitz und sperrt den Namen 5 Minuten (`room.banned`, `KICK_BAN_MS`; `join`/`sit` lehnen ab). Im Warteraum zeigt die Mitgliederliste dafür ein `×`
+  (zweimal tippen, erst „Raus?“).
+- **Antworten komprimiert:** `reply()` in `room-server.js` und `sendBody()` in `start/server.js` liefern Brotli/gzip (`vary: accept-encoding`), gecacht pro Kodierung.
+- **Aktivität** (`sa_act`-Cookie, `SAProfile.activity()` / `addPlay`): Verlauf der letzten Ergebnisse (`game.w|l|d.minute36`), Spielminuten pro Spiel
+  (`kit.js` `playtime()`: nur sichtbare Zeit), Spieltage und Serie. `result()` pflegt Verlauf und Tage; `reset()` / `resetAll()` löschen sie.
+  `profile.html` zeigt „Zuletzt gespielt“, Gesamtzeit, Serie und „Dranbleiben“.
+- **Offene Räume** (`sa_rooms`-Cookie, `SAProfile.rooms()` / `setRoom(game, code|null)`, 6 h): `room-ui.js` `trackRoom()` trägt den Raumcode ein/aus,
+  die Startseite zeigt oben „Zurück ins Spiel · Raum CODE“.
+- **Teilen:** am Rundenende (nur Spielende) `#reShare` (Web Share, sonst Zwischenablage über `Spieleabend.copy`). `beforeunload`-Warnung nur online mit Sitz und weiteren Menschen.
+- **Regeln per Link:** `?rules=1` (Startseiten-Link „Regeln“ je Karte) öffnet das Overlay `#rulesSheet`; das Spielmenü gibt es erst im Spiel.
+- **Hoher Kontrast** folgt standardmäßig `prefers-contrast: more`. `Spieleabend.gameId` (Promise aus `/info`).
+- **Startseite:** Kategorien (`tags` in `games.json`, Chips), Spiel des Tages, Siegbilanz pro Karte, Serie, `?surprise=1` (PWA-Shortcut), `content-visibility`/Lazy-Images.
+- `Cards.dnd(...).abort()` bricht einen laufenden Zug ab (Uno nutzt es beim Tab-Wechsel).
 
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
 

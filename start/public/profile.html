@@ -63,6 +63,13 @@ h2{margin:0;font-family:var(--display);font-weight:400;font-size:20px}
 .total div{padding:12px 6px;border-radius:16px;background:var(--bg)}
 .total b{display:block;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1}
 .total span{font-size:12px;color:var(--muted);font-weight:600}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.hist li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:var(--bg)}
+.hist img{flex:none;width:32px;height:32px;border-radius:9px;background:var(--surface)}
+.hist b{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist small{color:var(--muted);font-weight:600;font-size:12.5px;flex:none}
+.hist .res{flex:none;font-weight:800;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--surface)}
+.hist .res.w{background:var(--green);color:#fff}
 .stats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .stat{display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;background:var(--bg)}
 .stat img{flex:none;width:46px;height:46px;border-radius:12px;background:var(--surface)}
@@ -122,6 +129,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
     </div>
   </section>
 
+  <section class="card" aria-label="Zuletzt gespielt">
+    <h2>Zuletzt gespielt</h2>
+    <ul class="hist" id="hist"></ul>
+  </section>
+
   <section class="card" aria-label="Sicherung">
     <h2>Sicherung</h2>
     <p class="hint">Mit dem Code nimmst du Name, Avatar, Statistik und Einstellungen auf ein anderes Gerät mit: dort hier einfügen und wiederherstellen. Der Code enthält deine Werte, gib ihn nur Leuten, denen du vertraust.</p>
@@ -169,16 +181,26 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
   $("#cols").addEventListener("click", (e) => { const b = e.target.closest("[data-col]"); if (!b) return; p = P.set({ col: b.dataset.col }); renderWho(); });
   $("#avs").addEventListener("click", (e) => { const b = e.target.closest("[data-pick]"); if (!b) return; p = P.set({ av: b.dataset.pick }); renderWho(); });
 
+  const dur = (m) => (m >= 60 ? `${Math.floor(m / 60)} Std. ${m % 60 ? (m % 60) + " Min." : ""}`.trim() : `${m} Min.`);
+  function renderHist() {
+    const list = P.activity().history.slice(0, 15), nameOf = (id) => (games.find((x) => x.id === id) || { name: id }).name;
+    const ago = (t) => { const d = Math.round((Date.now() - t) / 6e4); return d < 1 ? "gerade eben" : d < 60 ? `vor ${d} Min.` : d < 1440 ? `vor ${Math.round(d / 60)} Std.` : `vor ${Math.round(d / 1440)} Tg.`; };
+    $("#hist").innerHTML = list.length ? list.map((h) => `<li><img src="${esc(h.game)}.svg" alt="" width="32" height="32"><b>${esc(nameOf(h.game))}</b><small>${ago(h.at)}</small><span class="res ${h.res}">${h.res === "w" ? "Sieg" : h.res === "d" ? "Remis" : "Niederlage"}</span></li>`).join("")
+      : `<li><small>Noch nichts. Hier stehen deine letzten Partien.</small></li>`;
+  }
   const pct = (w, g) => (g ? Math.round((w / g) * 100) : 0);
   function renderStats() {
     const st = p.stats;
     let g = 0, w = 0;
     for (const id of Object.keys(st)) { g += st[id].g; w += st[id].w; }
-    $("#total").innerHTML = `<div><b>${g}</b><span>Partien</span></div><div><b>${w}</b><span>Siege</span></div><div><b>${pct(w, g)} %</b><span>Siegquote</span></div>`;
+    const act = P.activity(), mins = Object.values(act.play).reduce((n, m) => n + m, 0);
+    $("#total").innerHTML = `<div><b>${g}</b><span>Partien</span></div><div><b>${w}</b><span>Siege</span></div><div><b>${pct(w, g)} %</b><span>Siegquote</span></div>` +
+      (mins ? `<div style="grid-column:1/-1"><b>${dur(mins)}</b><span>Spielzeit${act.streak >= 2 ? ` · ${act.streak} Tage in Folge` : ""}</span></div>` : "");
     $("#stats").innerHTML = games.map((x) => {
       const s = st[x.id];
       if (!s || !s.g) return `<li class="stat none"><img src="${esc(x.id)}.svg" alt="" width="46" height="46"><div class="txt"><b>${esc(x.name)}</b><small>Noch nicht gespielt</small></div></li>`;
-      const extra = [s.d ? `${s.d}× unentschieden` : "", s.bs ? `beste Serie ${s.bs}` : "", s.cs > 1 ? `gerade ${s.cs} in Folge` : "", s.og ? `online ${s.ow} von ${s.og}` : ""].filter(Boolean).join(" · ");
+      const pm = P.activity().play[x.id];
+      const extra = [pm ? dur(pm) + " gespielt" : "", s.d ? `${s.d}× unentschieden` : "", s.bs ? `beste Serie ${s.bs}` : "", s.cs > 1 ? `gerade ${s.cs} in Folge` : "", s.og ? `online ${s.ow} von ${s.og}` : ""].filter(Boolean).join(" · ");
       return `<li class="stat"><img src="${esc(x.id)}.svg" alt="" width="46" height="46"><div class="txt"><b>${esc(x.name)}</b>` +
         `<span class="nums">${s.g} ${s.g === 1 ? "Partie" : "Partien"} · ${s.w} ${s.w === 1 ? "Sieg" : "Siege"} · ${pct(s.w, s.g)} %</span>${extra ? `<small>${esc(extra)}</small>` : ""}</div>` +
         `<button class="btn" type="button" data-reset="${esc(x.id)}" data-confirm="Sicher?">Zurücksetzen</button></li>`;
@@ -197,6 +219,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
     { icon: "🥇", name: "Siegertyp", desc: "10 Siege", goal: 10, val: (st) => sum(st, (s) => s.w) },
     { icon: "🔥", name: "Auf Kurs", desc: "3 Siege in Folge", goal: 3, val: (st) => Math.max(0, ...Object.values(st).map((s) => s.bs)) },
     { icon: "⚡", name: "Unaufhaltsam", desc: "6 Siege in Folge", goal: 6, val: (st) => Math.max(0, ...Object.values(st).map((s) => s.bs)) },
+    { icon: "📆", name: "Dranbleiben", desc: "3 Tage in Folge gespielt", goal: 3, val: () => P.activity().streak },
     { icon: "🧭", name: "Entdecker", desc: "5 verschiedene Spiele gespielt", goal: 5, val: (st) => count(st, (s) => s.g > 0) },
     { icon: "🎯", name: "Vielseitig", desc: "In 5 verschiedenen Spielen gewonnen", goal: 5, val: (st) => count(st, (s) => s.w > 0) },
     { icon: "🌍", name: "Alle Spiele", desc: "Jedes Spiel mindestens einmal gespielt", goal: () => games.length || 1, val: (st) => (games.length ? games.filter((x) => st[x.id] && st[x.id].g > 0).length : 0) },
@@ -243,11 +266,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(-
     else if (b.id === "resetStats") p = P.reset();
     else if (b.id === "bkRestore") restore();
     else if (b.id === "resetAll") { p = P.resetAll(); p = P.set({ av: AVATARS[Math.floor(Math.random() * AVATARS.length)] }); $("#name").value = ""; }
-    renderWho(); renderStats(); renderAchs();
+    renderWho(); renderStats(); renderAchs(); renderHist();
   });
 
-  renderWho(); renderStats(); renderAchs();
-  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((j) => { games = j; renderStats(); renderAchs(); }).catch(() => {});
+  renderWho(); renderStats(); renderAchs(); renderHist();
+  fetch("games.json", { cache: "no-store" }).then((r) => r.json()).then((j) => { games = j; renderStats(); renderAchs(); renderHist(); }).catch(() => {});
 })();
 </script>
 </body>

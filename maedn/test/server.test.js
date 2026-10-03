@@ -148,3 +148,49 @@ test("up to eight people or computers share a room and get the 80-field board", 
   assert.strictEqual(v.rules.teams, false, "teams need exactly four");
   a.ws.close();
 });
+
+test("the host can throw someone out of the waiting room; they cannot rejoin under that name for a while", async () => {
+  await new Promise((r) => server.listening ? r() : server.on("listening", r));
+  const port = server.address().port;
+  const a = client(port), b = client(port), c = client(port), d = client(port);
+  await Promise.all([a.open, b.open, c.open, d.open]);
+  a.send({ t: "create", name: "Hanna", goal: 1 });
+  const joined = await a.next((m) => m.t === "joined");
+  b.send({ t: "join", code: joined.code, name: "Kim" });
+  await b.next((m) => m.t === "joined");
+  c.send({ t: "join", code: joined.code, name: "Lena" });
+  await c.next((m) => m.t === "joined");
+  await a.next((m) => m.t === "room" && m.members.length === 3);
+
+  b.send({ t: "kick", i: 2 }); // not the host: ignored
+  a.send({ t: "kick", i: 0 }); // the host cannot kick themselves
+  a.send({ t: "kick", i: 1 });
+  assert.deepStrictEqual(await b.next((m) => m.t === "left"), { t: "left", reason: "kicked" });
+  const after = await a.next((m) => m.t === "room" && m.members.length === 2);
+  assert.deepStrictEqual(after.members.map((m) => m.name), ["Hanna", "Lena"]);
+  assert.strictEqual((await c.next((m) => m.t === "room" && m.members.length === 2)).you, 1, "seats behind the kicked one move up");
+
+  d.send({ t: "join", code: joined.code, name: "kim" });
+  assert.match((await d.next((m) => m.t === "error")).msg, /entfernt/);
+  d.send({ t: "join", code: joined.code, name: "Otto" });
+  await d.next((m) => m.t === "joined");
+  rooms.get(joined.code).banned.kim = Date.now() - 1; // ban over
+  b.send({ t: "join", code: joined.code, name: "Kim" });
+  await b.next((m) => m.t === "joined");
+  for (const x of [a, b, c, d]) x.ws.close();
+});
+
+test("static files are sent compressed with brotli when the browser can read it", async () => {
+  await new Promise((r) => server.listening ? r() : server.on("listening", r));
+  const port = server.address().port, zlib = require("zlib");
+  const get = (enc) => new Promise((resolve, reject) => require("http").get({ port, path: "/", headers: { "accept-encoding": enc } }, (res) => {
+    const parts = []; res.on("data", (c) => parts.push(c)); res.on("end", () => resolve({ enc: res.headers["content-encoding"], body: Buffer.concat(parts) }));
+  }).on("error", reject));
+  const br = await get("gzip, br"), gz = await get("gzip"), plain = await get("identity");
+  assert.strictEqual(br.enc, "br");
+  assert.strictEqual(gz.enc, "gzip");
+  assert.strictEqual(plain.enc, undefined);
+  assert.ok(zlib.brotliDecompressSync(br.body).equals(plain.body));
+  assert.ok(zlib.gunzipSync(gz.body).equals(plain.body));
+  assert.ok(br.body.length < gz.body.length);
+});

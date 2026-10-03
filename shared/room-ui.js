@@ -152,6 +152,9 @@
     // "back to the party" links in the waiting room and the menu, only in rooms a party made
     const partyHref = () => startUrl(`?party=${R().party}`);
 
+    // the start page offers "back to your game" for the room this browser sits in (cookie shared by all games)
+    function trackRoom(code) { window.Spieleabend.gameId.then((id) => { if (id) window.SAProfile.setRoom(id, code || null); }); }
+
     // ---------- connection: one socket, reconnects on its own, rejoins with the stored secret ----------
     let pingAt = 0, rtt = 0;
     let ws = null, wantOnline = false, retry = 0, queue = [], giveUpT = null, netT = null, lastRx = 0, probeT = null, dropped = false;
@@ -231,6 +234,7 @@
       } else if (m.t === "room") {
         app.on.room(m);
         presence(m); timerWarn(m);
+        trackRoom(R() && R().code);
       } else if (m.t === "react") {
         app.on.react(m);
       } else if (m.t === "chatlog") {
@@ -253,10 +257,12 @@
       } else if (m.t === "gone" || m.t === "left") {
         // keep the socket: a join or create sent a moment ago is answered on it
         store.del(app.onlineKey);
+        trackRoom(null);
         seenOn = null; clearTimeout(warnT);
         chat = []; unread = 0; renderChat();
         app.on.left();
-        if (m.t === "gone") app.toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
+        if (m.reason === "kicked") app.toast("Der Host hat dich aus dem Raum entfernt.");
+        else if (m.t === "gone") app.toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
         app.render();
       } else if (app.on.msg) {
         app.on.msg(m); // game-specific messages (Activity's drawing strokes)
@@ -297,6 +303,14 @@
       renderLeaveVote();
       nudgeCheck();
     }
+
+    // closing the tab in the middle of an online game starts a leave vote for the others: ask first (desktop browsers only show their own text)
+    window.addEventListener("beforeunload", (e) => {
+      const v = V(), r = R();
+      if (app.mode() !== "online" || !v || !r || !(v.me >= 0) || v.phase === "roundEnd" || v.over || (r.members[r.you] && r.members[r.you].lobby)) return;
+      if (!r.members.some((m, i) => i !== r.you && !m.bot && m.online)) return;
+      e.preventDefault(); e.returnValue = "";
+    });
 
     // ---------- nudge: after 20 s of waiting for a person, a bell in the top bar pokes them (the server checks again) ----------
     let nudgeKey = "", nudgeSince = 0, nudgeT = 0;
@@ -427,7 +441,7 @@
         `<span class="av avc${i === r.host ? " crown" : ""}" style="--avc:${esc(m.color || "transparent")}" aria-hidden="true">${m.avatar || ""}</span>` +
         `<span class="nm">${esc(m.name)}</span>${app.memberExtra ? app.memberExtra(m, i) : ""}` +
         `${i === r.host ? '<span class="tag">Host</span>' : ""}${i === r.you ? '<span class="tag">du</span>' : ""}${m.bot ? '<span class="tag">Computer</span>' : ""}` +
-        `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("");
+        `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : host && !m.bot && i !== r.you ? `<button class="rm" type="button" data-kick="${i}" data-name="${esc(m.name)}" aria-label="${esc(m.name)} aus dem Raum werfen">×</button>` : ""}</li>`).join("");
       $("#addBot").hidden = !host || r.members.length >= max;
       app.renderSettings(host);
       if (watcher) $("#lobbyHint").textContent = r.members.length >= max ? "Du schaust zu. Wird ein Platz frei, kannst du mitspielen." : "Du schaust zu. Tippe auf „Mitspielen“, um einen freien Platz zu nehmen.";
@@ -503,6 +517,22 @@
       }
       votesEl.hidden = !(online && over);
       btn.hidden = mode === "online" && v.me < 0;
+      let share = $("#reShare");
+      if (!share) {
+        share = document.createElement("button");
+        share.id = "reShare"; share.type = "button"; share.className = "btn btn-ghost btn-block";
+        share.addEventListener("click", async () => {
+          const vv = V(), l = (vv && vv.last) || {}, ids = Array.isArray(l.winners) ? l.winners : Number.isInteger(l.winner) ? [l.winner] : [];
+          const names = ids.map((i) => vv.players && vv.players[i] && vv.players[i].name).filter(Boolean);
+          const text = `${baseTitle}: ${names.length ? `${names.join(" & ")} ${names.length > 1 ? "gewinnen" : "gewinnt"}!` : "Spiel zu Ende."} Spiel mit auf Spieleabend.`;
+          const url = location.origin + location.pathname;
+          if (navigator.share) { navigator.share({ title: "Spieleabend", text, url }).catch(() => {}); return; }
+          app.toast(await window.Spieleabend.copy(`${text} ${url}`) ? "Ergebnis kopiert." : "Kopieren geht hier nicht.");
+        });
+        $("#reBack").before(share);
+      }
+      share.textContent = navigator.share ? "Ergebnis teilen" : "Ergebnis kopieren";
+      share.hidden = !over;
       if (mode === "local") { back.hidden = false; back.textContent = "Zurück zum Start"; }
       else { back.hidden = over ? !r.members[r.you] : r.host !== v.me; back.textContent = "Zurück in den Warteraum"; } // after a game everyone decides for themselves
     }
@@ -566,8 +596,7 @@
         $("#shareGo").addEventListener("click", async () => {
           const url = partyLink(), code = R().party;
           if (navigator.share) { navigator.share({ title: "Spieleabend", text: `Komm in meine Spieleabend-Party! Code: ${code}`, url }).catch(() => {}); return; }
-          try { await navigator.clipboard.writeText(url); app.toast("Link kopiert."); }
-          catch (e) { app.toast("Kopieren geht hier nicht."); }
+          app.toast(await window.Spieleabend.copy(url) ? "Link kopiert." : "Kopieren geht hier nicht.");
         });
       }
       const url = partyLink();
@@ -582,6 +611,12 @@
     $("#members").addEventListener("click", (e) => {
       const b = e.target.closest("[data-unbot]");
       if (b) return send({ t: "unbot", i: +b.dataset.unbot });
+      const k = e.target.closest("[data-kick]");
+      if (!k) return;
+      if (k.classList.contains("sure")) return send({ t: "kick", i: +k.dataset.kick });
+      for (const o of $("#members").querySelectorAll(".rm.sure")) { o.classList.remove("sure"); o.textContent = "×"; }
+      k.classList.add("sure"); k.textContent = "Raus?";
+      setTimeout(() => { k.classList.remove("sure"); k.textContent = "×"; }, 3000);
     });
 
     // ---------- settings sheet: design, sound, accessibility ----------
@@ -723,6 +758,18 @@
       $("#menu").hidden = false;
     }
     $("#menuBtn").addEventListener("click", openMenu);
+    // ?rules=1 (a link from the start page) opens the rules in a sheet of their own: the menu only exists once a game runs
+    (function rulesSheet() {
+      const q = new URLSearchParams(location.search);
+      if (!q.get("rules") || !rulesHTML) return;
+      q.delete("rules"); history.replaceState(null, "", location.pathname + (q.toString() ? `?${q}` : ""));
+      const o = document.createElement("div");
+      o.className = "overlay"; o.id = "rulesSheet";
+      o.innerHTML = `<div class="sheet"><h2>${menu.dataset.rulesTitle || "Spielregeln"}</h2><div class="gamerules">${rulesHTML}</div>` +
+        `<div class="menubar"><button class="btn btn-primary" type="button">Verstanden</button></div></div>`;
+      o.addEventListener("click", (e) => { if (e.target === o || e.target.closest(".menubar button")) o.remove(); });
+      document.body.append(o);
+    })();
     // leave the room from the menu's bottom row: first tap turns it red, the second leaves
     let leaveArm = null;
     $("#menuLeave").addEventListener("click", () => {
@@ -746,7 +793,7 @@
     $("#roomInfo").addEventListener("click", async (e) => {
       if (!e.target.closest("[data-copy]")) return;
       const url = `${location.origin}${location.pathname}?r=${R().code}`;
-      try { await navigator.clipboard.writeText(url); app.toast("Link kopiert."); } catch (err) { app.toast("Kopieren geht hier nicht."); }
+      app.toast(await window.Spieleabend.copy(url) ? "Link kopiert." : "Kopieren geht hier nicht.");
     });
 
     // ---------- a new version of the game was deployed while this page was open ----------
