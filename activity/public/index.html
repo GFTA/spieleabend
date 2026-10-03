@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Activity">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Activity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="kit.css">
+<link rel="stylesheet" href="room-ui.css">
+<style>
+:root{--sea:#1f2350;--felt:#2a2350}
+/* table designs; "Nacht" is the default without an attribute */
+:root[data-table="vulkan"]{--sea:#3a1c1a;--felt:#3d1f18}
+:root[data-table="mint"]{--sea:#cfe9e0;--felt:#d3ecdf}
+:root[data-table="felt"]{--sea:#10363a;--felt:#0f3a2b}
+:root[data-table="ocean"]{--sea:#123057;--felt:#123a66}
+:root[data-table="light"]{--sea:#cfe0f3;--felt:#dfe8f5}
+:root[data-table="blossom"]{--sea:#e6d9f4;--felt:#f4dfe9}
+/* The page itself never scrolls (iOS Safari would slide the whole page); only inner areas do. */
+/* ---------- buttons & fields ---------- */
+.btn{border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
+.btn-ghost{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn-danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #9c1f23}
+.btn-danger:active{box-shadow:0 2px 0 #9c1f23;transform:translateY(2px)}
+.btn:disabled{opacity:.45;cursor:default}
+/* ---------- home ---------- */
+.screen{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px 16px 32px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-weight:400;font-size:40px;letter-spacing:.01em;margin:10px 0 0;line-height:1;text-align:center}
+.tagline{margin:0;color:var(--muted);text-align:center;max-width:36ch;text-wrap:balance}
+.row .btn{flex:1}
+.seg button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not([aria-pressed="true"]){opacity:.5}
+/* ---------- lobby ---------- */
+.members .dot.p0{background:var(--red)} .members .dot.p1{background:var(--yellow)}
+/* ---------- game ---------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:10px 16px 0}
+.roundinfo{display:none;flex:none;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
+.plates{flex:1;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px}
+.plate{position:relative;min-width:0;display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s,background .2s}
+.plate.active{background:var(--surface);box-shadow:inset 0 0 0 2.5px var(--accent)}
+.plate.away{opacity:.55}
+.plate.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{40%{transform:scale(1.06)}}
+.plate .pav{font-size:22px;line-height:1;flex:none}
+.plate .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.plate .pname{font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate .pmeta{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plate .pscore{flex:none;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.plate .pscore small{font-size:11px;font-weight:600;color:var(--muted)}
+.plate .pwins{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--surface);box-shadow:0 0 0 2px var(--bg);font-variant-numeric:tabular-nums}
+.plate.active .pwins{background:var(--accent);color:#231a05}
+.arena{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:10px 16px}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:.85}}
+.dock{position:relative;background:var(--bg2);border-radius:22px 22px 0 0;box-shadow:0 -1px 0 var(--line);padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px;transition:box-shadow .2s,background .2s}
+.dock.myturn{box-shadow:0 -2px 0 var(--accent)}
+.who{display:flex;align-items:center;gap:10px}
+.who .wav{font-size:30px;line-height:1;flex:none}
+.who b{display:block;font-size:clamp(15px,4.4vw,17px);font-weight:800;line-height:1.2;text-wrap:balance}
+.who small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:3px}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:12px 12px;font-size:15px}
+/* ---------- overlays ---------- */
+.sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;background:var(--bg2);border-radius:24px;padding:22px 18px;box-shadow:inset 0 0 0 1.5px var(--line),0 20px 60px rgba(0,0,0,.5);max-height:100%;overflow-y:auto}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.scores li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.scores li.win{box-shadow:inset 0 0 0 2px var(--accent)}
+.scores li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scores li small{color:var(--muted);font-size:12px;margin-left:6px}
+.scores b{font-weight:800;flex:none}
+.toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}
+.toggle input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;margin:0;transition:background .2s;cursor:pointer}
+.toggle input::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle span{display:flex;flex-direction:column;font-weight:800}
+.toggle small{font-weight:400;color:var(--muted);font-size:13px}
+#net{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--red),0 6px 20px rgba(0,0,0,.4);color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;pointer-events:none}
+#net::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s steps(2) infinite}
+#reactBar{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 62px);right:16px;display:flex;gap:4px;padding:6px;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line),0 12px 30px rgba(0,0,0,.5)}
+#reactBar button:active{background:var(--bg2)}
+#reactBar{flex-wrap:wrap;max-width:320px;justify-content:center}
+#reactBar .says{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+#reactBar .says button{width:auto;height:auto;font-size:14px;font-weight:700;padding:9px 8px;background:var(--bg2)}
+.bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+/* avatars */
+.avgrid button{border:0;background:transparent;font-size:26px;aspect-ratio:1;border-radius:10px;padding:0;min-width:0}
+.avgrid button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+.prow .avbtn:disabled{opacity:1}
+.av-i{font-style:normal;margin-right:.3em}
+/* look: table design and size */
+.look .seg{grid-template-columns:repeat(4,1fr)}
+.look .seg.three{grid-template-columns:repeat(3,1fr)}
+.look .seg button{font-size:13px;white-space:nowrap;padding-inline:4px}
+.look .swatch{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1.5px var(--line)}
+/* ---------- activity ---------- */
+.hero .logo{font-size:64px;text-align:center;line-height:1}
+.hero .logo span{display:inline-block;animation:wobble 3s ease-in-out infinite}
+.hero .logo span:nth-child(2){animation-delay:.4s}.hero .logo span:nth-child(3){animation-delay:.8s}
+@keyframes wobble{50%{transform:translateY(-6px) rotate(6deg)}}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+.toggles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg2);padding:5px;border-radius:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.toggles button{border:0;border-radius:10px;padding:10px 4px;background:transparent;font-weight:600;line-height:1.2;font-size:14px}
+.toggles button[aria-pressed="true"]{background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:800}
+.toggles button:disabled{cursor:default}
+.toggles button:disabled:not([aria-pressed="true"]){opacity:.5}
+.stage{width:100%;max-width:min(100%,max(300px,calc((100dvh - 380px) * 1.3333)),760px);display:flex;flex-direction:column;gap:10px;align-items:stretch;margin:auto 0}
+.chipbar{display:flex;align-items:center;gap:10px}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:800;font-size:14px;white-space:nowrap}
+.timer{flex:1;height:12px;border-radius:6px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);overflow:hidden;position:relative}
+.timer i{position:absolute;inset:0;transform-origin:left;background:var(--accent);transition:transform .3s linear}
+.timer.low i{background:var(--red)}
+.secs{flex:none;min-width:3.2ch;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.wordline{min-height:1.2em;text-align:center;font-family:var(--display);font-size:clamp(26px,8vw,40px);line-height:1.15;word-break:break-word}
+.wordline.pat{letter-spacing:.12em}
+.wordline .l{display:inline-block;min-width:.6em}
+.wordline .gap{display:inline-block;width:.5em}
+.wordline .rev{animation:flip .6s}
+@keyframes flip{0%{transform:rotateX(90deg);color:var(--accent)}60%{transform:rotateX(-12deg)}100%{transform:none}}
+.wordline.got{color:var(--green)}
+.wordsub{min-height:1.3em;text-align:center;font-size:13px;color:var(--muted);text-wrap:balance}
+.stars{color:var(--accent);letter-spacing:.1em}
+.canvaswrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.35),inset 0 0 0 2px rgba(0,0,0,.08)}
+.canvaswrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.canvaswrap.watch canvas{cursor:default}
+.canvaswrap .veil{position:absolute;inset:0;display:grid;place-items:center;background:rgba(26,20,38,.55);color:#fff;font-weight:800;font-size:18px;text-align:center;padding:16px;pointer-events:none}
+.card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 18px;border-radius:22px;background:var(--felt);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 14px 30px rgba(0,0,0,.35);text-align:center}
+.card .big{font-size:60px;line-height:1}
+.card .bigw{font-size:clamp(20px,5vw,26px);font-weight:800;text-wrap:balance}
+.card .help{color:var(--muted);font-size:14px;max-width:34ch;text-wrap:balance}
+.card.go .big{animation:wobble 1.4s ease-in-out infinite}
+.feed{display:flex;flex-direction:column;gap:4px;max-height:128px;min-height:0;overflow-y:auto;overscroll-behavior:contain;justify-content:flex-end}
+.feed div{display:flex;gap:6px;align-items:baseline;font-size:14px;padding:5px 10px;border-radius:10px;background:var(--bg2);min-width:0}
+.feed div.fresh{animation:pop .35s ease-out}
+.feed .who2{flex:none;font-weight:800}
+.feed .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed .near{margin-left:auto;flex:none;font-size:12px;font-weight:800;color:var(--accent)}
+.feed .ok{box-shadow:inset 0 0 0 1.5px var(--green);font-weight:700}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.tools .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.sw{width:30px;height:30px;border-radius:50%;border:0;padding:0;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),0 0 0 1px rgba(0,0,0,.25)}
+.sw[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+.sw.erase{background:#fff;display:grid;place-items:center;font-size:15px}
+.wd{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;border:0;background:var(--surface);color:var(--text);padding:0}
+.wd[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
+.wd i{display:block;border-radius:50%;background:currentColor}
+.tool{height:36px;padding:0 12px;border-radius:10px;border:0;background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
+.tool:disabled{opacity:.4}
+.guessform{display:flex;gap:8px}
+.guessform .field{flex:1;min-width:0}
+.guessform .btn{padding:12px 16px}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);max-height:150px;overflow-y:auto}
+.hist li{display:flex;gap:6px;justify-content:space-between}
+.hist b{color:var(--text);font-weight:800}
+.plate .pscore small{display:none}
+.plate .tick{position:absolute;left:-6px;top:-6px;width:22px;height:22px;border-radius:11px;background:var(--green);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg);animation:pop .3s}
+/* ---------- desktop ---------- */
+@media (hover:hover) and (pointer:fine){
+  .btn:not(:disabled):hover{filter:brightness(1.08)}
+}
+@media (min-width:900px) and (min-height:700px){
+  #home > *{width:100%;max-width:560px;align-self:center}
+  #game{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);column-gap:24px;padding:0 24px 20px}
+  .topbar{grid-column:1/-1;padding:14px 0 4px;gap:12px}
+  .roundinfo{display:block}
+  .plates{max-width:760px}
+  .plate .pav{font-size:30px}
+  .plate .pname{font-size:15px}
+  .arena{padding:8px 0 0}
+  .dock{align-self:start;margin-top:48px;border-radius:22px;padding:18px;gap:14px;box-shadow:inset 0 0 0 1.5px var(--line)}
+  .dock.myturn{box-shadow:inset 0 0 0 2px var(--accent)}
+  .acts{flex-direction:column}
+  .who b{font-size:20px}
+  .dock .keys{display:block}
+}
+.keys{display:none;font-size:12px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:800;color:var(--text);background:var(--surface);border-radius:5px;padding:0 5px;box-shadow:inset 0 0 0 1px var(--line)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== start ===== -->
+  <section id="home" class="screen" aria-label="Start">
+    <div class="homebar"><a class="homelink" href="https://games.cool-kidz.net/" data-start-link>‹ Spieleabend</a></div>
+    <div class="hero">
+      <div class="logo" aria-hidden="true"><span>✏️</span><span>🗣️</span><span>🎭</span></div>
+      <h1>Activity</h1>
+      <p class="tagline">Zeichnen, Erklären, Pantomime: errate die Begriffe der anderen.</p>
+    </div>
+
+    <div class="panel" id="whoPanel">
+    <label class="label" for="myName">Dein Name</label>
+    <div class="row">
+    <button class="avbtn" id="myAvatar" type="button" aria-label="Avatar wählen"></button>
+    <input class="field" id="myName" maxlength="18" autocomplete="nickname" enterkeyhint="done" placeholder="z. B. Anna">
+    </div>
+    <div class="avgrid" id="avatarGrid" hidden></div>
+    </div>
+
+    <div class="seg two" id="modeTabs" role="tablist" aria-label="Spielart">
+      <button type="button" data-tab="online" aria-pressed="true">Mehrspieler</button>
+      <button type="button" data-tab="local" aria-pressed="false">Einzelspieler</button>
+    </div>
+
+    <!-- online -->
+    <div class="panel" id="onlinePanel">
+      <p class="hint" id="serverHint" hidden></p>
+      <div class="label">Raum beitreten</div>
+      <div class="row">
+        <input class="field code" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="CODE" aria-label="Raum-Code">
+        <button class="btn btn-primary" id="joinBtn" type="button">Beitreten</button>
+      </div>
+      <div class="or">oder</div>
+      <div class="label">Neuen Raum erstellen</div>
+      <p class="hint">Spielarten, Zeit und einen Computer-Gegner stellst du gleich danach im Warteraum ein.</p>
+      <button class="btn" id="createBtn" type="button">Raum erstellen</button>
+    </div>
+    <div class="panel" id="onlineOff" hidden>
+      <p class="hint">Für „Mehrspieler“ muss das Spiel auf einem Server laufen, zum Beispiel auf deinem eigenen Server. Öffne dann dessen Adresse. Hier geht nur „Einzelspieler“.</p>
+    </div>
+
+    <!-- local -->
+    <div class="panel" id="localPanel" hidden>
+      <div class="panel" id="resumePanel" hidden>
+        <button class="btn btn-primary btn-block" id="resumeBtn" type="button">Spiel fortsetzen</button>
+        <p class="hint" id="resumeHint"></p>
+      </div>
+      <div class="panel" id="oppBox"></div>
+      <div class="label">Spielarten</div>
+      <div class="toggles" id="modesLocal" role="group" aria-label="Spielarten"></div>
+      <div class="label">Zeit pro Begriff</div>
+      <div class="seg" id="timeLocal" role="group" aria-label="Zeit pro Begriff"></div>
+      <div class="label">Länge</div>
+      <div class="seg" id="goalLocal" role="group" aria-label="Länge"></div>
+      <div class="label">Computer rät</div>
+      <div class="seg" id="levelLocal" role="group" aria-label="Stärke des Computer-Gegners"></div>
+      <button class="btn btn-primary btn-block" id="startLocal" type="button">Neues Spiel starten</button>
+    </div>
+    <a class="btn btn-ghost" href="https://games.cool-kidz.net/profile.html" data-start-link="profile.html">Profil &amp; Statistik</a>
+    <p class="hint">Wer dran ist, bekommt einen Begriff und zeichnet, erklärt oder spielt ihn pantomimisch vor. Die anderen tippen, was es sein könnte. Je schneller, desto mehr Punkte.</p>
+  </section>
+
+  <!-- ===== lobby ===== -->
+  <section id="lobby" class="screen" hidden aria-label="Warteraum">
+    <template data-slot="settings">
+    <div class="panel">
+      <div class="label">Spielarten</div>
+      <div class="toggles" id="modesOnline" role="group" aria-label="Spielarten"></div>
+      <div class="label">Zeit pro Begriff</div>
+      <div class="seg" id="timeOnline" role="group" aria-label="Zeit pro Begriff"></div>
+      <div class="label">Länge</div>
+      <div class="seg" id="goalOnline" role="group" aria-label="Länge"></div>
+      <div class="label">Computer rät</div>
+      <div class="seg" id="levelOnline" role="group" aria-label="Stärke des Computer-Gegners"></div>
+    </div>
+    </template>
+  </section>
+
+  <!-- ===== table ===== -->
+  <section id="game" hidden aria-label="Spieltisch">
+    <div class="topbar">
+      <div class="roundinfo" id="roundInfo"></div>
+      <div class="plates" id="plates"></div>
+      <button class="iconbtn" id="reactBtn" type="button" aria-label="Reaktion senden" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1.8 2 5.2 2 7 0"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></svg>
+      </button>
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Menü">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+    <div class="arena" id="arena">
+      <div class="stage" id="stage">
+        <div class="chipbar"><span class="chip" id="modeChip"></span><div class="timer" id="timer" aria-hidden="true"><i></i></div><span class="secs" id="secs" aria-hidden="true"></span></div>
+        <div class="wordline" id="wordLine" aria-live="polite"></div>
+        <div class="wordsub" id="wordSub"></div>
+        <div class="canvaswrap" id="canvasWrap" hidden><canvas id="board" aria-label="Zeichnung"></canvas></div>
+        <div class="card" id="card" hidden><div class="big" id="cardBig"></div><b class="bigw" id="cardTitle"></b><span class="help" id="cardHelp"></span></div>
+        <div class="feed" id="feed" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="who"><span class="wav" id="whoAv"></span><div><b id="whoName"></b><small id="whoHint"></small></div></div>
+      <div class="tools" id="tools" hidden></div>
+      <form class="guessform" id="guessForm" hidden autocomplete="off">
+        <input class="field" id="guessInput" maxlength="40" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Dein Tipp …" aria-label="Dein Tipp">
+        <button class="btn btn-primary" type="submit">Raten</button>
+      </form>
+      <div class="acts">
+        <button class="btn" id="swapBtn" type="button" hidden>Anderen Begriff</button>
+        <button class="btn btn-primary" id="goBtn" type="button" hidden>Los geht's</button>
+        <button class="btn btn-ghost" id="giveBtn" type="button" hidden>Aufgeben</button>
+        <button class="btn" id="resultBtn" type="button" hidden>Ergebnis zeigen</button>
+      </div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="roundEnd" hidden>
+  <div class="sheet">
+    <div class="label" id="reLabel"></div>
+    <h2 id="reTitle"></h2>
+    <p class="hint" id="reText"></p>
+    <ol class="scores" id="reScores"></ol>
+    <ul class="hist" id="reHist" aria-label="Begriffe"></ul>
+    <button class="btn btn-primary btn-block" id="reBtn" type="button"></button>
+    <p class="hint revotes" id="reVotes" hidden></p>
+    <button class="btn btn-block" id="reLook" type="button">Tisch ansehen</button>
+    <button class="btn btn-ghost btn-block" id="reBack" type="button"></button>
+  </div>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <template data-slot="rules">
+        <ul>
+          <li>Reihum bekommt jemand einen Begriff und stellt ihn <b>zeichnend</b>, <b>erklärend</b> oder <b>pantomimisch</b> dar. Die Spielart wird ausgelost.</li>
+          <li>Die anderen tippen ihre Ideen. Groß- und Kleinschreibung, Umlaute und kleine Tippfehler sind egal.</li>
+          <li>Je schneller erraten, desto mehr Punkte, und schwerere Begriffe zählen mehr. Wer darstellt, bekommt Punkte für jeden, der es errät.</li>
+          <li>Nach der halben und nach drei Vierteln der Zeit wird je ein Buchstabe verraten.</li>
+          <li>Vor dem Start darfst du einmal einen anderen Begriff verlangen.</li>
+          <li>Am Ende gewinnt, wer die meisten Punkte hat. Computer-Gegner raten nur mit, sie stellen nichts dar.</li>
+        </ul>
+  </template>
+</div>
+
+<div id="reactBar" hidden>
+  <button type="button" data-e="👍">👍</button><button type="button" data-e="😂">😂</button><button type="button" data-e="😱">😱</button>
+  <button type="button" data-e="😡">😡</button><button type="button" data-e="🎉">🎉</button><button type="button" data-e="🙈">🙈</button>
+  <div class="says"><button type="button" data-e="Na warte!">Na warte!</button><button type="button" data-e="Glück gehabt!">Glück gehabt!</button>
+  <button type="button" data-e="Knapp daneben!">Knapp daneben!</button><button type="button" data-e="Gut gespielt!">Gut gespielt!</button></div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<div id="net" hidden>Verbindung weg, verbinde neu …</div>
+<div id="toast" class="off" role="status" aria-live="polite"></div>
+
+<script src="avatars.js"></script>
+<script src="profile.js"></script>
+<script src="kit.js"></script>
+<script src="room-ui.js"></script>
+<script src="home-ui.js"></script>
+<script src="game.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

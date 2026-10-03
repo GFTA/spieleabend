@@ -1,0 +1,19 @@
+services:
+  activity:
+    build:
+      context: ..
+      dockerfile: activity/Dockerfile
+      args:
+        GAME: activity
+    image: activity:latest
+    container_name: activity
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${ACTIVITY_PORT:-8100}:8080"
+    volumes:
+      - activity-data:/data
+
+volumes:
+  activity-data:
