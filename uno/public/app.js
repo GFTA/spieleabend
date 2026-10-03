@@ -903,7 +903,7 @@
 
   // keep the screen on while playing (needs HTTPS; silently skipped otherwise)
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") { abortDrag(); return; }
+    if (document.visibilityState !== "visible") { dnd.abort(); return; }
     if (mode) wake();
   });
 

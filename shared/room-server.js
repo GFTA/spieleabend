@@ -317,6 +317,15 @@ module.exports = function roomServer(g) {
     if (!checkRematch(room) && !autoStart(room)) broadcast(room);
   }
 
+  const KICK_BAN_MS = 5 * 60 * 1000;
+  function banned(room, name) {
+    const t = room.banned && room.banned[String(name).toLowerCase()];
+    if (!t) return false;
+    if (t > Date.now()) return true;
+    delete room.banned[String(name).toLowerCase()];
+    return false;
+  }
+
   // take a seat out of the waiting room and shift everyone behind it
   function removeMember(room, pid) {
     room.members.splice(pid, 1);
@@ -381,6 +390,7 @@ module.exports = function roomServer(g) {
         const name = cleanName(msg.name);
         if (!r) return err("Diesen Raum gibt es nicht. Prüf den Code.");
         if (!name) return err("Bitte gib deinen Namen ein.");
+        if (banned(r, name)) return err("Der Host hat dich aus diesem Raum entfernt. Versuch es in ein paar Minuten noch einmal.");
         const same = r.members.findIndex((m) => m.name.toLowerCase() === name.toLowerCase());
         if (same >= 0) {
           // same name: only allowed to take the seat back when that player is offline
@@ -411,6 +421,7 @@ module.exports = function roomServer(g) {
         if (!room || ws.pid !== -1) return;
         if (room.members.length >= MAX_PLAYERS) return err(`Der Raum ist voll (${MAX_PLAYERS} Spieler).`);
         const name = ws.watchName;
+        if (banned(room, name)) return err("Der Host hat dich aus diesem Raum entfernt.");
         if (room.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) return err(`Der Name „${name}“ ist schon vergeben.`);
         room.members.push({ name, secret: crypto.randomUUID(), avatar: avatarOf(ws.watchAvatar), color: colorOf(ws.watchColor), lobby: !!room.state });
         attach(ws, room, room.members.length - 1);
@@ -474,6 +485,17 @@ module.exports = function roomServer(g) {
         const i = +(msg.i != null ? msg.i : msg.seat);
         if (!room || !isHost || room.state || !room.members[i] || !room.members[i].bot) return;
         removeMember(room, i);
+        broadcast(room); saveRooms();
+        return;
+      }
+      case "kick": { // host removes a person from the waiting room; they cannot come back under that name for a few minutes
+        const i = +msg.i;
+        if (!room || !isHost || !room.members[i] || room.members[i].bot || i === ws.pid || (room.state && inGame(room, i))) return;
+        const name = room.members[i].name.toLowerCase();
+        for (const s of [...(sockets.get(room.code) || [])]) if (s.pid === i) { send(s, { t: "left", reason: "kicked" }); detach(s); }
+        removeMember(room, i);
+        (room.banned || (room.banned = {}))[name] = Date.now() + KICK_BAN_MS;
+        room.touched = Date.now();
         broadcast(room); saveRooms();
         return;
       }
@@ -689,11 +711,15 @@ module.exports = function roomServer(g) {
   const COMPRESSIBLE = /^(text\/|application\/(json|manifest\+json)|image\/svg)/;
   function reply(req, res, code, headers, data, key) {
     const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    if (buf.length > 1024 && COMPRESSIBLE.test(headers["content-type"] || "") && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
+    const ae = req.headers["accept-encoding"] || "";
+    if (buf.length > 1024 && COMPRESSIBLE.test(headers["content-type"] || "") && /\b(br|gzip)\b/.test(ae)) {
+      const br = /\bbr\b/.test(ae);
       let c = gzCache.get(key);
-      if (!c || !c.raw.equals(buf)) { c = { raw: buf, gz: zlib.gzipSync(buf, { level: 9 }) }; gzCache.set(key, c); }
-      res.writeHead(code, Object.assign({}, headers, { "content-encoding": "gzip", vary: "accept-encoding" }));
-      return res.end(c.gz);
+      if (!c || !c.raw.equals(buf)) { c = { raw: buf }; gzCache.set(key, c); }
+      const enc = br ? "br" : "gzip";
+      if (!c[enc]) c[enc] = br ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length } }) : zlib.gzipSync(buf, { level: 9 });
+      res.writeHead(code, Object.assign({}, headers, { "content-encoding": enc, vary: "accept-encoding" }));
+      return res.end(c[enc]);
     }
     res.writeHead(code, headers);
     res.end(buf);

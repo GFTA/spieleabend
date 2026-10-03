@@ -161,6 +161,7 @@
     }
 
     return {
+      abort() { conclude(null, "abort"); },               // drop a drag in progress (e.g. the tab goes to the background)
       get busy() { return !!drag; },                       // a finger is down on a card (maybe not yet dragging)
       get active() { return !!(drag && drag.started); },   // a card is being dragged
       get src() { return drag && drag.started ? drag.s : null; },

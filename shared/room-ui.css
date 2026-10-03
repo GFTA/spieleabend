@@ -27,6 +27,7 @@
 .members .tag.ok{background:var(--green);color:#fff}
 .members .tag.wait{background:var(--surface);color:var(--muted)}
 .members .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.members .rm.sure{width:auto;padding:0 10px;font-size:13px;font-weight:700;background:var(--red,#e0393e);color:#fff}
 .members .rm{flex:none;width:34px;height:34px;margin:-6px -4px -6px 0;border-radius:10px;border:0;background:transparent;color:var(--muted);font-size:20px}
 .members .av{font-size:21px;line-height:1;border:0;padding:0;flex:none}
 .members button.av{cursor:pointer;box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
@@ -69,6 +70,9 @@
 .menubar #menuClose{flex:1;width:auto}
 .menubar .iconact{flex:none;width:52px;padding:0;display:grid;place-items:center}
 .menubar .iconact svg{width:22px;height:22px}
+#rulesSheet .sheet{overflow:hidden}
+#rulesSheet .gamerules{overflow-y:auto;min-height:0}
+#rulesSheet .menubar .btn{flex:1}
 /* after a game: who is in for the rematch */
 .revotes{text-align:center;font-size:13px;line-height:1.5;margin:0}
 .revotes span{white-space:nowrap}

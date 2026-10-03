@@ -84,12 +84,43 @@
   function applyPrefs() {
     const root = document.documentElement;
     if (calm()) root.dataset.motion = "off"; else delete root.dataset.motion;
-    if (pref("contrast", false)) root.dataset.contrast = "high"; else delete root.dataset.contrast;
+    if (pref("contrast", nativeMatchMedia("(prefers-contrast: more)").matches)) root.dataset.contrast = "high"; else delete root.dataset.contrast;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) { const bg = getComputedStyle(root).getPropertyValue("--bg").trim(); if (bg) meta.setAttribute("content", bg); }
   }
   applyPrefs();
   P.onChange(applyPrefs);
+
+  // copy text: the clipboard API only exists on https/localhost, a LAN address needs the old way
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(t); t.select(); t.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    t.remove();
+    return ok;
+  }
+
+  // which game this page is (the id its server reports), for the activity log and the "back to your room" hint
+  const gameId = !/^https?:$/.test(location.protocol) ? Promise.resolve(null)
+    : fetch("/info", { cache: "no-store" }).then((r) => r.json()).then((j) => Object.keys(j || {}).find((k) => j[k] === true && /^[a-z0-9]{2,20}$/.test(k)) || null).catch(() => null);
+
+  // minutes spent on a game page (only while it is visible) go into the profile's activity log
+  (function playtime() {
+    let game = null, since = document.hidden ? 0 : Date.now(), acc = 0;
+    gameId.then((g) => { game = g; });
+    const flush = () => {
+      if (since) { acc += Date.now() - since; since = document.hidden ? 0 : Date.now(); }
+      if (!game || acc < 60000) return;
+      const min = Math.floor(acc / 60000); acc -= min * 60000;
+      try { P.addPlay(game, min); } catch (e) {}
+    };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { flush(); since = 0; } else since = Date.now(); });
+    window.addEventListener("pagehide", flush);
+    setInterval(flush, 60000);
+  })();
 
   // screen reader announcements: a polite live region (toasts are one themselves)
   let liveEl = null;
@@ -445,5 +476,5 @@
     el.title = sortLabel(mode) + " (S)";
     if (!el.firstElementChild) el.innerHTML = SORT_INNER;
   }
-  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams, pref, calm, say, notify, badge, sounds: null };
+  window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams, pref, calm, say, copy, gameId, notify, badge, sounds: null };
 })();
