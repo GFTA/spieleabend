@@ -275,7 +275,7 @@ module.exports = function roomServer(g) {
       if (ws.pid == null) continue;
       send(ws, Object.assign({ t: "room", code: room.code, you: ws.pid, host: room.host, party: room.party || null }, fields, {
         members, rematch: room.rematch || [], watchers: seen, leaveVote: publicLeaveVote(room.leaveVote),
-        turnLeft: clock ? Math.max(0, clock.ends - Date.now()) : 0,
+        turnLeft: clock ? Math.max(0, clock.ends - Date.now()) : 0, turnPid: clock && room.state ? room.state.cur : -1,
         view: room.state ? Game.view(room.state, ws.pid >= 0 && ws.pid < room.state.players.length ? ws.pid : -1) : null, events: events || []
       }));
     }

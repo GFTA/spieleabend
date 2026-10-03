@@ -217,7 +217,7 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 ### Globale Einstellungen, Tastenkürzel, Anstupsen (`shared/profile.js`, `kit.js`, `room-ui.js`)
 
 - **Prefs** (`SAProfile.prefs()` / `setPrefs(patch)`, im Profil-Cookie als `pf`, gelten in allen Spielen und auf der Startseite):
-  `table`, `sound`, `vol` (0–100), `motion` (false = weniger Bewegung), `contrast` (hoher Kontrast), `notify`.
+  `table`, `sound`, `vol` (0–100), `motion` (false = weniger Bewegung), `contrast` (hoher Kontrast), `notify`, `haptic` (Vibration; `null` = folgt dem Ton).
   Ungültige Werte werden verworfen, `null` löscht einen Schlüssel. Ohne gespeicherten Tisch gilt der System-Modus (hell/dunkel).
   Ist das Cookie zu groß, entfernt `save()` zuerst `k` und leere Statistikfelder.
 - `kit.js` setzt `data-motion="off"` / `data-contrast="high"` auf `<html>` (CSS in `kit.css`), kappt WAAPI-Animationen bei „weniger Bewegung“
@@ -229,6 +229,16 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
   sendet `{t:"nudge", name}` an den Spieler und `{t:"nudged"}` an den Absender. Der Button `#nudgeBtn` erscheint nach 20 s Warten.
 - Das Menü zeigt Raumcode (Link kopieren), Zuschauer und Ping; `#updateBar` meldet eine neue Version (Vergleich von `/info` mit `<meta name="…-version">`).
 - Startseite: Suche (`/`), Favoriten (★) und „Zuletzt gespielt“ in localStorage; `profile.html` zeigt Erfolge, abgeleitet aus der Statistik.
+- **Schnell-Chat:** fünf Textbausteine (`QUICK` in `room-ui.js`) als Chips über dem Chat-Feld (Warteraum und im Spiel), senden über `sendChat`.
+  Fremde Chat-Zeilen werden per `K.say` vorgelesen und – im Hintergrund-Tab – als Benachrichtigung gezeigt.
+- **Anwesenheit:** `presence(m)` vergleicht `members[].online` und blendet „… hat die Verbindung verloren / ist wieder da“ ein.
+- **Zug-Warnung:** der Server sendet in `room` zusätzlich `turnPid` (Spieler auf der Zugzeit-Uhr); wer selbst dran ist, hört fünf Sekunden
+  vor Ablauf zwei Pieptöne (`K.sounds.warn`, Vibration).
+- `K.netBar` zeigt `#offlineBar`, solange der Browser offline ist (in jedem Spiel; die Startseite hat eine eigene Leiste).
+- Einstellungen-Sheet: „Zurücksetzen“ (zweimal tippen) setzt alle Prefs zurück und lädt neu (`sound:true`, damit alte Spielstände nicht stumm schalten).
+- `SAProfile.importAll(obj)` ersetzt das Profil (läuft durch `clean()`); `profile.html` bietet dafür den Sicherungscode „SA1.“ + Base64url-JSON.
+- Startseite: „🎲 Überrasch mich“ (zufälliges erreichbares Spiel, nicht das zuletzt gespielte), „📲 Als App installieren“ (`beforeinstallprompt`,
+  Hinweis für iOS) und ein leerer Service Worker `sw.js` (cached nichts, macht die Seite installierbar).
 
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
 
