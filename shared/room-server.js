@@ -686,8 +686,8 @@ module.exports = function roomServer(g) {
   // Scripts get a content hash in their URL (app.js?v=1a2b3c4d), so a phone or a CDN
   // holding an old copy can never mix old and new files after an update.
   // The shared base (kit.css/.js) and waiting room + menu (room-ui.css/.js) are served next to the game's files.
-  const SHARED = { "/avatars.js": path.join(__dirname, "avatars.js"), "/profile.js": path.join(__dirname, "profile.js"), "/kit.css": path.join(__dirname, "kit.css"), "/kit.js": path.join(__dirname, "kit.js"), "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css"), "/home-ui.js": path.join(__dirname, "home-ui.js"), "/cards.js": path.join(__dirname, "cards.js"), "/cards.css": path.join(__dirname, "cards.css") };
-  const SCRIPTS = ["/kit.css", "/room-ui.css", "/cards.css", "/avatars.js", "/profile.js", "/kit.js", "/room-ui.js", "/home-ui.js", "/cards.js", "/game.js", "/app.js"];
+  const SHARED = { "/avatars.js": path.join(__dirname, "avatars.js"), "/profile.js": path.join(__dirname, "profile.js"), "/kit.css": path.join(__dirname, "kit.css"), "/kit.js": path.join(__dirname, "kit.js"), "/room-ui.js": path.join(__dirname, "room-ui.js"), "/room-ui.css": path.join(__dirname, "room-ui.css"), "/home-ui.js": path.join(__dirname, "home-ui.js"), "/cards.js": path.join(__dirname, "cards.js"), "/cards.css": path.join(__dirname, "cards.css"), "/tutorial.js": path.join(__dirname, "tutorial.js"), "/tutorial.css": path.join(__dirname, "tutorial.css") };
+  const SCRIPTS = ["/kit.css", "/room-ui.css", "/cards.css", "/avatars.js", "/profile.js", "/kit.js", "/room-ui.js", "/home-ui.js", "/cards.js", "/game.js", "/app.js", "/tutorial.js", "/tutorial.css", "/tour.js"];
   const fileOf = (p) => SHARED[p] || path.join(PUBLIC, p);
   const hash = crypto.createHash("sha1");
   for (const p of SCRIPTS) hash.update(fs.readFileSync(fileOf(p)));

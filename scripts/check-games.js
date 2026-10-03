@@ -24,7 +24,7 @@ const warn = (id, msg) => (strict ? bad : (i, m) => warnings.push(`warning ` + i
 const PAGE_ORDER = ["kit.css", "room-ui.css", "avatars.js", "profile.js", "kit.js", "room-ui.js", "home-ui.js", "game.js", "app.js"];
 const REQUIRED_FILES = [
   "server.js", "Dockerfile", "docker-compose.yml", "docker-compose.tunnel.yml", "package.json", "package-lock.json", "README.md",
-  "public/index.html", "public/app.js", "public/game.js", "public/sw.js", "public/manifest.webmanifest", "public/icon.svg",
+  "public/index.html", "public/app.js", "public/game.js", "public/sw.js", "public/tour.js", "public/manifest.webmanifest", "public/icon.svg",
   "test/game.test.js", "test/server.test.js",
 ];
 
@@ -97,6 +97,20 @@ for (const id of ids) {
 
   const sw = read(id, "public", "sw.js") || "";
   if (sw && !/\bSHELL\b|\bASSETS\b|addAll/.test(sw)) bad(id, "public/sw.js has no precache list");
+
+  // tutorial: steps for shared/tutorial.js, and every #id it points at must exist in the page or be built by app.js
+  const tour = read(id, "public", "tour.js");
+  if (tour != null) {
+    if (!/Tutorial\.define\(/.test(tour)) bad(id, "public/tour.js must call Tutorial.define({ steps })");
+    const nSteps = (tour.match(/\btext:/g) || []).length;
+    if (nSteps < 4) bad(id, `public/tour.js has only ${nSteps} steps with text (at least 4)`);
+    const appJs = read(id, "public", "app.js") || "";
+    const missing = new Set();
+    for (const m of tour.replace(/\/\/.*$/gm, "").matchAll(/#([A-Za-z][\w-]*)/g)) {
+      if (!page.includes(`id="${m[1]}"`) && !appJs.includes(m[1])) missing.add("#" + m[1]);
+    }
+    if (missing.size) bad(id, `public/tour.js points at elements that do not exist: ${[...missing].join(", ")}`);
+  }
 
   const tests = exists(id, "test") ? fs.readdirSync(path.join(root, id, "test")) : [];
   if (!tests.some((f) => /server/.test(f))) bad(id, "test/ needs a server test (a real websocket round through the shared server)");
