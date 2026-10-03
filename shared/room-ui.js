@@ -128,7 +128,7 @@
   //   watching(v?) get/set "watching the running game from the waiting room"
   //   toast(text), render(), maxPlayers, watchers (full rooms let people watch)
   //   onlineKey: where the room code + secret are stored to rejoin after a reload
-  //   on: { opened(), joined(m), room(m), react(m), error(m), left() }  what the game does with server messages
+  //   on: { opened(), joined(m), room(m), react(m), error(m), left(), msg(m) }  what the game does with server messages
   //   bubble(pi, text, name) -> show a short text over a player (reactions; chat lines during a game)
   //   memberExtra(m, i) -> html after the name (colour dot, ...)
   //   renderSettings(host) -> fill the settings slot and the house rules
@@ -258,6 +258,8 @@
         app.on.left();
         if (m.t === "gone") app.toast(m.reason === "idle" ? "Raum wegen Inaktivität geschlossen." : m.reason === "closed" ? "Der Raum wurde geschlossen." : "Diesen Raum gibt es nicht mehr.");
         app.render();
+      } else if (app.on.msg) {
+        app.on.msg(m); // game-specific messages (Activity's drawing strokes)
       }
     }
     // someone else lost the connection or came back: say so (a phone that sleeps looks like a dropout to the others)
