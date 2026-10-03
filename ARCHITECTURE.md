@@ -198,7 +198,7 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - **Speicherort:** Cookie `sa_profile` mit `Domain=.cool-kidz.net` (gilt für alle Spiel-Subdomains und die Startseite)
   plus Spiegel in localStorage `spieleabend.profile`; der neuere Zeitstempel `u` gewinnt. Auf anderen Hosts (IP im WLAN) ist es host-bezogen.
 - `kit.js`: `identity()` nimmt `?name=`/`?av=` (Vorrang), sonst das Profil; das `#myName`-Feld schreibt ins Profil.
-  `avatarPicker()`/`pickerHTML()` zeigen Farbwahl (`.avcols`) und Avatar-Raster (`.avgrid`, scrollt, feste Spaltenzahl gibt es nicht).
+  `pickerHTML()` zeigt Farbwahl (`.avcols`) und Avatar-Raster (`.avgrid`) – nur auf Startseite und Profil; `avatarPicker()` zeigt in den Spielen nur noch Avatar und Farbe an.
 - **Farbe** geht als validierter Hex-Wert mit `create`/`join`/`avatar` zum Server (`colorOf()` in `room-server.js`) und
   steht in `members`, Chat, Zuschauer- und Party-Daten. Sie erscheint in Warteraum, Chat, Party-Liste und Profil, nicht auf den Spielplaketten.
 - **Krönchen** 👑 (`.avc.crown::after`) trägt der Host in Warteraum und Party-Liste.
@@ -233,9 +233,7 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)
 
 - `room-ui.js` baut in **jedem** Spiel oben rechts ein Einstellungen-Sheet
-  (`#settings`): Tisch-Design, Größe, Avatar und Farbe (wie im Profil,
-  online wird `{t:"avatar", avatar, color}` an den Raum geschickt) und der
-  Ton-Schalter. Geöffnet wird es über `#setBtn` in der Topbar im Spiel bzw.
+  (`#settings`): Tisch-Design, Größe, Ton, Lautstärke und die Barrierefreiheits-Schalter. **Avatar und Farbe werden nur auf der Startseite bzw. im Profil gewählt**, nie im Spiel oder Warteraum (`#myAvatar` zeigt sie nur an). Geöffnet wird es über `#setBtn` in der Topbar im Spiel bzw.
   `#setFab` (fest oben rechts) auf Startbildschirm/Warteraum; im Spiel ist
   der Fab per `:has(#game:not([hidden]))` ausgeblendet. Pro Spiel ist dafür
   kein HTML nötig; spielspezifische Optionen gehören in ein

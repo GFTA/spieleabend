@@ -126,22 +126,15 @@
       COLORS.map((c) => `<button type="button" data-col="${c}" aria-pressed="${c === col}" style="background:${c}" aria-label="Farbe ${c}"></button>`).join("") + `</div>` +
       avatars.map((a) => `<button type="button" data-pick="${a}" aria-pressed="${a === cur}">${a}</button>`).join("");
   }
-  // the avatar button next to the name field (#myAvatar) opens a grid (#avatarGrid) to pick from
-  function avatarPicker({ avatars, get, set }) {
+  // the avatar next to the name field (#myAvatar) only shows the profile's avatar and colour; they are chosen on the start page
+  function avatarPicker() {
     const btn = $("#myAvatar"), grid = $("#avatarGrid");
+    if (grid) grid.hidden = true;
+    if (!btn) return;
     const paint = () => { btn.style.background = P.get().col || ""; };
-    paint();
-    btn.addEventListener("click", () => {
-      grid.innerHTML = pickerHTML(avatars, get(), P.get().col);
-      grid.hidden = !grid.hidden;
-    });
-    grid.addEventListener("click", (e) => {
-      const c = e.target.closest("[data-col]");
-      if (c) { P.set({ col: c.dataset.col }); paint(); grid.innerHTML = pickerHTML(avatars, get(), P.get().col); return; }
-      const b = e.target.closest("[data-pick]"); if (!b) return;
-      set(b.dataset.pick); P.set({ av: b.dataset.pick });
-      grid.hidden = true; btn.textContent = b.dataset.pick;
-    });
+    btn.tabIndex = -1; btn.style.pointerEvents = "none"; btn.style.cursor = "default";
+    btn.setAttribute("aria-label", "Dein Avatar (auf der Startseite änderbar)");
+    paint(); P.onChange(paint);
   }
 
   // A row of player plates that scrolls sideways: whenever another player gets the turn, bring them into view.

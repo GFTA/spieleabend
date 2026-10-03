@@ -95,12 +95,11 @@
   // chat during a game: a button in the top bar next to the menu, and a sheet with the whole log
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="nudgeBtn" type="button" aria-label="Anstupsen: Du bist dran" title="Anstupsen: Du bist dran" hidden>${ICONS.bell}</button>`);
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="chatBtn" type="button" aria-label="Chat" title="Chat" hidden>${ICONS.chat}<span class="badge" id="chatBadge" hidden></span></button>`);
-  // settings (design, avatar, colour, sound): a button in the game's top bar, a floating one on the start and waiting screens
+  // settings (design, sound, accessibility): a button in the game's top bar, a floating one on the start and waiting screens
   $("#menuBtn").insertAdjacentHTML("beforebegin", `<button class="iconbtn" id="setBtn" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>`);
   document.body.insertAdjacentHTML("beforeend", `<button class="iconbtn setfab" id="setFab" type="button" aria-label="Einstellungen" title="Einstellungen">${ICONS.sliders}</button>
   <div class="overlay" id="settings" hidden><div class="sheet"><h2>Einstellungen</h2>
     <div class="look" id="lookSettings"></div>
-    <div class="label">Avatar &amp; Farbe</div><div class="avgrid" id="setAvGrid"></div>
     <div class="setrow"><label class="toggle" for="soundOn"><input type="checkbox" id="soundOn" checked><span>Töne und Vibration</span></label>
       <div class="volrow">${ICONS.vol}<input class="range" type="range" id="soundVol" min="0" max="100" step="5" value="100" aria-label="Lautstärke"></div></div>
     <label class="toggle" for="calmOn"><input type="checkbox" id="calmOn"><span>Weniger Bewegung<small>Keine Flug- und Wackel-Animationen</small></span></label>
@@ -385,7 +384,7 @@
       $("#sitBtn").hidden = !watcher || r.members.length >= max;
       $("#members").innerHTML = r.members.map((m, i) =>
         `<li class="${i === r.you ? "me" : ""}">${m.bot ? `<span class="botico">${ICONS.bot}</span>` : `<span class="on${m.online ? "" : " off"}"></span>`}` +
-        (i === r.you ? `<button class="av avc${i === r.host ? " crown" : ""}" type="button" data-myav style="--avc:${esc(m.color || "transparent")}" aria-label="Avatar wechseln">${m.avatar}</button>` : `<span class="av avc${i === r.host ? " crown" : ""}" style="--avc:${esc(m.color || "transparent")}" aria-hidden="true">${m.avatar || ""}</span>`) +
+        `<span class="av avc${i === r.host ? " crown" : ""}" style="--avc:${esc(m.color || "transparent")}" aria-hidden="true">${m.avatar || ""}</span>` +
         `<span class="nm">${esc(m.name)}</span>${app.memberExtra ? app.memberExtra(m, i) : ""}` +
         `${i === r.host ? '<span class="tag">Host</span>' : ""}${i === r.you ? '<span class="tag">du</span>' : ""}${m.bot ? '<span class="tag">Computer</span>' : ""}` +
         `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : ""}</li>`).join("");
@@ -540,36 +539,21 @@
     $("#inviteBtn").addEventListener("click", shareSheet);
     $("#addBot").addEventListener("click", () => send({ t: "bot" }));
     $("#sitBtn").addEventListener("click", () => send({ t: "sit" }));
-    const lobbyAv = document.createElement("div");
-    lobbyAv.className = "avgrid"; lobbyAv.id = "lobbyAv"; lobbyAv.hidden = true;
-    $("#members").after(lobbyAv);
-    const fillLobbyAv = () => { const r = R(); lobbyAv.innerHTML = window.Spieleabend.pickerHTML(app.avatars, r && r.members[r.you] ? r.members[r.you].avatar : "", window.Spieleabend.profile.get().col); };
     $("#members").addEventListener("click", (e) => {
       const b = e.target.closest("[data-unbot]");
       if (b) return send({ t: "unbot", i: +b.dataset.unbot });
-      if (e.target.closest("[data-myav]")) { lobbyAv.hidden = !lobbyAv.hidden; if (!lobbyAv.hidden) fillLobbyAv(); }
-    });
-    lobbyAv.addEventListener("click", (e) => {
-      const c = e.target.closest("[data-col]"), a = e.target.closest("[data-pick]");
-      if (!c && !a) return;
-      const P = window.Spieleabend.profile;
-      if (c) P.set({ col: c.dataset.col }); else { app.setAvatar(a.dataset.pick); P.set({ av: a.dataset.pick }); lobbyAv.hidden = true; }
-      send({ t: "avatar", avatar: a ? a.dataset.pick : undefined, color: P.get().col });
-      if (!lobbyAv.hidden) fillLobbyAv();
     });
 
-    // ---------- settings sheet: design, avatar and colour (also sent to the room), sound ----------
+    // ---------- settings sheet: design, sound, accessibility ----------
     (function settings() {
-      const P = window.Spieleabend.profile, grid = $("#setAvGrid");
-      const paintHome = () => { const b = $("#myAvatar"); if (b) { b.textContent = P.get().av; b.style.background = P.get().col || ""; } };
-      const fill = () => { grid.innerHTML = window.Spieleabend.pickerHTML(app.avatars, P.get().av, P.get().col); };
+      const P = window.Spieleabend.profile;
       const K = window.Spieleabend;
       const syncPrefs = () => {
         $("#calmOn").checked = K.calm(); $("#contrastOn").checked = K.pref("contrast", false);
         $("#notifyOn").checked = K.pref("notify", false) && Notification.permission === "granted";
         $("#fsBtn").textContent = document.fullscreenElement ? "Vollbild beenden" : "Vollbild";
       };
-      const open = () => { fill(); syncPrefs(); $("#settings").hidden = false; };
+      const open = () => { syncPrefs(); $("#settings").hidden = false; };
       $("#calmOn").addEventListener("change", (e) => P.setPrefs({ motion: e.target.checked ? false : null }));
       $("#contrastOn").addEventListener("change", (e) => P.setPrefs({ contrast: e.target.checked }));
       if ("Notification" in window) $("#notifyRow").hidden = false;
@@ -633,13 +617,6 @@
       $("#setBtn").addEventListener("click", open);
       $("#setFab").addEventListener("click", open);
       $("#settingsClose").addEventListener("click", () => { $("#settings").hidden = true; });
-      grid.addEventListener("click", (e) => {
-        const c = e.target.closest("[data-col]"), a = e.target.closest("[data-pick]");
-        if (!c && !a) return;
-        if (c) P.set({ col: c.dataset.col }); else { app.setAvatar(a.dataset.pick); P.set({ av: a.dataset.pick }); }
-        if (app.mode() === "online" && R()) send({ t: "avatar", avatar: a ? a.dataset.pick : undefined, color: P.get().col });
-        paintHome(); fill();
-      });
     })();
 
     // ---------- in-game menu ----------
