@@ -337,7 +337,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   }
   // only touch the hrefs, so a room code someone is typing stays put
   function updateLinks() {
-    for (const a of document.querySelectorAll(".game a[data-url]")) a.href = gameUrl(a.dataset.url, a.dataset.extra ? { rules: 1 } : undefined);
+    for (const a of document.querySelectorAll(".game a[data-url]")) a.href = gameUrl(a.dataset.url, a.dataset.extra ? { [a.dataset.extra]: 1 } : undefined);
   }
 
   const TINT = { uno: "#e0393e", schiffe: "#2d6fd6", viergewinnt: "#f2c230", wuerfelpoker: "#f28a1f", kniffel: "#2fa35b", poker: "#8a4fd0", maedn: "#1fb5c9", hangman: "#b98a5a", phase10: "#ec6fb2" };
@@ -370,7 +370,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       return `<article class="game" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
         <div class="top">
           <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88" loading="lazy" decoding="async"></div>
-          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}<a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
+          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}<a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><a class="rulelink" href="${esc(gameUrl(g.url, { tutorial: 1 }))}" data-url="${esc(g.url)}" data-extra="tutorial" aria-label="${esc(g.name)}: Tutorial starten">Tutorial</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
         </div>
         <p>${esc(g.desc)}</p>
         <div class="partybox" data-for="${esc(g.id)}"></div>
