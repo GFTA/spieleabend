@@ -199,6 +199,7 @@
   },
   {
     "id": "activity",
+    "added": "2026-10-03",
     "name": "Activity",
     "title": "Activity",
     "desc": "Zeichnen, Erklären, Pantomime: errate die Begriffe der anderen.",
@@ -210,6 +211,7 @@
   },
   {
     "id": "catan",
+    "added": "2026-10-03",
     "name": "Catan",
     "title": "Catan",
     "desc": "Siedeln, handeln, bauen: Wer zuerst 10 Siegpunkte hat, gewinnt.",

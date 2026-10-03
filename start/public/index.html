@@ -98,7 +98,7 @@ footer{order:2}
   .hero h1::before{width:1.75em;height:1.6em;margin-top:-.8em}
   .tagline{max-width:none}
   .layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;align-items:start}
-  .side{display:flex;flex-direction:column;gap:14px}
+  .side{display:flex;flex-direction:column;gap:14px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:3px;margin:-3px}
   .side>.me,.side>.party{width:100%;align-self:stretch}
   .games{grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:14px;align-content:start}
   .hero{padding-bottom:8px}
@@ -203,6 +203,16 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .resume .go{margin-left:auto;flex:none;padding:8px 14px;border-radius:12px;background:var(--green);color:#fff}
 .streak{margin:0;font-size:13px;font-weight:700;color:var(--muted)}
 .game{content-visibility:auto;contain-intrinsic-size:auto 140px}
+.hello{margin:0;font-weight:700;font-size:16px}
+.hello small{display:block;color:var(--muted);font-weight:600;font-size:13px;margin-top:2px}
+.newach{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:6px 14px;border-radius:999px;background:var(--accent);color:#231a05;font-weight:800;font-size:13.5px;text-decoration:none}
+.game .tagfresh{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--green);color:#fff}
+.grouphead{grid-column:1/-1;margin:6px 0 -2px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.game.dim{opacity:.7}
+.game.skel{display:block;height:150px;content-visibility:visible;background:linear-gradient(100deg,var(--bg2) 30%,var(--surface) 50%,var(--bg2) 70%) 0 0/250% 100%;animation:skel 1.5s linear infinite}
+@keyframes skel{to{background-position:-150% 0}}
+@media (prefers-reduced-motion:reduce){.game.skel{animation:none}}
+:root[data-motion="off"] .game.skel{animation:none}
 </style>
 </head>
 <body>
@@ -210,6 +220,8 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <header class="hero">
     <div class="label">cool-kidz.net</div>
     <h1>Spiele<span>abend</span></h1>
+    <p class="hello" id="hello" hidden></p>
+    <a class="newach" id="newAch" href="profile.html" hidden></a>
   </header>
 
   <a class="resume" id="resume" hidden></a>
@@ -245,7 +257,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   <div class="finder" role="search"><input id="q" type="search" placeholder="Spiel suchen (Taste /)" aria-label="Spiel suchen" autocomplete="off" enterkeyhint="search"><button class="chip" id="favOnly" type="button" aria-pressed="false">★ Favoriten</button><button class="chip" id="randomBtn" type="button">🎲 Überrasch mich</button><button class="chip" id="installBtn" type="button" hidden>📲 Als App installieren</button></div>
   <div class="tagrow" id="tagRow" role="group" aria-label="Kategorie"></div>
   <p class="hint" id="installHint" hidden>Tippe unten im Browser auf „Teilen“ und wähle „Zum Home-Bildschirm“.</p>
-  <section class="games" id="games" aria-label="Spiele"></section>
+  <section class="games" id="games" aria-label="Spiele" aria-busy="true"><article class="game skel" aria-hidden="true"></article><article class="game skel" aria-hidden="true"></article><article class="game skel" aria-hidden="true"></article><article class="game skel" aria-hidden="true"></article><article class="game skel" aria-hidden="true"></article><article class="game skel" aria-hidden="true"></article></section>
   </div>
   </div>
 
@@ -254,6 +266,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 
 <script src="avatars.js"></script>
 <script src="profile.js"></script>
+<script src="achievements.js"></script>
 <script>
 (() => {
   "use strict";
@@ -309,7 +322,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   }
   const tellParty = () => { if (party && saved) act({ t: "avatar", avatar: me.avatar, color: me.color }).catch(() => {}); };
   $("#myName").value = me.name;
-  $("#myName").addEventListener("input", (e) => { me.name = e.target.value; P.set({ name: me.name.trim() }); updateLinks(); });
+  $("#myName").addEventListener("input", (e) => { me.name = e.target.value; P.set({ name: me.name.trim() }); updateLinks(); if (games.length) renderHello(); });
   $("#myAvatar").addEventListener("click", () => {
     const g = $("#avatarGrid");
     g.hidden = !g.hidden;
@@ -352,6 +365,13 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   if (!Array.isArray(favs)) favs = [];
   if (!Array.isArray(recent)) recent = [];
   const keep = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  // "2–6 Spieler + Zuschauer" -> [2, 6]
+  const range = (g) => { const m = /(\d+)(?:\s*[–-]\s*(\d+))?/.exec(g.players || ""); return m ? [+m[1], +(m[2] || m[1])] : [1, 99]; };
+  const FRESH_DAYS = 14;
+  const isFresh = (g, stats) => { const t = g.added && Date.parse(g.added); return !!t && Date.now() - t < FRESH_DAYS * 864e5 && !(stats[g.id] && stats[g.id].g); };
+  const partyN = () => (party ? party.members.length : 0);
+  const fits = (g, n) => n < 2 || (([lo, hi]) => lo <= n && n <= hi)(range(g));
+  let fitN = 0;
   function shown() {
     const q = query.trim().toLowerCase(), daily = dailyId(), rank = (g) => (favs.includes(g.id) ? 0 : g.id === daily ? 0.5 : recent.includes(g.id) ? 1 + recent.indexOf(g.id) / 10 : 5);
     return games.map((g, i) => [g, i]).filter(([g]) => (!favOnly || favs.includes(g.id)) && (!tag || (g.tags || []).includes(tag)) && (!q || `${g.name} ${g.title || ""} ${g.desc} ${g.players}`.toLowerCase().includes(q)))
@@ -360,17 +380,20 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   function render(status) {
     status = status || lastStatus;
     const st = Object.fromEntries((status || []).map((s) => [s.id, s]));
-    const list = shown(), stats = P.get().stats, daily = dailyId();
+    const all = shown(), stats = P.get().stats, daily = dailyId();
+    fitN = partyN();
+    const list = all.filter((g) => fits(g, fitN)).concat(all.filter((g) => !fits(g, fitN)));
+    const firstOut = list.findIndex((g) => !fits(g, fitN));
     if (!$("#tagRow").children.length) $("#tagRow").innerHTML = TAGS.filter(([k]) => games.some((g) => (g.tags || []).includes(k))).map(([k, n]) => `<button class="chip" type="button" data-tag="${k}" aria-pressed="false">${n}</button>`).join("");
-    $("#games").innerHTML = !list.length ? `<p class="nogames">${favOnly && !favs.length ? "Noch keine Favoriten. Tippe bei einem Spiel auf den Stern." : "Kein Spiel gefunden."}</p>` : list.map((g) => {
+    $("#games").innerHTML = !list.length ? `<p class="nogames">${favOnly && !favs.length ? "Noch keine Favoriten. Tippe bei einem Spiel auf den Stern." : "Kein Spiel gefunden."}</p>` : list.map((g, i) => {
       const s = st[g.id];
       const pill = !s ? `<span class="pill">Prüfe …</span>`
         : s.online ? `<span class="pill on">Online${s.rooms ? ` · ${s.rooms} ${s.rooms === 1 ? "Raum" : "Räume"} offen` : ""}</span>`
         : `<span class="pill off">Gerade nicht erreichbar</span>`;
-      return `<article class="game" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
+      return `${i === firstOut ? `<h3 class="grouphead">Passt nicht zu ${fitN} Spielern</h3>` : ""}<article class="game${i >= firstOut && firstOut >= 0 ? " dim" : ""}" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
         <div class="top">
           <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88" loading="lazy" decoding="async"></div>
-          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}<a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><a class="rulelink" href="${esc(gameUrl(g.url, { tutorial: 1 }))}" data-url="${esc(g.url)}" data-extra="tutorial" aria-label="${esc(g.name)}: Tutorial starten">Tutorial</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
+          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${isFresh(g, stats) ? `<span class="tagfresh">Neu</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}<a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><a class="rulelink" href="${esc(gameUrl(g.url, { tutorial: 1 }))}" data-url="${esc(g.url)}" data-extra="tutorial" aria-label="${esc(g.name)}: Tutorial starten">Tutorial</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
         </div>
         <p>${esc(g.desc)}</p>
         <div class="partybox" data-for="${esc(g.id)}"></div>
@@ -379,11 +402,28 @@ footer{text-align:center;color:var(--muted);font-size:12px}
         </div>
       </article>`;
     }).join("");
+    $("#games").removeAttribute("aria-busy");
     renderPartyBoxes();
   }
 
   // "3 Tage in Folge" from the activity log, and the way back into a room this browser still sits in
+  function renderHello() {
+    const el = $("#hello"), h = new Date().getHours(), p = P.get(), name = (p.name || "").trim();
+    const hi = h >= 5 && h < 11 ? "Guten Morgen" : h >= 17 && h < 23 ? "Guten Abend" : "Hallo";
+    let g = 0, w = 0;
+    for (const s of Object.values(p.stats)) { g += s.g; w += s.w; }
+    const list = games.length ? window.SAAch.list({ stats: p.stats, games, activity: P.activity() }) : [], ok = list.filter((a) => a.ok);
+    el.hidden = false;
+    el.innerHTML = `${hi}${name ? ", " + esc(name) : ""}` + (g ? `<small>${g} ${g === 1 ? "Partie" : "Partien"} · ${w} ${w === 1 ? "Sieg" : "Siege"}${ok.length ? ` · ${ok.length} von ${list.length} Erfolgen` : ""}</small>` : "");
+    const note = $("#newAch");
+    let seen = null; try { seen = JSON.parse(localStorage.getItem("spieleabend.achseen")); } catch (e) {}
+    if (!Array.isArray(seen)) { if (list.length) try { localStorage.setItem("spieleabend.achseen", JSON.stringify(ok.map((a) => a.id))); } catch (e) {} note.hidden = true; return; }
+    const fresh = ok.filter((a) => !seen.includes(a.id));
+    note.hidden = !fresh.length;
+    if (fresh.length) note.textContent = `🏅 Neuer Erfolg: ${fresh.length === 1 ? fresh[0].name : fresh.length + " Erfolge"}`;
+  }
   function renderHabits() {
+    renderHello();
     const a = P.activity(), line = $("#streak");
     line.hidden = !(a.streak >= 2 || a.playedToday);
     line.textContent = a.streak >= 2 ? `🔥 ${a.streak} Tage in Folge gespielt${a.playedToday ? "" : ". Heute noch eine Runde?"}` : "Heute schon gespielt.";
@@ -485,14 +525,14 @@ footer{text-align:center;color:var(--muted);font-size:12px}
   function leaveLocal(text) {
     if (es) { es.close(); es = null; }
     party = null; saved = null; write(PK, null); busy = false;
-    renderParty(); renderPartyBoxes(); say(text);
+    renderParty(); refit(); say(text);
   }
   function connectParty() {
     if (es) es.close();
     if (!saved) return;
     const src = new EventSource(`party/events?code=${encodeURIComponent(saved.code)}&secret=${encodeURIComponent(saved.secret)}`);
     es = src;
-    src.onmessage = (e) => { if (es !== src) return; party = JSON.parse(e.data); busy = false; renderParty(); renderPartyBoxes(); maybeGo(); };
+    src.onmessage = (e) => { if (es !== src) return; party = JSON.parse(e.data); busy = false; renderParty(); refit(); maybeGo(); };
     src.addEventListener("kicked", () => { if (es === src) leaveLocal("Du wurdest aus der Party entfernt."); });
     // a closed stream (a dropped one reconnects on its own) may mean the party is gone: ask before forgetting it
     src.onerror = async () => {
@@ -528,6 +568,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     if (!g.max || n <= g.max || g.hint === false) return "";
     return `Die Party hat ${n} Leute, ${g.name} hat ${g.max} Plätze. Es spielen der Host und alle, die „Bereit“ gedrückt haben, die anderen schauen zu.`;
   };
+  const refit = () => { if (partyN() !== fitN && games.length) render(); else renderPartyBoxes(); };
   function renderPartyBoxes() {
     document.body.classList.toggle("inparty", !!party);
     updateLinks();
@@ -575,7 +616,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
     try {
       const r = await api(path, body);
       saved = { code: r.view.code, secret: r.secret }; write(PK, saved); party = r.view; prefill = ""; say("");
-      renderParty(); renderPartyBoxes(); connectParty();
+      renderParty(); refit(); connectParty();
     } catch (e) { say(e.message); }
   }
   $("#party").addEventListener("click", async (e) => {
