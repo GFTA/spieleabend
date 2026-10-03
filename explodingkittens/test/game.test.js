@@ -371,7 +371,7 @@ test("timing: the window length and the turn clock are sane", () => {
   const t0 = Date.now();
   const S = mk(3), p = S.cur;
   setup(S, ["cat1", "cat2"]);
-  give(S, p, "shuffle");
+  give(S, p, "shuffle"); give(S, (p + 1) % 3, "nope");
   Game.act(S, p, { t: "play", c: "shuffle" });
   assert.ok(S.stack.until - t0 >= Game.WINDOW_MS - 50);
   assert.ok(Game.nextDeadline(S, t0) > 0);
@@ -398,4 +398,40 @@ test("round end: next starts a new round, after the game is over wins are reset"
   assert.strictEqual(S.phase, "roundEnd");
   if (S.last.over) { Game.act(S, 0, { t: "next" }); assert.ok(S.players.every((x) => x.wins === 0)); assert.strictEqual(S.round, 1); }
   assert.strictEqual(Game.act(S, 0, { t: "next" }).ok, true);
+});
+
+test("nobody can say Nö: the card resolves after a short beat instead of the full window", () => {
+  const S = mk(3), p = S.cur;
+  setup(S, ["cat1", "cat2"]);
+  give(S, p, "shuffle");
+  const t0 = Date.now();
+  Game.act(S, p, { t: "play", c: "shuffle" });
+  assert.ok(S.stack.until - t0 <= Game.SETTLE_MS + 50);
+});
+
+test("\"Kein Nö\" from everybody holding one ends the window early; a Nö reopens it", () => {
+  const S = mk(3), p = S.cur, a = (p + 1) % 3, b = (p + 2) % 3;
+  setup(S, ["cat1", "cat2"]);
+  give(S, p, "shuffle"); give(S, a, "nope"); give(S, b, "nope");
+  Game.act(S, p, { t: "play", c: "shuffle" });
+  const full = S.stack.until;
+  assert.ok(full - Date.now() > 500);
+  assert.ok(Game.act(S, a, { t: "pass" }).ok);
+  assert.strictEqual(S.stack.until, full); // b may still say Nö
+  assert.ok(Game.act(S, b, { t: "pass" }).ok);
+  assert.ok(S.stack.until - Date.now() <= Game.SETTLE_MS + 50);
+  assert.strictEqual(Game.view(S, a).stack.passed, true);
+  assert.strictEqual(Game.view(S, p).stack.passed, false);
+});
+
+test("a Nö clears earlier passes", () => {
+  const S = mk(3), p = S.cur, a = (p + 1) % 3, b = (p + 2) % 3;
+  setup(S, ["cat1", "cat2"]);
+  give(S, p, "shuffle"); give(S, a, "nope", "nope"); give(S, b, "nope");
+  Game.act(S, p, { t: "play", c: "shuffle" });
+  Game.act(S, b, { t: "pass" });
+  assert.ok(Game.act(S, a, { t: "nope" }).ok);
+  assert.deepStrictEqual(S.stack.passed, []);
+  assert.ok(S.stack.until - Date.now() > 1000); // a still has one, b is asked again
+  assert.strictEqual(Game.act(S, p, { t: "pass" }).ok, true);
 });

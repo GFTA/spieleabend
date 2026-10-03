@@ -533,6 +533,7 @@
   $("#tripBtn").addEventListener("click", () => activate(3));
   $("#giveBtn").addEventListener("click", () => activate());
   $("#nopeBtn").addEventListener("click", () => nope());
+  $("#passBtn").addEventListener("click", () => { if (V && V.phase === "stack" && !V.stack.passed) send({ t: "pass" }); });
   $("#cancelBtn").addEventListener("click", () => { sel = null; pick = null; naming = null; $("#nameSheet").hidden = true; paintSel(); renderDock(); });
   $("#resultBtn").addEventListener("click", () => { peek = false; render(); });
 
@@ -696,7 +697,7 @@
     const bar = $("#stackBar"), st = V.stack;
     if (V.phase !== "stack" || !st) { bar.hidden = true; stackKey = ""; return; }
     bar.hidden = false;
-    const key = `${V.round}:${V.mv}:${st.nopes}`;
+    const key = `${V.round}:${V.mv}:${st.nopes}:${st.pn}`;
     if (key === stackKey) return;
     stackKey = key; stackEnds = Date.now() + st.left;
     const total = st.nopes ? G.NOPE_MS : G.WINDOW_MS, i = bar.firstElementChild;
@@ -862,7 +863,7 @@
     } else if (V.phase === "stack") {
       const st = V.stack;
       av = V.players[st.pi].avatar; who = `${pname(st.pi)} ${verb(st.pi, "spielst", "spielt")} ${G.cardName(st.c)}`;
-      hint = canNope() ? "Tippe auf „Nö!“, um es abzuwehren." : st.last === V.me ? "Du hast schon „Nö!“ gesagt." : count("nope") ? "Zu spät für ein „Nö!“." : "Du hast kein „Nö!“.";
+      hint = canNope() ? (st.passed ? "Du lässt es durch. Tippe auf „Nö!“, falls du es dir anders überlegst." : "Tippe auf „Nö!“, um es abzuwehren, oder auf „Kein Nö“.") : st.last === V.me ? "Du hast schon „Nö!“ gesagt." : count("nope") ? "Zu spät für ein „Nö!“." : "Du hast kein „Nö!“.";
     } else if (V.phase === "give") {
       const f = V.give.from;
       av = V.players[f].avatar;
@@ -900,6 +901,7 @@
     $("#drawBtn").disabled = !play;
     $("#nopeBtn").hidden = !(V.phase === "stack" && !watch && count("nope") > 0);
     $("#nopeBtn").disabled = !nope_;
+    $("#passBtn").hidden = !(V.phase === "stack" && nope_ && !V.stack.passed && !(V.stack.pi === V.me && V.stack.nopes % 2 === 0));
     for (const e of $$("#hand .card")) e.classList.toggle("ready", nope_ && e.dataset.c === "nope");
     $("#playBtn").hidden = !(play && c && !G.isCat(c) && c !== "nope" && c !== "defuse" && !pick);
     if (c) $("#playBtn").textContent = `${G.cardName(c)} spielen`;

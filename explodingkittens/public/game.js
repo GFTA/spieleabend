@@ -20,6 +20,7 @@
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
   const WINDOW_MS = 3200;  // everybody may play a "Nö!" for this long after a card was played
   const NOPE_MS = 2600;    // ... and after each Nö
+  const SETTLE_MS = 600;   // when nobody can or wants to say Nö, the card resolves after this short beat
   const TURN_MS = 45000;   // the server's clock for whoever has to decide something
   const HAND = 7, PEEK = 3;
 
@@ -76,7 +77,7 @@
       players: players.slice(0, MAX_PLAYERS).map((p, i) => ({ name: p.name, bot: !!p.bot, avatar: avatarOf(p, i), wins: 0, hand: [], out: false })),
       goal: normGoal(goal), level: normLevel(level),
       round: 0, starter: 0, mv: 0, tn: 0, txn: 0, log: [], last: null,
-      win: fast ? 800 : WINDOW_MS, nopeWin: fast ? 800 : NOPE_MS
+      win: fast ? 800 : WINDOW_MS, nopeWin: fast ? 800 : NOPE_MS, settle: fast ? 150 : SETTLE_MS
     };
     S.starter = rand(S.players.length);
     startRound(S, []);
@@ -281,15 +282,29 @@
   }
 
   function startStack(S, pi, c, n, target, name, events) {
-    S.stack = { pi, c, n, target, name, nopes: 0, last: -1, until: Date.now() + S.win };
+    S.stack = { pi, c, n, target, name, nopes: 0, last: -1, passed: [], until: Date.now() + S.win };
     S.phase = "stack";
     events.push({ t: n === 1 ? "play" : "combo", pi, c, n, target });
+    settle(S);
+  }
+  // Waiting out the full window only makes sense while somebody might still say Nö: a person with a Nö in
+  // hand who has not passed yet, or a computer player that means to. Otherwise cut it short.
+  function settle(S) {
+    const st = S.stack;
+    if (!st) return;
+    for (let i = 0; i < S.players.length; i++) {
+      const p = S.players[i];
+      if (p.out || st.last === i || !p.hand.includes("nope")) continue;
+      if (i === st.pi && st.nopes % 2 === 0) continue; // nobody cancels their own card
+      if (p.bot ? wantsNope(S, i) : !st.passed.includes(i)) return;
+    }
+    st.until = Math.min(st.until, Date.now() + S.settle);
   }
 
   // Apply an action by player `pi`. Returns { ok, error?, events }. Actions:
   //   {t:"play", c, target?}            an action card (Gefallen needs a target)
   //   {t:"combo", c, n, target, name?}  2 or 3 equal cats; a pair steals at random, a triple names a card
-  //   {t:"nope"}  {t:"draw"}  {t:"give", c}  {t:"place", pos}  {t:"next"}  {t:"skip"} (host)  {t:"timeout"} (server clock)
+  //   {t:"nope"}  {t:"pass"} (no Nö from me)  {t:"draw"}  {t:"give", c}  {t:"place", pos}  {t:"next"}  {t:"skip"} (host)  {t:"timeout"} (server clock)
   function act(S, pi, a) {
     const r = doAct(S, pi, a);
     if (r.ok) S.mv++;
@@ -338,9 +353,16 @@
       const k = P.hand.indexOf("nope");
       if (k < 0) return fail("Du hast kein „Nö!“.");
       P.hand.splice(k, 1); S.disc.push("nope");
-      S.stack.nopes++; S.stack.last = pi; S.stack.until = Date.now() + S.nopeWin;
+      S.stack.nopes++; S.stack.last = pi; S.stack.until = Date.now() + S.nopeWin; S.stack.passed = [];
       events.push({ t: "nope", pi, n: S.stack.nopes });
       log(S, `${P.name}: „Nö!“`);
+      settle(S);
+      return ok();
+    }
+    if (a.t === "pass") { // "no Nö from me": once everybody who could has said so, the card resolves right away
+      if (S.phase !== "stack" || !S.stack) return fail("Es gibt nichts abzuwehren.");
+      if (!S.stack.passed.includes(pi)) S.stack.passed.push(pi);
+      settle(S);
       return ok();
     }
 
@@ -510,7 +532,7 @@
       deckN: S.deck.length, kn: kittensIn(S.deck), discN: S.disc.length, discTop: S.disc.length ? S.disc[S.disc.length - 1] : null,
       hand: me >= 0 ? S.players[me].hand.slice() : null,
       peek: me >= 0 && S.peeks[me] ? S.peeks[me].slice() : null,
-      stack: st ? { pi: st.pi, c: st.c, n: st.n, target: st.target, name: st.name, nopes: st.nopes, last: st.last, left: Math.max(0, st.until - Date.now()) } : null,
+      stack: st ? { pi: st.pi, c: st.c, n: st.n, target: st.target, name: st.name, nopes: st.nopes, last: st.last, passed: me >= 0 && st.passed.includes(me), pn: st.passed.length, left: Math.max(0, st.until - Date.now()) } : null,
       give: S.give ? { from: S.give.from, to: S.give.to } : null,
       place: S.place ? { pi: S.place.pi } : null,
       txs: S.txs.map((x) => ({ k: x.k, from: x.from, to: x.to, c: pi === x.from || pi === x.to ? x.c : null })),
@@ -522,7 +544,7 @@
   const needsTarget = (c, n) => (n > 1 ? true : c === "favor");
 
   return {
-    MAX_PLAYERS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, CARDS, ORDER, ACTIONS, CATS, HAND, PEEK, WINDOW_MS, NOPE_MS, TURN_MS,
+    MAX_PLAYERS, BOT_NAMES, AVATARS, BOT_AVATAR, LEVELS, CARDS, ORDER, ACTIONS, CATS, HAND, PEEK, WINDOW_MS, NOPE_MS, SETTLE_MS, TURN_MS,
     normGoal, normLevel, cardName, isCat, needsTarget, newGame, startRound, act, tick, nextDeadline, waitingFor, botMove, botPlan, view
   };
 });
