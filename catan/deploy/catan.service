@@ -1,0 +1,21 @@
+# systemd unit for running Catan without Docker.
+# Copy ~/spieleabend/catan to /opt/catan, run `npm ci --omit=dev` there, then:
+#   sudo cp ~/spieleabend/catan/deploy/catan.service /etc/systemd/system/
+#   sudo systemctl enable --now catan
+[Unit]
+Description=Catan game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/catan
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8101
+Environment=DATA_DIR=/var/lib/catan
+StateDirectory=catan
+DynamicUser=yes
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

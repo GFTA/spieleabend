@@ -1,0 +1,19 @@
+services:
+  catan:
+    build:
+      context: ..
+      dockerfile: catan/Dockerfile
+      args:
+        GAME: catan
+    image: catan:latest
+    container_name: catan
+    restart: unless-stopped
+    environment:
+      PARTY_SECRET: ${PARTY_SECRET:-}
+    ports:
+      - "${CATAN_PORT:-8101}:8080"
+    volumes:
+      - catan-data:/data
+
+volumes:
+  catan-data:

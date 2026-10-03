@@ -32,6 +32,7 @@ Das ist der Bauplan für jedes neue Spiel in diesem Repo. Arbeitsanweisung für 
 | Rummikub | [`rummikub/`](rummikub/) | Reihen und Gruppen, ganzer Tisch umbaubar, Ziehen per Drag & Drop, 2–4 Spieler plus Zuschauer, Computer-Gegner · Port 8098 |
 | Exploding Kittens | [`explodingkittens/`](explodingkittens/) | Katzen verstecken, Nö! sagen, nicht explodieren, Ziehen per Drag & Drop, 2–5 Spieler plus Zuschauer, Computer-Gegner · Port 8099 |
 | Activity | [`activity/`](activity/) | Zeichnen, Erklären, Pantomime, Live-Zeichenfläche mit Touch und Maus, Hinweise, 2–8 Spieler plus Zuschauer, Computer rät mit · Port 8100 |
+| Catan | [`catan/`](catan/) | Siedeln, handeln, bauen auf dem Sechseckbrett, Bauen und Räuber per Drag & Drop, Handel mit Bank und Spielern, 2–4 Spieler plus Zuschauer, Computer-Gegner · Port 8101 |
 
 Alle Spiele auf einen Blick: **https://games.cool-kidz.net** (Ordner [`start/`](start/)).
 
