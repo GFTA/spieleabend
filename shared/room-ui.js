@@ -437,12 +437,14 @@
       const watcher = r.you < 0, seen = r.watchers || [];
       $("#membersLabel").textContent = `Spieler (${r.members.length}/${max})` + (seen.length ? ` · ${seen.length} ${seen.length === 1 ? "schaut" : "schauen"} zu` : "");
       $("#sitBtn").hidden = !watcher || r.members.length >= max;
+      const before = new Set([...document.querySelectorAll("#members > li .nm")].map((e) => e.textContent));
       $("#members").innerHTML = r.members.map((m, i) =>
         `<li class="${i === r.you ? "me" : ""}">${m.bot ? `<span class="botico">${ICONS.bot}</span>` : `<span class="on${m.online ? "" : " off"}"></span>`}` +
         `<span class="av avc${i === r.host ? " crown" : ""}" style="--avc:${esc(m.color || "transparent")}" aria-hidden="true">${m.avatar || ""}</span>` +
         `<span class="nm">${esc(m.name)}</span>${app.memberExtra ? app.memberExtra(m, i) : ""}` +
         `${i === r.host ? '<span class="tag">Host</span>' : ""}${i === r.you ? '<span class="tag">du</span>' : ""}${m.bot ? '<span class="tag">Computer</span>' : ""}` +
         `${m.bot && host ? `<button class="rm" type="button" data-unbot="${i}" aria-label="${esc(m.name)} entfernen">×</button>` : host && !m.bot && i !== r.you ? `<button class="rm" type="button" data-kick="${i}" data-name="${esc(m.name)}" aria-label="${esc(m.name)} aus dem Raum werfen">×</button>` : ""}</li>`).join("");
+      if (before.size) [...document.querySelectorAll("#members > li")].forEach((li) => { const nm = li.querySelector(".nm"); if (nm && !before.has(nm.textContent)) li.classList.add("join"); });
       $("#addBot").hidden = !host || r.members.length >= max;
       app.renderSettings(host);
       if (watcher) $("#lobbyHint").textContent = r.members.length >= max ? "Du schaust zu. Wird ein Platz frei, kannst du mitspielen." : "Du schaust zu. Tippe auf „Mitspielen“, um einen freien Platz zu nehmen.";

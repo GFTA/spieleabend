@@ -181,18 +181,19 @@
     }).join("");
   }
 
+  // rows, columns and boxes as lists of cell indexes
+  const GROUPS = [];
+  for (let r = 0; r < 9; r++) GROUPS.push([...Array(9)].map((_, c) => r * 9 + c));
+  for (let c = 0; c < 9; c++) GROUPS.push([...Array(9)].map((_, r) => r * 9 + c));
+  for (let br = 0; br < 3; br++) for (let bc = 0; bc < 3; bc++) {
+    const g = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) g.push((br * 3 + r) * 9 + bc * 3 + c);
+    GROUPS.push(g);
+  }
   function conflictSet(grid, puzzle) {
     const bad = new Set();
     if (!grid) return bad;
-    const groups = [];
-    for (let r = 0; r < 9; r++) groups.push([...Array(9)].map((_, c) => r * 9 + c));
-    for (let c = 0; c < 9; c++) groups.push([...Array(9)].map((_, r) => r * 9 + c));
-    for (let br = 0; br < 3; br++) for (let bc = 0; bc < 3; bc++) {
-      const g = [];
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) g.push((br * 3 + r) * 9 + bc * 3 + c);
-      groups.push(g);
-    }
-    for (const g of groups) {
+    for (const g of GROUPS) {
       const seen = new Map();
       for (const i of g) {
         const n = grid[i]; if (!n) continue;
@@ -203,21 +204,35 @@
     return bad;
   }
 
-  function cellHTML(i, grid, notes, bad, selVal, sr, sc) {
+  function cellHTML(i, grid, notes, bad, selVal, sr, sc, fx) {
     const given = !!V.puzzle[i], n = grid[i], r = i / 9 | 0, c = i % 9;
     const cls = [
       given ? "given" : "",
       i === sel ? "sel" : "",
       sel >= 0 && (r === sr || c === sc || ((r / 3 | 0) === (sr / 3 | 0) && (c / 3 | 0) === (sc / 3 | 0))) ? "hl" : "",
       selVal && n === selVal ? "same" : "",
-      bad.has(i) && !given ? "bad" : ""
+      bad.has(i) && !given ? "bad" : "",
+      fx && fx.cls
     ].filter(Boolean).join(" ");
     let inner = n ? String(n) : "";
     if (!n && notes && notes[i]) {
       const bits = notes[i];
       inner = `<span class="notes">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<span>${bits & (1 << (d - 1)) ? d : ""}</span>`).join("")}</span>`;
     }
-    return `<button type="button" role="gridcell" data-i="${i}" class="${cls}" aria-label="Feld ${r + 1},${c + 1}${n ? ": " + n : ""}">${inner}</button>`;
+    return `<button type="button" role="gridcell" data-i="${i}" class="${cls}"${fx && fx.d != null ? ` style="--w:${fx.d}ms"` : ""} aria-label="Feld ${r + 1},${c + 1}${n ? ": " + n : ""}">${inner}</button>`;
+  }
+
+  // what just happened on the grid: a number placed (pop), a wrong one (shake), a finished row, column or box (wave)
+  let prevFx = null;
+  function gridFx(grid, bad) {
+    const key = V.puzzle.join(""), done = new Set();
+    GROUPS.forEach((g, u) => { if (g.every((i) => grid[i] && !bad.has(i))) done.add(u); });
+    const fx = new Map(), prev = prevFx;
+    prevFx = { key, grid: Array.from(grid), done };
+    if (!prev || prev.key !== key || matchMedia("(prefers-reduced-motion: reduce)").matches) return fx;
+    for (let i = 0; i < 81; i++) if (!V.puzzle[i] && grid[i] && grid[i] !== prev.grid[i]) fx.set(i, { cls: bad.has(i) ? "shake" : "pop" });
+    for (const u of done) if (!prev.done.has(u)) GROUPS[u].forEach((i, k) => fx.set(i, { cls: "wave", d: k * 55 }));
+    return fx;
   }
 
   function renderGrid() {
@@ -227,6 +242,7 @@
     const grid = me && me.grid ? me.grid : (V.solution || V.puzzle);
     const notes = me && me.notes ? me.notes : null;
     const bad = me && V.phase === "play" ? conflictSet(grid, V.puzzle) : new Set();
+    const fx = me && V.phase === "play" ? gridFx(grid, bad) : (prevFx = null, new Map());
     const selVal = sel >= 0 && grid[sel] ? grid[sel] : 0;
     const [sr, sc] = sel >= 0 ? [sel / 9 | 0, sel % 9] : [-1, -1];
     let html = "";
@@ -234,7 +250,7 @@
       for (let bc = 0; bc < 3; bc++) {
         let cells = "";
         for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-          cells += cellHTML((br * 3 + r) * 9 + bc * 3 + c, grid, notes, bad, selVal, sr, sc);
+          const i = (br * 3 + r) * 9 + bc * 3 + c; cells += cellHTML(i, grid, notes, bad, selVal, sr, sc, fx.get(i));
         }
         html += `<div class="block" role="rowgroup">${cells}</div>`;
       }

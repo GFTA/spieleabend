@@ -66,6 +66,12 @@
 .sudoku button.hl{background:color-mix(in srgb,var(--accent) 14%,var(--cell))}
 .sudoku button.same:not(.sel){color:var(--accent)}
 .sudoku button.bad{color:var(--bad)}
+.sudoku button.pop{animation:sdPop .3s cubic-bezier(.2,.9,.3,1.4)}
+.sudoku button.shake{animation:sdShake .4s}
+.sudoku button.wave{animation:sdWave .6s ease-in-out var(--w,0ms)}
+@keyframes sdPop{0%{transform:scale(.55)}100%{transform:none}}
+@keyframes sdShake{0%,100%{translate:0}20%{translate:-4px}45%{translate:4px}70%{translate:-3px}}
+@keyframes sdWave{0%,100%{transform:none}40%{transform:scale(1.18);background:color-mix(in srgb,var(--accent) 45%,var(--cell,transparent))}}
 .sudoku button .notes{position:absolute;inset:2px;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);font-size:clamp(9px,2.6vw,12px);font-weight:700;color:var(--note);line-height:1;pointer-events:none}
 .sudoku button .notes span{display:grid;place-items:center}
 
