@@ -476,5 +476,30 @@
     el.title = sortLabel(mode) + " (S)";
     if (!el.firstElementChild) el.innerHTML = SORT_INNER;
   }
+  // a dialog that opens gets the entrance (CSS .enter) and its whole-number scores count up from 0
+  function openedOverlay(el) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    el.classList.add("enter");
+    setTimeout(() => el.classList.remove("enter"), 1000);
+    [...el.querySelectorAll(".scores b, .ranking .w")].forEach((n, i) => {
+      const txt = n.textContent.trim(), to = /^-?\d{1,6}$/.test(txt) ? +txt : NaN;
+      if (!(Math.abs(to) >= 2) || !n.isConnected) return;
+      const t0 = performance.now() + 150 + Math.min(i, 6) * 60, ms = 650;
+      n.textContent = "0";
+      const step = (t) => {
+        if (n.textContent !== "0" && !/^-?\d+$/.test(n.textContent)) return;
+        const f = Math.min(1, Math.max(0, (t - t0) / ms));
+        n.textContent = String(Math.round(to * (1 - Math.pow(1 - f, 3))));
+        if (f < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  function watchOverlays() {
+    new MutationObserver((list) => {
+      for (const m of list) { const t = m.target; if (t.classList && t.classList.contains("overlay") && !t.hidden && m.oldValue !== null) openedOverlay(t); }
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["hidden"], attributeOldValue: true });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watchOverlays); else watchOverlays();
   window.Spieleabend = { $, esc, store, sortToggle, sortToggleHTML, startUrl, TABLES, look, identity, avatarPicker, pickerHTML, followTurn, mine, flash, toss, profile: P, toast, confetti, showBubble, sound, dropParams, pref, calm, say, copy, gameId, notify, badge, sounds: null };
 })();

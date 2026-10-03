@@ -230,6 +230,10 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - `kit.js` setzt `data-motion="off"` / `data-contrast="high"` auf `<html>` (CSS in `kit.css`), kappt WAAPI-Animationen bei „weniger Bewegung“
   und bietet `K.notify`, `K.badge` (Favicon-Punkt), `K.say` (aria-live) sowie Dialog-Barrierefreiheit für alle `.overlay`
   (Rolle, Fokus rein/zurück, Tab-Falle).
+- Gemeinsame Bewegung (`kit.css`/`kit.js`, ohne Zutun der Spiele): Bildschirmwechsel (`#home`/`#game`) blenden ein; jedes `.overlay` bekommt beim
+  Öffnen `.enter` (Sheet steigt auf, `.scores`/`.ranking`-Zeilen laufen gestaffelt ein, Sieger-Zeile glüht, ganze Zahlen in `.scores b` /
+  `.ranking .w` zählen hoch); neue Lobby-Einträge poppen (`li.join`); Buttons geben beim Drücken nach. Spiele mit eigener Animation an
+  `.sheet`-Kindern müssen beachten, dass `.overlay.enter>*` dort 1 s lang überschreibt. Sudoku: Pop (richtige Zahl), Shake (Konflikt), Welle (fertige Zeile/Spalte/Box).
 - Tastenkürzel (`room-ui.js`): Alt+M Menü, Alt+O Einstellungen, Alt+C Chat, Alt+K Ton, Alt+V Vollbild, Alt+H oder `?` Übersicht.
   Neue Kürzel dort eintragen und im `#keysSheet` auflisten.
 - **Anstupsen:** Client `{t:"nudge"}` → Server (`room-server.js`) prüft laufendes Spiel, Sitzplatz, menschlichen Zugspieler und 20 s Abklingzeit,

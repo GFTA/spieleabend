@@ -196,6 +196,29 @@ details.fold[open] summary{margin-bottom:8px}
 .prow .seat{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--surface);color:var(--muted);font-variant-numeric:tabular-nums}
 .bubble.say{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px;filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
 .bubble.text{font-size:16px;font-weight:800;white-space:nowrap;background:#fff;color:#1a1426;padding:6px 10px;border-radius:12px}
+/* Motion polish shared by every game: screens fade in, dialogs rise, score rows slide in (kit.js adds .enter to an overlay when it opens) */
+@keyframes saFade{from{opacity:0}}
+@keyframes saRise{from{opacity:0;transform:translateY(24px) scale(.94)}60%{transform:translateY(-3px) scale(1.01)}}
+@keyframes saRow{from{opacity:0;transform:translateX(-16px)}}
+@keyframes saGlow{50%{box-shadow:inset 0 0 0 2px var(--accent),0 0 24px color-mix(in srgb,var(--accent) 65%,transparent)}}
+@keyframes saJoin{from{opacity:0;transform:scale(.9) translateY(8px)}60%{transform:scale(1.03)}}
+#home:not([hidden]),#game:not([hidden]){animation:saFade .3s ease-out}
+.overlay.enter{animation:saFade .2s ease-out}
+.overlay.enter>*{animation:saRise .34s cubic-bezier(.2,.9,.3,1) both}
+.overlay.enter>*:nth-child(2){animation-delay:.05s}
+.overlay.enter>*:nth-child(3){animation-delay:.1s}
+.overlay.enter>*:nth-child(n+4){animation-delay:.15s}
+.overlay.enter :is(.scores,.ranking)>li{animation:saRow .36s ease-out var(--d,.14s) both}
+.overlay.enter :is(.scores,.ranking)>li:nth-child(2){--d:.2s}
+.overlay.enter :is(.scores,.ranking)>li:nth-child(3){--d:.26s}
+.overlay.enter :is(.scores,.ranking)>li:nth-child(4){--d:.32s}
+.overlay.enter :is(.scores,.ranking)>li:nth-child(5){--d:.38s}
+.overlay.enter :is(.scores,.ranking)>li:nth-child(n+6){--d:.44s}
+.overlay.enter :is(.scores,.ranking)>li.win{animation:saRow .36s ease-out var(--d,.14s) both,saGlow 1.1s ease-in-out .9s 2}
+.members li.join{animation:saJoin .4s cubic-bezier(.2,.9,.3,1)}
+.btn,.seg button,.iconbtn{transition:transform .12s ease,box-shadow .15s ease,filter .15s ease,background-color .15s ease}
+.btn:not(:disabled):active,.iconbtn:active{transform:translateY(1px) scale(.97)}
+.btn-primary:not(:disabled):active{transform:translateY(2px) scale(.97)}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @keyframes bang{0%{transform:scale(.3) rotate(-12deg);opacity:0}30%{transform:scale(1.1) rotate(-6deg);opacity:1}100%{transform:scale(1.35) rotate(-4deg);opacity:0}}
 @media (hover:hover) and (pointer:fine){.btn:not(:disabled):hover{filter:brightness(1.08)}}
