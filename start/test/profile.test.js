@@ -103,3 +103,29 @@ test("profile: with many games the cookie stays small and the result keys surviv
   assert.strictEqual(P.result("game05", "k".repeat(30) + 5, { won: false }), false);
   assert.ok(Object.keys(cookies).length === 1);
 });
+
+test("profile: vibration is a setting of its own", () => {
+  const { P } = browser();
+  P.setPrefs({ haptic: false });
+  assert.strictEqual(P.prefs().haptic, false);
+  P.setPrefs({ haptic: "no" });
+  assert.strictEqual(P.prefs().haptic, false, "invalid values are ignored");
+  P.setPrefs({ haptic: null });
+  assert.ok(!("haptic" in P.prefs()));
+});
+
+test("profile: a backup is validated again on the way in and replaces the profile", () => {
+  const a = browser();
+  a.P.set({ name: "Anna", av: "🦊", col: "#e0393e" });
+  a.P.setPrefs({ table: "ocean", vol: 40 });
+  a.P.result("uno", "r1", { won: true, online: true });
+  const code = JSON.stringify(a.P.get());
+  const b = browser("vier.cool-kidz.net", {});
+  assert.strictEqual(b.P.importAll(null), null);
+  assert.strictEqual(b.P.importAll([]), null);
+  assert.strictEqual(b.P.importAll({ foo: 1 }), null, "nothing usable in it");
+  const p = b.P.importAll(JSON.parse(code));
+  assert.deepStrictEqual([p.name, p.av, p.col, p.stats.uno.w, p.stats.uno.ow, p.pf.table, p.pf.vol], ["Anna", "🦊", "#e0393e", 1, 1, "ocean", 40]);
+  const evil = b.P.importAll({ name: "x".repeat(99), av: "<img>", col: "url(x)", stats: { "bad key!": { g: 5 }, uno: { g: -4, w: "9" } }, pf: { table: "<b>", vol: 500 } });
+  assert.deepStrictEqual([evil.name.length, evil.av, evil.col, Object.keys(evil.stats).join(), evil.stats.uno.g, evil.stats.uno.w, evil.pf.table, evil.pf.vol], [18, "", "", "uno", 0, 9, undefined, 100]);
+});
