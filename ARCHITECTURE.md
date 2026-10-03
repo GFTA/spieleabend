@@ -93,7 +93,7 @@ oben rechts die erste Grid-Zeile (Label-Zeile).
 **Startseite (`start/public/index.html`):** eigenständig (kein `shared/`), kompakte Spielkarten
 mit `--tint` je Spiel, „Du“-Karte mit Design-Auswahl, Party-Einladung als eine Zeile.
 Begrüßung mit Statistik-Zeile und „Neuer Erfolg“-Hinweis (`#hello`/`#newAch`, vergleicht mit localStorage `spieleabend.achseen`,
-das `profile.html` beim Öffnen setzt), Spielerzahl-Filter (`#cntRow`, Bereich aus `players` in `games.json`), „Neu“-Marke für
+das `profile.html` beim Öffnen setzt), Party-Größe sortiert passende Spiele nach oben und gruppiert zu kleine/volle darunter (Bereich aus `players` in `games.json`, live bei Beitritt/Austritt), „Neu“-Marke für
 Spiele mit `added` (YYYY-MM-DD) der letzten 14 Tage, solange sie nicht gespielt wurden, Skeleton-Karten bis `games.json`
 geladen ist, die Seitenleiste klebt ab 1000 px Breite (`position:sticky`).
 `start/public/achievements.js` (`window.SAAch.list({stats, games, activity})`) ist die einzige Quelle der Erfolge
