@@ -95,7 +95,7 @@
   // ---------- cards ----------
   function cardHTML(c, o = {}) {
     return `<div class="card k-${c}" data-c="${c}" data-i="${G.CARDS[c].icon}" title="${esc(G.cardName(c))}"${o.attrs ? " " + o.attrs : ""}${o.style ? ` style="${o.style}"` : ""}>` +
-      `<b>${G.CARDS[c].icon}</b><span class="cn">${SHORT[c]}</span></div>`;
+      `<b>${G.CARDS[c].icon}</b><small class="cd">${esc(G.CARDS[c].desc)}</small><span class="cn">${SHORT[c]}</span></div>`;
   }
   const backHTML = () => '<div class="card back"><b>🐱</b></div>';
   const pileCard = (inner, o = {}) => `<div class="cd-pile${o.empty ? " empty" : ""}" style="--H:1">${inner}${o.count ? `<span class="cnt">${o.count}</span>` : ""}</div>`;
@@ -879,7 +879,7 @@
       av = P.avatar;
       if (play) {
         who = V.owed > 1 ? `Du bist dran (${V.owed} Züge)` : "Du bist dran";
-        hint = pick ? "Tippe auf eine Person." : sel ? "Nochmal tippen oder auf den Tisch ziehen." : "Spiele Karten oder ziehe vom Stapel.";
+        hint = pick ? "Tippe auf eine Person." : sel ? `${G.CARDS[sel].info} Nochmal tippen oder auf den Tisch ziehen.` : "Tippe eine Karte an, um zu sehen, was sie kann, oder ziehe vom Stapel.";
       } else {
         who = `${P.name} ist dran${V.owed > 1 ? ` (${V.owed} Züge)` : ""}`;
         hint = P.bot ? "Der Computer überlegt …" : "Warte auf den nächsten Zug.";

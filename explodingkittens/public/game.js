@@ -26,19 +26,19 @@
 
   // `count` is how many cards of that kind the deck has (kitten and defuse are handled by the deal)
   const CARDS = {
-    kitten: { name: "Explodierende Katze", icon: "💣", count: 0 },
-    defuse: { name: "Entschärfen", icon: "🧯", count: 0 },
-    nope: { name: "Nö!", icon: "🚫", count: 5 },
-    attack: { name: "Angriff", icon: "⚔️", count: 4 },
-    skip: { name: "Aussetzen", icon: "⏭️", count: 4 },
-    favor: { name: "Gefallen", icon: "🎁", count: 4 },
-    shuffle: { name: "Mischen", icon: "🔀", count: 4 },
-    future: { name: "Blick in die Zukunft", icon: "🔮", count: 5 },
-    cat1: { name: "Taco-Katze", icon: "🌮", count: 4 },
-    cat2: { name: "Melonen-Katze", icon: "🍉", count: 4 },
-    cat3: { name: "Kartoffel-Katze", icon: "🥔", count: 4 },
-    cat4: { name: "Regenbogen-Katze", icon: "🌈", count: 4 },
-    cat5: { name: "Bart-Katze", icon: "🧔", count: 4 }
+    kitten: { name: "Explodierende Katze", icon: "💣", count: 0, desc: "Explodiert!", info: "Wer sie zieht, fliegt raus, außer er kann sie mit Entschärfen retten." },
+    defuse: { name: "Entschärfen", icon: "🧯", count: 0, desc: "Rettet vor der 💣", info: "Rettet dich, wenn du eine Katze ziehst. Du steckst sie danach geheim zurück in den Stapel." },
+    nope: { name: "Nö!", icon: "🚫", count: 5, desc: "Stoppt eine Karte", info: "Sag „Nö!“, wenn jemand anderes eine Karte spielt. Die Karte wirkt dann nicht." },
+    attack: { name: "Angriff", icon: "⚔️", count: 4, desc: "Nächster: 2 Züge", info: "Dein Zug endet ohne Ziehen. Der Nächste muss 2 Züge machen." },
+    skip: { name: "Aussetzen", icon: "⏭️", count: 4, desc: "Zug ohne Ziehen", info: "Beendet deinen Zug, ohne dass du ziehen musst." },
+    favor: { name: "Gefallen", icon: "🎁", count: 4, desc: "Du bekommst eine Karte", info: "Eine Person deiner Wahl muss dir eine Karte geben (sie sucht sie aus)." },
+    shuffle: { name: "Mischen", icon: "🔀", count: 4, desc: "Stapel mischen", info: "Mischt den Stapel, damit niemand die oberste Karte kennt." },
+    future: { name: "Blick in die Zukunft", icon: "🔮", count: 5, desc: "Oberste 3 ansehen", info: "Du schaust dir die obersten 3 Karten des Stapels heimlich an." },
+    cat1: { name: "Taco-Katze", icon: "🌮", count: 4, desc: "2 gleiche: Karte klauen", info: "Zwei gleiche Katzen: Du ziehst eine zufällige Karte von jemandem. Drei gleiche: Du nennst eine Karte, die du verlangst." },
+    cat2: { name: "Melonen-Katze", icon: "🍉", count: 4, desc: "2 gleiche: Karte klauen", info: "Zwei gleiche Katzen: Du ziehst eine zufällige Karte von jemandem. Drei gleiche: Du nennst eine Karte, die du verlangst." },
+    cat3: { name: "Kartoffel-Katze", icon: "🥔", count: 4, desc: "2 gleiche: Karte klauen", info: "Zwei gleiche Katzen: Du ziehst eine zufällige Karte von jemandem. Drei gleiche: Du nennst eine Karte, die du verlangst." },
+    cat4: { name: "Regenbogen-Katze", icon: "🌈", count: 4, desc: "2 gleiche: Karte klauen", info: "Zwei gleiche Katzen: Du ziehst eine zufällige Karte von jemandem. Drei gleiche: Du nennst eine Karte, die du verlangst." },
+    cat5: { name: "Bart-Katze", icon: "🧔", count: 4, desc: "2 gleiche: Karte klauen", info: "Zwei gleiche Katzen: Du ziehst eine zufällige Karte von jemandem. Drei gleiche: Du nennst eine Karte, die du verlangst." }
   };
   const ORDER = Object.keys(CARDS);
   const ACTIONS = ["attack", "skip", "favor", "shuffle", "future"]; // played alone
