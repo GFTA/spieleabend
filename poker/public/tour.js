@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, { turnTimer: false }, false],
   steps: [
-    { title: "Poker in einer Minute", text: "Texas Hold’em: Jede:r bekommt <b>zwei Karten</b> auf die Hand, dazu kommen fünf gemeinsame Karten auf den Tisch. Du bildest die beste Hand aus fünf der sieben Karten. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Poker in einer Minute", text: "Texas Hold’em: Jeder bekommt <b>zwei Karten</b> auf die Hand, dazu kommen fünf gemeinsame Karten auf den Tisch. Du bildest die beste Hand aus fünf der sieben Karten. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#hole", place: "top", text: "Das sind deine <b>zwei Karten</b>. Nur du siehst sie." },
     { target: "#felt", text: "In der Mitte liegen die <b>gemeinsamen Karten</b>: erst der Flop (3), dann Turn (1) und River (1). Darüber steht der <b>Pot</b>, also alle gesetzten Chips." },
     { target: "#players", text: "Die Spieler mit ihren <b>Chips</b>. Das <b>D</b> markiert den Dealer, links davon zahlen zwei Spieler die Blinds, damit immer etwas im Pot liegt." },

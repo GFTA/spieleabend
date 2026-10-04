@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, undefined, undefined, 2],
   steps: [
-    { title: "Schiffe versenken in einer Minute", text: "Jede:r versteckt eine <b>Flotte</b> auf einem Gitter. Reihum schießt ihr auf Felder des anderen. Wer zuerst alle gegnerischen Schiffe versenkt, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Schiffe versenken in einer Minute", text: "Jeder versteckt eine <b>Flotte</b> auf einem Gitter. Reihum schießt ihr auf Felder des anderen. Wer zuerst alle gegnerischen Schiffe versenkt, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: ($) => $("#placeBar:not([hidden])") ? [$("#harbor"), $("#board")] : null, idle: "Die Flotte steht schon.", text: "Erst stellst du deine Flotte auf: Tippe ein <b>Schiff</b> im Hafen an, dann das Feld für den Bug, oder zieh es aufs Gitter. Ein Tipp aufs Schiff dreht es." },
     { target: ($) => $("#placeBar:not([hidden])") ? $("#randBtn") : null, wait: "tap", idle: "Die Flotte steht schon.", place: "top", text: "Keine Lust auf Basteln? <b>Zufällig</b> verteilt alle Schiffe auf einmal. Tippe darauf." },
     { target: ($) => $("#fleetBtn:not([hidden])"), wait: "tap", idle: "Gleich geht es weiter …", place: "top", text: "Passt alles? Dann tippe auf <b>Fertig, Flotte steht</b>." },

@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, undefined, 2],
   steps: [
-    { title: "Skip-Bo in einer Minute", text: "Ziel: Als Erste:r deinen <b>Vorratsstapel</b> leer spielen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir den Tisch." },
+    { title: "Skip-Bo in einer Minute", text: "Ziel: Als Erster deinen <b>Vorratsstapel</b> leer spielen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir den Tisch." },
     { target: "#myStock", place: "top", text: "Dein <b>Vorratsstapel</b>. Nur die oberste Karte ist offen und spielbar. Ist der Stapel leer, hast du gewonnen. Die Zahl zeigt, wie viele noch drin sind." },
     { target: "#builds", text: "Die vier <b>Bauhaufen</b> in der Mitte. Auf jeden kommt der Reihe nach 1, 2, 3 … bis 12. Ein voller Haufen wird abgeräumt." },
     { target: "#hand", place: "top", text: "Deine <b>Hand</b>: bis zu 5 Karten. Am Anfang jedes Zugs wird sie aufgefüllt. Der <b>Skip-Bo-Joker</b> ersetzt jede Zahl." },

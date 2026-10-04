@@ -4,12 +4,12 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, undefined, 2],
   steps: [
-    { title: "Catan in einer Minute", text: "Baue Straßen, Siedlungen und Städte und sammle als Erste:r <b>10 Siegpunkte</b>. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Catan in einer Minute", text: "Baue Straßen, Siedlungen und Städte und sammle als Erster <b>10 Siegpunkte</b>. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Die Insel aus <b>Rohstofffeldern</b> (Wald, Lehm, Schaf, Getreide, Erz, Wüste). Jedes Feld trägt eine <b>Zahl</b>. Wird sie gewürfelt, bekommen alle mit einer Siedlung daran den Rohstoff." },
     { target: "#hand", place: "top", text: "Deine <b>Rohstoffe</b>. Damit bezahlst du Bauten. Straße: Holz und Lehm. Siedlung: Holz, Lehm, Schaf und Getreide. Stadt: 2 Getreide und 3 Erz." },
     {
       target: ($) => $("#dock.myturn") ? $("#board") : null, wait: { tap: "#board" }, idle: "Der Computer ist noch dran. Gleich bist du dran …",
-      text: "<b>Aufbau</b>: Jede:r setzt zwei Siedlungen mit je einer Straße. Tippe auf einen <b>leuchtenden Platz</b>, um deine erste Siedlung zu setzen. Wähle Plätze an Feldern mit vielen und guten Zahlen (6 und 8 kommen am häufigsten)."
+      text: "<b>Aufbau</b>: Jeder setzt zwei Siedlungen mit je einer Straße. Tippe auf einen <b>leuchtenden Platz</b>, um deine erste Siedlung zu setzen. Wähle Plätze an Feldern mit vielen und guten Zahlen (6 und 8 kommen am häufigsten)."
     },
     {
       target: ($) => $("#dock.myturn") ? $("#board") : null, wait: { tap: "#board" }, idle: "Der Computer ist noch dran. Gleich bist du dran …",

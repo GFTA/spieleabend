@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], 500, { jumpIn: false, turnTimer: false }],
   steps: [
-    { title: "Uno in einer Minute", text: "Ziel: Als Erste:r alle Handkarten loswerden. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir, was du siehst und was du tun kannst." },
+    { title: "Uno in einer Minute", text: "Ziel: Als Erster alle Handkarten loswerden. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir, was du siehst und was du tun kannst." },
     { target: "#hand", place: "top", text: "Das ist deine <b>Hand</b>. Karten, die du jetzt legen darfst, sind hell, die anderen abgedunkelt." },
     { target: "#discard", text: "Die <b>Ablage</b>. Deine Karte muss zur obersten Karte passen: gleiche <b>Farbe</b>, gleiche <b>Zahl</b> oder gleiches <b>Symbol</b>. Farbwahl-Karten passen immer." },
     { target: "#drawPile", text: "Der <b>Stapel</b>. Hast du nichts Passendes, ziehst du hier eine Karte. Die Zahl darunter zeigt, wie viele noch drin sind." },

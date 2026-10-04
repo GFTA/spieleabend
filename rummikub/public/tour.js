@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, undefined, 2],
   steps: [
-    { title: "Rummikub in einer Minute", text: "Ziel: Als Erste:r alle Plättchen vom <b>Ständer</b> auf den Tisch bringen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
+    { title: "Rummikub in einer Minute", text: "Ziel: Als Erster alle Plättchen vom <b>Ständer</b> auf den Tisch bringen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
     { target: "#rack", place: "top", text: "Dein <b>Ständer</b> mit 14 Plättchen. Mit dem Knopf daneben sortierst du nach Farbe oder Zahl." },
     { target: "#sets", text: "Der <b>Tisch</b>. Hier liegen nur gültige Sätze: eine <b>Reihe</b> (mindestens 3 Zahlen in Folge, gleiche Farbe) oder eine <b>Gruppe</b> (3 oder 4 gleiche Zahlen in verschiedenen Farben)." },
     { target: "#pool", place: "top", text: "Der <b>Vorrat</b>. Kannst du nichts legen, ziehst du hier ein Plättchen. Der Joker ersetzt jedes Plättchen." },

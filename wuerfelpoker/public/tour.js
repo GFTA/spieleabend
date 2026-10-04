@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, { turnTimer: false }],
   steps: [
-    { title: "Würfelpoker in einer Minute", text: "Jede:r hat pro Runde bis zu <b>drei Würfe</b> und versucht, die beste Pokerhand mit fünf Würfeln zu bekommen. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Würfelpoker in einer Minute", text: "Jeder hat pro Runde bis zu <b>drei Würfe</b> und versucht, die beste Pokerhand mit fünf Würfeln zu bekommen. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#felt", text: "Hier liegen deine <b>fünf Würfel</b>. Darunter zeigen Punkte, wie viele Würfe du noch hast." },
     {
       target: ($) => $("#dock.myturn") ? $("#rollBtn") : null, wait: "tap", idle: "Der Computer ist noch dran. Gleich bist du dran …", place: "top",

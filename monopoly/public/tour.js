@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, undefined, 2],
   steps: [
-    { title: "Monopoly in einer Minute", text: "Kaufe Grundstücke, kassiere Miete und ruiniere deine Gegner. Wer als <b>Letzte:r</b> noch zahlen kann, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Monopoly in einer Minute", text: "Kaufe Grundstücke, kassiere Miete und ruiniere deine Gegner. Wer als <b>Letzter</b> noch zahlen kann, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b> mit 40 Feldern. Du ziehst im Uhrzeigersinn. Straßen und Bahnhöfe kannst du kaufen. Wer darauf landet und sie nicht besitzt, zahlt dir Miete." },
     { target: "#dock", place: "top", text: "Hier unten steht, wer dran ist und was gerade passiert. Du ziehst, und je nach Feld kaufst du, zahlst Miete oder Steuern, ziehst eine Karte oder landest im Gefängnis." },
     {

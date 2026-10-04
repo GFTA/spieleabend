@@ -4,7 +4,7 @@ Tutorial.define({
   opponents: 1,
   game: (a) => [a[0], undefined, 2],
   steps: [
-    { title: "Exploding Kittens in einer Minute", text: "Ziel: Als <b>Letzte:r</b> übrig bleiben. Im Stapel stecken explodierende Katzen 💣. Wer eine zieht und nicht entschärfen kann, ist raus. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
+    { title: "Exploding Kittens in einer Minute", text: "Ziel: Als <b>Letzter</b> übrig bleiben. Im Stapel stecken explodierende Katzen 💣. Wer eine zieht und nicht entschärfen kann, ist raus. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
     { target: "#hand", place: "top", text: "Deine <b>Hand</b>: 7 Karten, darunter ein 🧯 <b>Entschärfen</b>. Tippe eine Karte an, um zu sehen, was sie kann." },
     { target: "#deck", text: "Der <b>Stapel</b>. Am Ende deines Zugs ziehst du hier eine Karte. Die Zahl zeigt, wie viele noch drin sind. Irgendwo steckt eine Katze." },
     { target: "#stackZone, #disc", text: "Gespielte Karten landen auf der <b>Ablage</b>. Spielst du eine Karte, können andere sie mit einem 🚫 <b>Nö!</b> abwehren. Dafür bleiben ein paar Sekunden." },

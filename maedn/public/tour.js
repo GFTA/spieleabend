@@ -5,7 +5,7 @@ Tutorial.define({
   game: (a) => [a[0], undefined, undefined, 2],
   arrange: (S) => { S.rig = [6, 4, 3, 5, 2]; },
   steps: [
-    { title: "Mensch ärgere dich nicht in einer Minute", text: "Bringe als Erste:r alle vier <b>Figuren</b> einmal ums Brett in dein Ziel. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
+    { title: "Mensch ärgere dich nicht in einer Minute", text: "Bringe als Erster alle vier <b>Figuren</b> einmal ums Brett in dein Ziel. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b>. Jede Farbe hat vier Figuren im <b>Haus</b>, ein <b>Startfeld</b> und ein <b>Ziel</b>. Rund ums Brett geht es im Uhrzeigersinn." },
     { title: "Raus aus dem Haus", text: "Mit einer <b>6</b> kommt eine Figur auf dein Startfeld. Hast du noch keine draußen, darfst du bis zu dreimal würfeln. Nach einer 6 bist du <b>nochmal</b> dran." },
     {
