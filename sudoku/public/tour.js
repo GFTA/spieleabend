@@ -1,6 +1,8 @@
 // Tutorial steps for Sudoku (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 0,
   opponents: 0,
+  game: (a) => [a[0], undefined, 1],
   steps: [
     { title: "Sudoku in einer Minute", text: "Fülle das Gitter mit den Zahlen <b>1 bis 9</b>, sodass in jeder Zeile, jeder Spalte und jedem 3×3-Block jede Zahl genau einmal vorkommt. Gleich startet ein Übungsrätsel." },
     { target: "#grid", text: "Das <b>Gitter</b>. Die dunklen Zahlen sind vorgegeben, die leeren Felder füllst du aus." },

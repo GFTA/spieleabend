@@ -1,6 +1,8 @@
 // Tutorial steps for Uno (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], 500, { jumpIn: false, turnTimer: false }],
   steps: [
     { title: "Uno in einer Minute", text: "Ziel: Als Erste:r alle Handkarten loswerden. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir, was du siehst und was du tun kannst." },
     { target: "#hand", place: "top", text: "Das ist deine <b>Hand</b>. Karten, die du jetzt legen darfst, sind hell, die anderen abgedunkelt." },

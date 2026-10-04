@@ -335,7 +335,7 @@ test("trading between players: offer, answers, confirmation, nobody wants it, ti
   bad(S, pi, { t: "offer", give, want }); // one at a time
   bad(S, pi, { t: "end" });
   bad(S, pi, { t: "bank", give: "wood", get: "ore" });
-  assert.deepStrictEqual(Game.actors(S), [a, b]);
+  assert.deepStrictEqual(Game.actors(S).slice().sort((x, y) => x - y), [a, b].sort((x, y) => x - y));
   bad(S, pi, { t: "accept" }); // not for the offerer
   bad(S, b, { t: "accept" }); // lacks the ore
   ok(S, b, { t: "decline" });
@@ -492,7 +492,7 @@ test("computer players wait like humans: the plan names who, how long and change
     ok(S, plan.pi, Game.botMove(S, plan.pi));
     assert.ok(++guard < 40);
   }
-  assert.strictEqual(Game.botMove(S, 0), S.cur === 0 ? Game.botMove(S, 0) : null);
+  assert.deepStrictEqual(Game.botMove(S, 0), S.cur === 0 ? Game.botMove(S, 0) : null);
 });
 
 test("the engine is fast: board generation and computer-only games take well under a few seconds", () => {

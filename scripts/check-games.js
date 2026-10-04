@@ -105,6 +105,8 @@ for (const id of ids) {
     const nSteps = (tour.match(/\btext:/g) || []).length;
     if (nSteps < 4) bad(id, `public/tour.js has only ${nSteps} steps with text (at least 4)`);
     const appJs = read(id, "public", "app.js") || "";
+    if (!/\bseed:\s*\d+/.test(tour) || !/\bgame:\s*\(/.test(tour)) bad(id, "public/tour.js must be scripted: seed: <n> and game: (args) => fixed newGame args (find the seed with scripts/tour-seed.js)");
+    if (!/Tutorial\.held\(\)/.test(appJs)) bad(id, "public/app.js: the computer's timer must wait while Tutorial.held() is true");
     const missing = new Set();
     for (const m of tour.replace(/\/\/.*$/gm, "").matchAll(/#([A-Za-z][\w-]*)/g)) {
       if (!page.includes(`id="${m[1]}"`) && !appJs.includes(m[1])) missing.add("#" + m[1]);

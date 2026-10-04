@@ -1,6 +1,8 @@
 // Tutorial steps for Poker (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 0,
   opponents: 1,
+  game: (a) => [a[0], undefined, { turnTimer: false }, false],
   steps: [
     { title: "Poker in einer Minute", text: "Texas Hold’em: Jede:r bekommt <b>zwei Karten</b> auf die Hand, dazu kommen fünf gemeinsame Karten auf den Tisch. Du bildest die beste Hand aus fünf der sieben Karten. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#hole", place: "top", text: "Das sind deine <b>zwei Karten</b>. Nur du siehst sie." },

@@ -1,6 +1,8 @@
 // Tutorial steps for Catan (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Catan in einer Minute", text: "Baue Straßen, Siedlungen und Städte und sammle als Erste:r <b>10 Siegpunkte</b>. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Die Insel aus <b>Rohstofffeldern</b> (Wald, Lehm, Schaf, Getreide, Erz, Wüste). Jedes Feld trägt eine <b>Zahl</b>. Wird sie gewürfelt, bekommen alle mit einer Siedlung daran den Rohstoff." },

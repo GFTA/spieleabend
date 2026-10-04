@@ -1,6 +1,9 @@
 // Tutorial steps for Mensch ärgere dich nicht (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
+  arrange: (S) => { S.rig = [6, 4, 3, 5, 2]; },
   steps: [
     { title: "Mensch ärgere dich nicht in einer Minute", text: "Bringe als Erste:r alle vier <b>Figuren</b> einmal ums Brett in dein Ziel. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b>. Jede Farbe hat vier Figuren im <b>Haus</b>, ein <b>Startfeld</b> und ein <b>Ziel</b>. Rund ums Brett geht es im Uhrzeigersinn." },

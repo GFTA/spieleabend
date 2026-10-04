@@ -614,7 +614,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L) return;
-      if (!$("#menu").hidden || dnd.busy) { scheduleBot(); return; } // paused while the menu is open
+      if (!$("#menu").hidden || dnd.busy || (window.Tutorial && Tutorial.held())) { scheduleBot(); return; } // paused while the menu is open
       const again = G.botPlan(L);
       if (!again || again.key !== plan.key) { scheduleBot(); return; }
       const a = G.botMove(L, plan.pi);

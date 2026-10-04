@@ -1,6 +1,8 @@
 // Tutorial steps for Machi Koro (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, 2],
   steps: [
     { title: "Machi Koro in einer Minute", text: "Baue deine Stadt aus: Wer zuerst alle <b>vier Wahrzeichen</b> (Bahnhof, Einkaufszentrum, Freizeitpark, Funkturm) gebaut hat, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#cities", place: "top", text: "Deine <b>Stadt</b> und die deines Gegners. Du startest mit einem Getreidefeld, einer Bäckerei und 3 Münzen. Tippe eine Karte an, um Details zu sehen." },

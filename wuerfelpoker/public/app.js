@@ -75,6 +75,7 @@
     botT = setTimeout(() => {
       botKey = null;
       if (mode !== "local" || !L || !lBot(L.cur)) return;
+      if ((window.Tutorial && Tutorial.held())) { scheduleLocalBot(); return; }
       const a = G.suggest(G.view(L, L.cur), G.botLevel(L, L.cur, localLevel)) || { t: "stop" };
       if (!doAct(a, L.cur) && a.t !== "stop") doAct({ t: L.rolls ? "stop" : "roll" }, L.cur);
     }, wait + 750 + Math.random() * 650);

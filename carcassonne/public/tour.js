@@ -1,6 +1,8 @@
 // Tutorial steps for Carcassonne (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, 2, { meadows: true }],
   steps: [
     { title: "Carcassonne in einer Minute", text: "Ihr baut gemeinsam eine Landschaft aus <b>Plättchen</b> und setzt <b>Gefolgsleute</b> darauf. Wer mit Straßen, Städten und Klöstern die meisten Punkte macht, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#boardWrap", text: "Das <b>Spielfeld</b>. Es wächst mit jedem Plättchen. Mit zwei Fingern oder dem Mausrad zoomst du, mit den Knöpfen rechts auch. Das Ziel-Symbol zeigt wieder alles." },

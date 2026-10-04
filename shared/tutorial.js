@@ -11,6 +11,16 @@
 //     ]
 //   });
 //
+// Scripted practice game: every tutorial plays the SAME game. While it runs, the game engine (window.<Name>Game) gets
+// a fixed random stream (deal, dice, bot decisions depend only on the number of moves made so far, never on timing),
+// and the optional hooks
+//   seed: 17                            // which stream; found with scripts/tour-seed (the first mover must be the player)
+//   game: (args) => args                // fixes the settings that newGame() receives (level, goal, rules), the player's own
+//                                       // saved settings never leak into the tutorial
+//   arrange: (state, engine) => {}      // may adjust the freshly dealt state
+// Computer opponents stand still while an explaining card ("Weiter") is open, see Tutorial.held() (apps check it in
+// their bot timer): the player has seen a move before the next one happens.
+//
 // Functions (target, wait.until, pre) get document.querySelector as their argument ($).
 // A step may also have: place ("top" | "bottom"), pre() (runs when the step opens), idle (text, or function ($) returning it, while the target is
 // missing, e.g. "Gleich bist du dran"), wait: { tap: "selector" } (press a different element than the highlighted one).
@@ -24,7 +34,44 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const DONE_KEY = (id) => "sa.tour.done." + id;
 
-  let def = null, run = null;
+  let def = null, run = null, boot = false, script = null;
+
+  // ---------- the same game every time ----------
+  const hash = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const prng = (a) => () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const WRAP = ["newGame", "startRound", "act", "tick", "botMove", "botPlan", "suggest", "botLevel"];
+  const engines = () => Object.keys(window).filter((k) => /Game$/.test(k)).map((k) => window[k])
+    .filter((g) => g && typeof g === "object" && typeof g.newGame === "function" && typeof g.act === "function");
+  // the stream for one engine call depends on (seed, function, successful moves so far): same state, same decision
+  function stream(seed, name, moves) { return prng(hash(seed + ":" + name + ":" + moves)); }
+  function arm(d, seed) {
+    disarm();
+    const S = script = { seed, moves: 0, saved: [] };
+    for (const g of engines()) {
+      const orig = {};
+      for (const name of WRAP) {
+        if (typeof g[name] !== "function") continue;
+        orig[name] = g[name];
+        g[name] = function (...args) {
+          if (name === "newGame" && d.game) { try { args = d.game(args) || args; } catch (e) { /* keep the player's settings */ } }
+          const prev = Math.random;
+          Math.random = stream(S.seed, name, S.moves);
+          try {
+            const r = orig[name].apply(this, args);
+            if (name === "newGame" && d.arrange) { try { d.arrange(r, g); } catch (e) { /* the unarranged deal is still a valid game */ } }
+            if (name === "act" && r && r.ok) S.moves++;
+            return r;
+          } finally { Math.random = prev; }
+        };
+      }
+      S.saved.push([g, orig]);
+    }
+  }
+  function disarm() {
+    if (!script) return;
+    for (const [g, orig] of script.saved) for (const k of Object.keys(orig)) g[k] = orig[k];
+    script = null;
+  }
 
   const visible = (el) => {
     if (!el || !el.isConnected) return false;
@@ -75,6 +122,7 @@
     if (pick && cur !== pick) pick.click();
     if (opts.setup) await opts.setup();
     const go = $("#startLocal"); if (!go) return false;
+    arm(opts, opts.seed != null ? "s" + opts.seed : "g" + (window.Tutorial.gameId || document.title));
     go.click();
     for (let i = 0; i < 40; i++) { if ($("#game") && !$("#game").hidden) break; await sleep(100); }
     if (cur && pick && cur !== pick) cur.click();
@@ -95,8 +143,9 @@
   async function begin() {
     if (run) end();
     if (!def) return;
+    boot = true; // computers stay put until the first card is on screen
     const ok = await startPractice(def);
-    if (!ok) return;
+    if (!ok) { boot = false; disarm(); return; }
     const layer = build();
     const R = run = { layer, i: -1, step: null, tick: null, armed: false, advancing: false, scrolled: null, rect: "" };
     const q = (s) => $(s, layer);
@@ -202,8 +251,11 @@
     q(".tour-next").addEventListener("click", () => go(R.i + 1));
     q(".tour-back").addEventListener("click", () => go(R.i - 1));
     go(0);
+    boot = false;
   }
   function end() {
+    boot = false;
+    disarm();
     if (!run) return;
     run.off(); run.layer.remove(); run = null;
   }
@@ -213,6 +265,8 @@
     define(d) { def = d; },
     begin, end,
     get active() { return !!run; },
-    _resolve: resolve
+    scripted() { return !!script; },
+    held() { return boot || !!(run && run.step && !run.step.wait); },
+    _resolve: resolve, _stream: stream
   };
 })();

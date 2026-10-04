@@ -1,6 +1,8 @@
 // Tutorial steps for Monopoly (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Monopoly in einer Minute", text: "Kaufe Grundstücke, kassiere Miete und ruiniere deine Gegner. Wer als <b>Letzte:r</b> noch zahlen kann, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b> mit 40 Feldern. Du ziehst im Uhrzeigersinn. Straßen und Bahnhöfe kannst du kaufen. Wer darauf landet und sie nicht besitzt, zahlt dir Miete." },

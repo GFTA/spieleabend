@@ -164,7 +164,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || (L.phase !== "place" && L.phase !== "meeple")) return;
-      if (!$("#menu").hidden) { scheduleBot(); return; }
+      if (!$("#menu").hidden || (window.Tutorial && Tutorial.held())) { scheduleBot(); return; }
       const a = G.botMove(L, plan.pi);
       const res = a ? G.act(L, plan.pi, a) : null;
       if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); store.set(K.local, L); render(); }

@@ -134,7 +134,7 @@
     botKey = plan.key;
     botT = setTimeout(() => {
       if (mode !== "local" || !L) return;
-      if ($("#menu") && !$("#menu").hidden) { scheduleBot(); return; }
+      if (($("#menu") && !$("#menu").hidden) || (window.Tutorial && Tutorial.held())) { scheduleBot(); return; }
       const again = G.botPlan(L);
       if (!again || again.key !== botKey) { scheduleBot(); return; }
       const pi = again.pi, a = G.botMove(L, pi);

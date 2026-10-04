@@ -1,6 +1,8 @@
 // Tutorial steps for Activity (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 0,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, undefined, 2],
   steps: [
     { title: "Activity in einer Minute", text: "Reihum stellt jemand einen <b>Begriff</b> dar, die anderen raten. Je nach Runde <b>zeichnest</b>, <b>erklärst</b> oder machst du <b>Pantomime</b>. Gleich startet eine Übungsrunde. Im Einzelspiel stellst du immer selbst dar, die Computer-Gegner raten mit." },
     { target: ($) => $("#card:not([hidden])") || $("#wordLine"), idle: "Gleich geht es los …", text: "Hier steht dein <b>Begriff</b> und wie du ihn darstellst. Nur du siehst ihn. Schwere Begriffe geben mehr Punkte. Mit <b>Anderen Begriff</b> tauschst du ihn einmal aus." },

@@ -1,6 +1,8 @@
 // Tutorial steps for Phase 10 (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Phase 10 in einer Minute", text: "Ziel: Zehn <b>Phasen</b> nacheinander schaffen. In jeder Runde sammelst du Karten, die zu deiner Phase passen (z. B. zwei Drillinge), legst sie aus und wirst deine Karten los." },
     { target: "#deckPile", text: "Der <b>Stapel</b> (Zahlen 1–12 in vier Farben, Joker und Aussetzen). Zu Beginn deines Zugs ziehst du hier eine Karte." },

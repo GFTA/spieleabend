@@ -1,6 +1,8 @@
 // Tutorial steps for Rummikub (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Rummikub in einer Minute", text: "Ziel: Als Erste:r alle Plättchen vom <b>Ständer</b> auf den Tisch bringen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
     { target: "#rack", place: "top", text: "Dein <b>Ständer</b> mit 14 Plättchen. Mit dem Knopf daneben sortierst du nach Farbe oder Zahl." },

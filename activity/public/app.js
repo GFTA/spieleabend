@@ -117,6 +117,7 @@
     botT = setTimeout(() => {
       botKey = null;
       if (mode !== "local" || !L) return;
+      if ((window.Tutorial && Tutorial.held())) { scheduleBot(); return; }
       const q = G.botPlan(L);
       if (!q || q.key !== p.key) { scheduleBot(); return; }
       const a = G.botMove(L, q.pi), res = a ? G.act(L, q.pi, a) : null;

@@ -1,6 +1,8 @@
 // Tutorial steps for Kniffel (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 0,
   opponents: 1,
+  game: (a) => [a[0], { turnTimer: false }],
   steps: [
     { title: "Kniffel in einer Minute", text: "13 Runden lang würfelst du bis zu <b>dreimal</b> pro Zug und trägst dann genau ein Feld in deinen Block ein. Am Ende gewinnt, wer die meisten Punkte hat. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#sheetWrap", place: "top", text: "Dein <b>Block</b>. Oben zählen nur Würfel mit der passenden Augenzahl (ab 63 Punkten gibt es 35 Bonus). Unten stehen Dreierpasch, Viererpasch, Full House, Straßen, Kniffel (fünf gleiche) und Chance." },
