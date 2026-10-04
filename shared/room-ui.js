@@ -29,9 +29,7 @@
   ICONS.share = SVG('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/>', ' stroke-linejoin="round"');
   ICONS.bell = SVG('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>', ' stroke-linejoin="round"');
   ICONS.vol = SVG('<path d="M4 9.5v5h4l5 4v-13l-5 4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/>', ' stroke-linejoin="round"');
-  const QUICK = ["👍 Gut gespielt!", "🎉 Glückwunsch!", "⏳ Bin gleich da", "😴 Beeil dich", "🔁 Nochmal?"];
-  const QUICK_ROW = `<div class="quickchat" role="group" aria-label="Schnellnachrichten">${QUICK.map((q) => `<button type="button" data-quick="${q}">${q}</button>`).join("")}</div>`;
-  const CHAT_FORM = QUICK_ROW + `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
+  const CHAT_FORM = `<form class="chatform" data-chat><input class="field" type="text" maxlength="200" placeholder="Nachricht …" autocomplete="off" enterkeyhint="send" aria-label="Chat-Nachricht"><button class="btn" type="submit">Senden</button></form>`;
 
   // ---------- markup ----------
   const slot =(root, name) => { const t = root.querySelector(`template[data-slot="${name}"]`); return t ? t.innerHTML : ""; };
@@ -395,12 +393,6 @@
       if (!text) return;
       if (!(ws && ws.readyState === 1)) { app.toast("Keine Verbindung, die Nachricht wurde nicht gesendet."); return; }
       sendChat(text); input.value = "";
-    });
-    document.addEventListener("click", (e) => {
-      const q = e.target.closest("[data-quick]");
-      if (!q) return;
-      if (!(ws && ws.readyState === 1)) { app.toast("Keine Verbindung, die Nachricht wurde nicht gesendet."); return; }
-      sendChat(q.dataset.quick);
     });
     renderChat();
     // on a wide screen the chat is a sidebar on the right that pushes the game aside, the button folds it in and out
