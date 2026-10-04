@@ -278,6 +278,10 @@ ersten `applyLook()`-Aufruf, damit kein falsches Design kurz aufblitzt.
 - Schritt: `title`, `text` (HTML), `target` (Selektor, Liste, oder `($) => element|null`; ohne `target` ist es eine Karte über abgedunkeltem Spiel), `place` (`top`|`bottom`),
   `wait` (`"tap"`: weiter, wenn das Ziel angetippt oder gezogen wurde; `{tap: sel}`; `{until: ($) => bool}`), `idle` (Text, solange das Ziel fehlt, z. B. der Computer dran ist), `pre($)`.
   Liefert `target` nichts, zeigt die Sprechblase `idle` und der Spieler kann „Überspringen“. Esc oder × beenden, am Ende merkt `sa.tour.done.<spiel>` sich „geschafft“.
+- **Geskriptet**: `Tutorial.define({ seed, game, arrange? })`. Beim Start des Übungsspiels packt `arm()` die Engine-Funktionen (newGame, startRound, act, tick, botMove, botPlan, suggest, botLevel) ein:
+  jeder Aufruf bekommt ein eigenes `Math.random` (mulberry32 aus `seed:funktion:zugzähler`, Zähler = erfolgreiche `act`-Aufrufe), `game(args)` ersetzt die newGame-Argumente (feste Einstellungen),
+  `arrange(state, engine)` darf die Startlage zurechtrücken (MädN: `S.rig` = feste Würfe). `Tutorial.held()` ist wahr, solange eine Erklärkarte offen ist oder das Tutorial bootet: die Computer-Timer in `app.js`
+  warten dann. `Tutorial.scripted()` schaltet zufällige UI-Entscheidungen ab (Uno: Computer vergisst nie UNO). `end()` stellt alles wieder her. Seed finden: `node scripts/tour-seed.js <spiel> [max]`.
 - Meldet das Tutorial nur Selektoren, die im Spiel fehlen, schlägt `scripts/check-games` fehl (jede `#id` muss in `index.html` stehen oder in `app.js` vorkommen).
 
 ### Einstellungen-Sheet & Zugleiste (`shared/room-ui.js`, `shared/kit.js`)

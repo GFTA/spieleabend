@@ -1,6 +1,8 @@
 // Tutorial steps for Vier gewinnt (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, undefined, 2],
   steps: [
     { title: "Vier gewinnt in einer Minute", text: "Wer zuerst <b>vier eigene Scheiben</b> in einer Reihe hat, gewinnt: waagerecht, senkrecht oder schräg. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b> mit seinen Spalten. Eine Scheibe fällt immer bis auf die unterste freie Stelle." },

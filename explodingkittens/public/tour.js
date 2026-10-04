@@ -1,6 +1,8 @@
 // Tutorial steps for Exploding Kittens (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, 2],
   steps: [
     { title: "Exploding Kittens in einer Minute", text: "Ziel: Als <b>Letzte:r</b> übrig bleiben. Im Stapel stecken explodierende Katzen 💣. Wer eine zieht und nicht entschärfen kann, ist raus. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
     { target: "#hand", place: "top", text: "Deine <b>Hand</b>: 7 Karten, darunter ein 🧯 <b>Entschärfen</b>. Tippe eine Karte an, um zu sehen, was sie kann." },

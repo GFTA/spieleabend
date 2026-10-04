@@ -1,6 +1,8 @@
 // Tutorial steps for Würfelpoker (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, { turnTimer: false }],
   steps: [
     { title: "Würfelpoker in einer Minute", text: "Jede:r hat pro Runde bis zu <b>drei Würfe</b> und versucht, die beste Pokerhand mit fünf Würfeln zu bekommen. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#felt", text: "Hier liegen deine <b>fünf Würfel</b>. Darunter zeigen Punkte, wie viele Würfe du noch hast." },

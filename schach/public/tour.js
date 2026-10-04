@@ -1,6 +1,8 @@
 // Tutorial steps for Schach (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Schach in einer Minute", text: "Setze den gegnerischen <b>König</b> matt: Er wird bedroht und kann nicht mehr entkommen. Weiß beginnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b>. Jede Figur zieht auf ihre Art: <b>Bauer</b> ein Feld vor (schlägt schräg), <b>Turm</b> gerade, <b>Läufer</b> schräg, <b>Dame</b> beides, <b>Springer</b> L-förmig und über andere hinweg, <b>König</b> ein Feld in jede Richtung." },

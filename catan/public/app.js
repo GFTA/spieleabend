@@ -116,7 +116,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || L.phase !== "play") return;
-      if (!$("#menu").hidden || FX.busy()) { scheduleBot(300); return; }
+      if (!$("#menu").hidden || FX.busy() || (window.Tutorial && Tutorial.held())) { scheduleBot(300); return; }
       const now = G.botPlan(L);
       if (!now || now.key !== plan.key) { scheduleBot(); return; }
       const a = G.botMove(L, now.pi), res = a ? G.act(L, now.pi, a) : null;

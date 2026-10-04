@@ -1,6 +1,8 @@
 // Tutorial steps for Skip-Bo (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Skip-Bo in einer Minute", text: "Ziel: Als Erste:r deinen <b>Vorratsstapel</b> leer spielen. Gleich startet eine Übungsrunde gegen einen Computer-Gegner. Ich zeige dir den Tisch." },
     { target: "#myStock", place: "top", text: "Dein <b>Vorratsstapel</b>. Nur die oberste Karte ist offen und spielbar. Ist der Stapel leer, hast du gewonnen. Die Zahl zeigt, wie viele noch drin sind." },

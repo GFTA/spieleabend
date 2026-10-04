@@ -130,7 +130,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || L.phase !== "play") return;
-      if (!$("#menu").hidden) { scheduleBot(); return; } // paused while the menu is open
+      if (!$("#menu").hidden || (window.Tutorial && Tutorial.held())) { scheduleBot(); return; } // paused while the menu is open
       const a = G.botMove(L, plan.pi);
       const res = a ? G.act(L, plan.pi, a) : null;
       if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); saveLocal(); render(); }

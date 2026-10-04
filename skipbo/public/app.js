@@ -339,7 +339,7 @@
     if (!plan) return;
     botT = setTimeout(() => {
       if (mode !== "local" || !L || L.phase !== "play" || !L.players[L.cur].bot) return;
-      if (!$("#menu").hidden || dnd.busy) { scheduleBot(); return; } // paused while the menu is open
+      if (!$("#menu").hidden || dnd.busy || (window.Tutorial && Tutorial.held())) { scheduleBot(); return; } // paused while the menu is open
       const pi = L.cur, a = G.botMove(L, pi);
       const res = a ? G.act(L, pi, a) : null;
       if (res && res.ok) { handleEvents(res.events, G.view(L, 0)); store.set(K.local, L); render(); }

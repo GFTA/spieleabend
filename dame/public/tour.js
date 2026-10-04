@@ -1,6 +1,8 @@
 // Tutorial steps for Dame (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, 2],
   steps: [
     { title: "Dame in einer Minute", text: "Schlage alle gegnerischen Steine oder nimm dem Gegner alle Züge. Gespielt wird auf den <b>dunklen Feldern</b>. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: "#board", text: "Das <b>Brett</b>. Ein Stein zieht ein Feld <b>schräg vorwärts</b>. Eine <b>Dame</b> zieht beliebig weit in alle vier Diagonalen." },

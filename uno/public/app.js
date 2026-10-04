@@ -167,7 +167,7 @@
     if (w && `${w.pi}:${w.until}` !== localUnoDecided) {
       localUnoDecided = `${w.pi}:${w.until}`;
       // weaker computers sometimes forget UNO and take the penalty
-      if (Math.random() > G.BOT_UNO[G.botLevel(L, w.pi, localLevel)]) { localForgot.add(localUnoDecided); w = null; }
+      if (!(window.Tutorial && Tutorial.scripted && Tutorial.scripted()) && Math.random() > G.BOT_UNO[G.botLevel(L, w.pi, localLevel)]) { localForgot.add(localUnoDecided); w = null; }
     }
     const pi = w ? w.pi : isBot(L.cur) ? L.cur : -1;
     const key = pi < 0 ? null : `${L.round}:${L.turn}:${L.phase}:${pi}:${!!w}`;
@@ -177,6 +177,7 @@
     localBotT = setTimeout(() => {
       localBotKey = null;
       if (mode !== "local" || !L) return;
+      if ((window.Tutorial && Tutorial.held())) { scheduleLocalBot(); return; }
       const a = G.suggest(G.view(L, pi), G.botLevel(L, pi, localLevel));
       if (a && !doAct(a, pi) && a.t === "play") doAct({ t: L.phase === "drawn" ? "keep" : "draw" }, pi);
     }, (w ? 500 : 900) + Math.random() * 700);

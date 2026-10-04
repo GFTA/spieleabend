@@ -1,6 +1,8 @@
 // Tutorial steps for Galgenmännchen (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 1,
   opponents: 1,
+  game: (a) => [a[0], undefined, "random", undefined, 2],
   steps: [
     { title: "Galgenmännchen in einer Minute", text: "Ein deutsches Wort ist gesucht. Ihr ratet reihum <b>Buchstaben</b>. Gleich startet eine Übungsrunde gegen einen Computer-Gegner." },
     { target: "#word", text: "Das ist das <b>Wort</b>. Jedes Feld ist ein Buchstabe. Über dem Wort steht die Kategorie." },

@@ -1,6 +1,8 @@
 // Tutorial steps for Schiffe versenken (engine: shared/tutorial.js)
 Tutorial.define({
+  seed: 0,
   opponents: 1,
+  game: (a) => [a[0], undefined, undefined, undefined, 2],
   steps: [
     { title: "Schiffe versenken in einer Minute", text: "Jede:r versteckt eine <b>Flotte</b> auf einem Gitter. Reihum schießt ihr auf Felder des anderen. Wer zuerst alle gegnerischen Schiffe versenkt, gewinnt. Gleich startet eine Übungspartie gegen einen Computer-Gegner." },
     { target: ($) => $("#placeBar:not([hidden])") ? [$("#harbor"), $("#board")] : null, idle: "Die Flotte steht schon.", text: "Erst stellst du deine Flotte auf: Tippe ein <b>Schiff</b> im Hafen an, dann das Feld für den Bug, oder zieh es aufs Gitter. Ein Tipp aufs Schiff dreht es." },
