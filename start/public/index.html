@@ -58,7 +58,7 @@ h1 span{color:var(--accent)}
 .gamescol{display:flex;flex-direction:column;gap:12px}
 .section-head{display:flex;flex-direction:column;gap:2px;margin:6px 2px 0}
 .section-head .hint{margin:0;font-size:13px;color:var(--muted)}
-.game{--tint:var(--accent);position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) auto;grid-template-areas:"art title play" "desc desc desc" "pb pb pb";align-items:center;gap:10px 14px;padding:14px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .15s}
+.game{--tint:var(--accent);position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) auto;grid-template-areas:"art title play" "desc desc desc" "links links links" "pb pb pb";align-items:center;gap:10px 14px;padding:14px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .15s}
 .game .top{display:contents}
 .game .art{grid-area:art;width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--tint) 24%,var(--surface));overflow:hidden}
 .game .art img{width:100%;height:100%;display:block}
@@ -75,6 +75,7 @@ h1 span{color:var(--accent)}
 .actions .btn-primary::before{content:"";width:0;height:0;margin-left:4px;border-left:13px solid #231a05;border-top:8px solid transparent;border-bottom:8px solid transparent;border-radius:2px}
 .actions .btn-primary::after{content:"";position:absolute;inset:0;border-radius:22px}
 .actions .btn-primary:active{box-shadow:0 1px 0 #b78d12;transform:translateY(2px)}
+.game .links{grid-area:links;display:flex;align-items:center;gap:16px;margin-top:-4px}
 .partybox{grid-area:pb;display:flex;flex-direction:column;gap:8px}
 .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:14px;padding:14px 20px;font-weight:800;font-size:16px;text-decoration:none;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1.5px var(--line)}
 .btn-primary{background:var(--accent);color:#231a05;box-shadow:0 4px 0 #b78d12}
@@ -196,7 +197,7 @@ footer{text-align:center;color:var(--muted);font-size:12px}
 .tagrow .chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .game .tagday{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--accent);color:#231a05}
 .game .rec{font-size:12px;color:var(--muted);font-weight:600}
-.game .rulelink{position:relative;z-index:2;font-size:12px;font-weight:700;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.game .rulelink{position:relative;z-index:2;font-size:13px;padding:4px 0;font-weight:700;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
 .resume{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;text-decoration:none;color:var(--text);font-weight:800;background:color-mix(in srgb,var(--green) 22%,var(--bg2));box-shadow:inset 0 0 0 2px var(--green)}
 .resume[hidden]{display:none}
 .resume small{display:block;font-weight:600;color:var(--muted);font-size:12.5px}
@@ -393,9 +394,10 @@ footer{text-align:center;color:var(--muted);font-size:12px}
       return `${i === firstOut ? `<h3 class="grouphead">Passt nicht zu ${fitN} Spielern</h3>` : ""}<article class="game${i >= firstOut && firstOut >= 0 ? " dim" : ""}" data-id="${esc(g.id)}" style="--tint:${TINT[g.id] || "var(--accent)"}">
         <div class="top">
           <div class="art"><img src="${esc(g.id)}.svg" alt="" width="88" height="88" loading="lazy" decoding="async"></div>
-          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${isFresh(g, stats) ? `<span class="tagfresh">Neu</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}<a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><a class="rulelink" href="${esc(gameUrl(g.url, { tutorial: 1 }))}" data-url="${esc(g.url)}" data-extra="tutorial" aria-label="${esc(g.name)}: Tutorial starten">Tutorial</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div></div>
+          <div><h2>${esc(g.name)}</h2><div class="meta"><span>${esc(g.players)}</span>${pill}${g.id === daily ? `<span class="tagday">Spiel des Tages</span>` : ""}${isFresh(g, stats) ? `<span class="tagfresh">Neu</span>` : ""}${recent[0] === g.id ? `<span class="tagnew">Zuletzt gespielt</span>` : ""}${stats[g.id] && stats[g.id].g ? `<span class="rec">${stats[g.id].w} von ${stats[g.id].g} gewonnen</span>` : ""}</div></div>
         </div>
         <p>${esc(g.desc)}</p>
+        <div class="links"><a class="rulelink" href="${esc(gameUrl(g.url, { rules: 1 }))}" data-url="${esc(g.url)}" data-extra="rules" aria-label="${esc(g.name)}: Regeln lesen">Regeln</a><a class="rulelink" href="${esc(gameUrl(g.url, { tutorial: 1 }))}" data-url="${esc(g.url)}" data-extra="tutorial" aria-label="${esc(g.name)}: Tutorial starten">Tutorial</a><button class="favbtn" type="button" data-fav="${esc(g.id)}" aria-pressed="${favs.includes(g.id)}" aria-label="${esc(g.name)} als Favorit" title="Favorit">${favs.includes(g.id) ? "★" : "☆"}</button></div>
         <div class="partybox" data-for="${esc(g.id)}"></div>
         <div class="actions">
           <a class="btn btn-primary" href="${esc(gameUrl(g.url))}" data-url="${esc(g.url)}" aria-label="${esc(g.name)} spielen">Spielen</a>
