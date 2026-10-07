@@ -65,7 +65,8 @@
   const actor = () => (!V ? -1 : V.phase === "place" ? V.place.pi : V.phase === "give" ? V.give.from : V.phase === "roundEnd" ? -1 : V.cur);
   const canAct = () => !!V && V.phase === "play" && V.me >= 0 && V.cur === V.me && !isOut();
   const canGive = () => !!V && V.phase === "give" && V.give.from === V.me && !isOut();
-  const canNope = () => !!V && V.phase === "stack" && !!V.stack && !isOut() && V.stack.last !== V.me && count("nope") > 0 && Date.now() < stackEnds;
+  const ownCard = () => !!V && !!V.stack && V.stack.pi === V.me && V.stack.nopes % 2 === 0;
+  const canNope = () => !!V && V.phase === "stack" && !!V.stack && !isOut() && V.stack.last !== V.me && !ownCard() && count("nope") > 0 && Date.now() < stackEnds;
   const validTargets = () => V.players.map((p, i) => i).filter((i) => i !== V.me && !V.players[i].out && V.players[i].handN > 0);
 
   const SHORT = { kitten: "Katze", defuse: "Entschärfen", nope: "Nö!", attack: "Angriff", skip: "Aussetzen", favor: "Gefallen", shuffle: "Mischen", future: "Zukunft",
@@ -387,7 +388,7 @@
     send({ t: "draw" });
   }
   function nope(rect) {
-    if (!canNope()) { toast(count("nope") ? "Dafür ist es zu spät." : "Du hast kein „Nö!“."); return false; }
+    if (!canNope()) { toast(ownCard() ? "Deine eigene Karte kannst du nicht abwehren." : count("nope") ? "Dafür ist es zu spät." : "Du hast kein „Nö!“."); return false; }
     return send({ t: "nope" }, rect);
   }
   function giveCard(c, rect) {
@@ -690,14 +691,16 @@
     if (st.target >= 0) t += ` gegen ${acc(st.target)}`;
     if (st.n === 3 && st.name) t += ` und ${verb(st.pi, "willst", "will")} „${G.cardName(st.name)}“`;
     const cancelled = st.nopes % 2 === 1;
-    return `${esc(t)}<small>${cancelled ? '<span class="warn">Abgewehrt!</span> Außer jemand sagt noch ein „Nö!“.' : "Jemand kann „Nö!“ sagen …"}</small>`;
+    const sub = cancelled ? (st.short ? '<span class="warn">Abgewehrt!</span>' : '<span class="warn">Abgewehrt!</span> Gleich vorbei, außer jemand sagt „Nö!“ dazu.')
+      : st.short ? "" : "Wird gleich ausgeführt, außer jemand sagt „Nö!“.";
+    return `${esc(t)}${sub ? `<small>${sub}</small>` : ""}`;
   }
 
   function renderStackBar() {
     const bar = $("#stackBar"), st = V.stack;
-    if (V.phase !== "stack" || !st) { bar.hidden = true; stackKey = ""; return; }
+    if (V.phase !== "stack" || !st || st.short) { bar.hidden = true; stackKey = ""; if (st) stackEnds = Date.now() + st.left; return; }
     bar.hidden = false;
-    const key = `${V.round}:${V.mv}:${st.nopes}:${st.pn}`;
+    const key = `${V.round}:${V.mv}:${st.nopes}`;
     if (key === stackKey) return;
     stackKey = key; stackEnds = Date.now() + st.left;
     const total = st.nopes ? G.NOPE_MS : G.WINDOW_MS, i = bar.firstElementChild;
@@ -863,7 +866,7 @@
     } else if (V.phase === "stack") {
       const st = V.stack;
       av = V.players[st.pi].avatar; who = `${pname(st.pi)} ${verb(st.pi, "spielst", "spielt")} ${G.cardName(st.c)}`;
-      hint = canNope() ? (st.passed ? "Du lässt es durch. Tippe auf „Nö!“, falls du es dir anders überlegst." : "Tippe auf „Nö!“, um es abzuwehren, oder auf „Kein Nö“.") : st.last === V.me ? "Du hast schon „Nö!“ gesagt." : count("nope") ? "Zu spät für ein „Nö!“." : "Du hast kein „Nö!“.";
+      hint = canNope() ? (st.passed ? "Du lässt sie durch." : "Mit „Nö!“ stoppst du die Karte.") : ownCard() ? "Wir warten kurz, ob jemand „Nö!“ sagt." : st.last === V.me ? "Du hast „Nö!“ gesagt." : count("nope") ? "Zu spät für ein „Nö!“." : "Du hast kein „Nö!“.";
     } else if (V.phase === "give") {
       const f = V.give.from;
       av = V.players[f].avatar;
@@ -899,7 +902,7 @@
     const c = sel;
     $("#drawBtn").hidden = !(V.phase === "play" && !watch);
     $("#drawBtn").disabled = !play;
-    $("#nopeBtn").hidden = !(V.phase === "stack" && !watch && count("nope") > 0);
+    $("#nopeBtn").hidden = !(V.phase === "stack" && !watch && count("nope") > 0 && !ownCard());
     $("#nopeBtn").disabled = !nope_;
     $("#passBtn").hidden = !(V.phase === "stack" && nope_ && !V.stack.passed && !(V.stack.pi === V.me && V.stack.nopes % 2 === 0));
     for (const e of $$("#hand .card")) e.classList.toggle("ready", nope_ && e.dataset.c === "nope");

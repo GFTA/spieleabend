@@ -102,29 +102,29 @@ h1{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:.01e
 .ocnt{font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
 .otag{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--accent);white-space:nowrap}
 .obox .boom{position:absolute;right:8px;bottom:4px;font-size:22px}
-.table{width:min(100%,460px);display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 12px 12px;border-radius:24px;background:var(--felt);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.32);transition:box-shadow .2s}
+.table{--tc:calc(var(--cw) * 1.42);--w:var(--tc);width:min(100%,520px);display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 14px 14px;border-radius:26px;background:var(--felt);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.32);transition:box-shadow .2s}
 .table.cd-drop{box-shadow:inset 0 0 0 3px var(--accent),0 12px 26px rgba(0,0,0,.32)}
 .table.cd-over{box-shadow:inset 0 0 0 3px var(--accent),0 0 22px var(--accent)}
-.trow{display:flex;align-items:flex-start;justify-content:center;gap:calc(var(--cw) * .3);width:100%}
+.trow{display:flex;align-items:flex-start;justify-content:center;gap:calc(var(--tc) * .22);width:100%}
 .pilebox{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
 .deck.shake{animation:wob .45s}
 @keyframes wob{25%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}}
 #deckBtn{cursor:pointer}
-.stackzone{position:relative;flex:1;max-width:calc(var(--cw) * 2.6);min-height:calc(var(--cw) * 1.4);display:flex;align-items:center;justify-content:center;border-radius:calc(var(--cw) * .13)}
-.stackzone .slot-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:12px;font-weight:700;color:rgba(255,255,255,.35);border-radius:calc(var(--cw) * .13);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
+.stackzone{position:relative;flex:1;max-width:calc(var(--tc) * 2.4);min-height:calc(var(--tc) * 1.4);display:flex;align-items:center;justify-content:center;border-radius:calc(var(--tc) * .13)}
+.stackzone .slot-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:700;color:rgba(255,255,255,.35);border-radius:calc(var(--tc) * .13);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
 .stackcards{display:flex;align-items:center;justify-content:center;animation:drop .3s ease-out}
 @keyframes drop{from{transform:scale(1.18);opacity:.4}}
 .stackcards .card + .card{margin-left:calc(var(--w) * -.55)}
 .stackcards .card:nth-child(2){transform:rotate(5deg)}
 .stackcards .card:nth-child(3){transform:rotate(10deg) translateY(2px)}
-.nopepile{position:absolute;right:calc(var(--cw) * -.1);top:calc(var(--cw) * -.28);z-index:2;animation:bounce .4s ease-out}
-.nopepile .card{--w:calc(var(--cw) * .62);transform:rotate(9deg)}
+.nopepile{position:absolute;right:calc(var(--tc) * -.1);top:calc(var(--tc) * -.28);z-index:2;animation:bounce .4s ease-out}
+.nopepile .card{--w:calc(var(--tc) * .62);transform:rotate(9deg)}
 .nopepile .cnt{position:absolute;right:-6px;bottom:-6px;z-index:3;min-width:1.5em;padding:1px 6px;border-radius:999px;background:var(--red);color:#fff;font:800 13px/1.4 var(--body,Figtree,sans-serif);text-align:center;box-shadow:0 0 0 2px var(--bg)}
 @keyframes bounce{40%{transform:scale(1.25)}}
-.sinfo{min-height:1.35em;font-size:14px;font-weight:700;text-align:center;text-wrap:balance}
+.sinfo{min-height:1.35em;font-size:15px;font-weight:700;text-align:center;text-wrap:balance}
 .sinfo small{display:block;font-weight:600;font-size:12px;color:var(--muted)}
 .sinfo .warn{color:#ff9aa0}
-#stackBar{width:min(260px,80%);margin:-4px auto 0}
+#stackBar{width:min(300px,86%);height:8px;border-radius:4px;margin:-4px auto 0}
 #stackBar i{width:100%}
 .danger{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.02em}
 .danger b{font-weight:800;color:#fff}
@@ -253,7 +253,7 @@ h1{font-family:var(--display);font-weight:400;font-size:36px;letter-spacing:.01e
   .hand .card .cd{display:block;position:absolute;left:7%;right:7%;bottom:calc(var(--w) * .27);text-align:center;font-size:calc(var(--w) * .105);font-weight:600;line-height:1.15;pointer-events:none;opacity:.85}
   .ohead .pname{font-size:15px}
   .lastmove{font-size:14px}
-  .table{width:min(100%,560px)}
+  .table{width:min(100%,680px)}
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}

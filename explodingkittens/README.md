@@ -17,7 +17,7 @@ Einzelspieler gegen den Computer und Online-Räume benutzen dieselbe Regel-Engin
   Angriffe addieren sich, jeder weitere gibt einen zusätzlichen Zug), **Mischen**, **Blick in die Zukunft**
   (die obersten 3 Karten ansehen), **Gefallen** (eine Person gibt dir eine Karte ihrer Wahl).
 - **Nö!** stoppt jede Aktion, auch ein anderes Nö!. Die Aktion gilt, wenn eine gerade Zahl Nös gespielt wurde.
-  Nach einer gespielten Karte läuft ein kurzes Zeitfenster (ca. 3 Sekunden, nach jedem Nö! 2,6 Sekunden),
+  Nach einer gespielten Karte läuft ein kurzes Zeitfenster (3 Sekunden, nach jedem Nö! 2 Sekunden),
   in dem alle mit Nö! reagieren können.
   Kann niemand mehr Nö! sagen (keine Karte auf der Hand oder „Kein Nö“ getippt), wird die Karte nach etwa 0,6 Sekunden ausgeführt.
 - **Katzenkarten** (Taco, Melone, Kartoffel, Regenbogen, Bart) gehen nur als **Paar** (zufällige Karte der gewählten

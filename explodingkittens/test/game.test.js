@@ -133,6 +133,16 @@ test("Nö cancels, a Nö on the Nö brings it back, and the window restarts", ()
   assert.strictEqual(S.cur, a); // went through
 });
 
+test("nobody can Nö their own card, but the player may Nö a Nö", () => {
+  const S = mk(3), p = S.cur, a = (p + 1) % 3;
+  give(S, p, "shuffle", "nope"); give(S, a, "nope");
+  Game.act(S, p, { t: "play", c: "shuffle" });
+  assert.strictEqual(Game.act(S, p, { t: "nope" }).ok, false);
+  assert.ok(Game.act(S, a, { t: "nope" }).ok);
+  assert.strictEqual(Game.view(S, p).stack.short, false);
+  assert.ok(Game.act(S, p, { t: "nope" }).ok);
+});
+
 test("Nö only works inside the window and not without a played card", () => {
   const S = mk(3), p = S.cur, a = (p + 1) % 3;
   give(S, a, "nope");

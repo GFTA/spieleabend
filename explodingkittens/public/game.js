@@ -18,8 +18,8 @@
   const AVATARS = (typeof module === "object" && module.exports ? require("../../shared/avatars.js") : self.SAAvatars).AVATARS;
   const BOT_AVATAR = "🤖";
   const LEVELS = { 1: "Leicht", 2: "Normal", 3: "Profi" };
-  const WINDOW_MS = 3200;  // everybody may play a "Nö!" for this long after a card was played
-  const NOPE_MS = 2600;    // ... and after each Nö
+  const WINDOW_MS = 3000;  // everybody may play a "Nö!" for this long after a card was played
+  const NOPE_MS = 2000;    // ... and after each Nö
   const SETTLE_MS = 600;   // when nobody can or wants to say Nö, the card resolves after this short beat
   const TURN_MS = 45000;   // the server's clock for whoever has to decide something
   const HAND = 7, PEEK = 3;
@@ -299,6 +299,7 @@
       if (p.bot ? wantsNope(S, i) : !st.passed.includes(i)) return;
     }
     st.until = Math.min(st.until, Date.now() + S.settle);
+    st.short = true;
   }
 
   // Apply an action by player `pi`. Returns { ok, error?, events }. Actions:
@@ -350,10 +351,11 @@
       if (S.phase !== "stack" || !S.stack) return fail("Es gibt nichts abzuwehren.");
       if (Date.now() >= S.stack.until) return fail("Zu spät für ein Nö.");
       if (S.stack.last === pi) return fail("Du hast gerade schon „Nö!“ gesagt.");
+      if (S.stack.pi === pi && S.stack.nopes % 2 === 0) return fail("Deine eigene Karte kannst du nicht abwehren.");
       const k = P.hand.indexOf("nope");
       if (k < 0) return fail("Du hast kein „Nö!“.");
       P.hand.splice(k, 1); S.disc.push("nope");
-      S.stack.nopes++; S.stack.last = pi; S.stack.until = Date.now() + S.nopeWin; S.stack.passed = [];
+      S.stack.nopes++; S.stack.last = pi; S.stack.until = Date.now() + S.nopeWin; S.stack.passed = []; S.stack.short = false;
       events.push({ t: "nope", pi, n: S.stack.nopes });
       log(S, `${P.name}: „Nö!“`);
       settle(S);
@@ -532,7 +534,7 @@
       deckN: S.deck.length, kn: kittensIn(S.deck), discN: S.disc.length, discTop: S.disc.length ? S.disc[S.disc.length - 1] : null,
       hand: me >= 0 ? S.players[me].hand.slice() : null,
       peek: me >= 0 && S.peeks[me] ? S.peeks[me].slice() : null,
-      stack: st ? { pi: st.pi, c: st.c, n: st.n, target: st.target, name: st.name, nopes: st.nopes, last: st.last, passed: me >= 0 && st.passed.includes(me), pn: st.passed.length, left: Math.max(0, st.until - Date.now()) } : null,
+      stack: st ? { pi: st.pi, c: st.c, n: st.n, target: st.target, name: st.name, nopes: st.nopes, last: st.last, passed: me >= 0 && st.passed.includes(me), pn: st.passed.length, short: !!st.short, left: Math.max(0, st.until - Date.now()) } : null,
       give: S.give ? { from: S.give.from, to: S.give.to } : null,
       place: S.place ? { pi: S.place.pi } : null,
       txs: S.txs.map((x) => ({ k: x.k, from: x.from, to: x.to, c: pi === x.from || pi === x.to ? x.c : null })),
