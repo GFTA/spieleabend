@@ -117,6 +117,8 @@
 .awards li b{display:block;font-size:14px}.awards li small{color:var(--muted)}.awards .ic{font-size:22px}
 #challengeBtn{flex:none;padding:10px 14px;font-size:14px;background:var(--red);color:#fff}
 .discard-wrap.cd-over{transform:scale(1.07);box-shadow:0 0 0 4px #fff,0 0 40px 4px var(--ring,transparent)}
+.cd-ghost .card{--cw:var(--w);position:relative}
+body.myturn:has(#game:not([hidden]))::after{display:none}
 .discard-wrap .card{animation:land .28s ease-out}
 @keyframes land{from{transform:translateY(-26px) rotate(-8deg) scale(1.08);opacity:.2}to{transform:none;opacity:1}}
 .tinfo{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;color:var(--muted);font-size:12px;font-weight:600}
