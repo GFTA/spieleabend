@@ -10,8 +10,8 @@ Tutorial.define({
     { target: "#pool", place: "top", text: "Der <b>Vorrat</b>. Kannst du nichts legen, ziehst du hier ein Plättchen. Der Joker ersetzt jedes Plättchen." },
     { title: "Erstes Auslegen", text: "Dein erstes Auslegen muss mindestens <b>30 Punkte</b> zählen und kommt nur aus deinem eigenen Ständer. Danach darfst du den ganzen Tisch umbauen, solange am Ende alles gültig ist." },
     {
-      target: ($) => $("#dock.myturn") ? [$("#rack"), $("#drawBtn")] : null, wait: { tap: "#drawBtn, #rack .tile" }, idle: "Der Computer ist noch dran. Gleich bist du dran …", place: "top",
-      text: "<b>Du bist dran!</b> Zieh Plättchen vom Ständer auf den Tisch (oder tippe erst das Plättchen, dann das Ziel). Mit <b>Fertig</b> bestätigst du, mit <b>Zurück</b> nimmst du alles zurück. Hast du nichts zum Legen, tippe <b>Ziehen</b>."
+      target: ($) => $("#dock.myturn") ? [$("#rack"), $("#pool")] : null, wait: { tap: "#pool, #rack .tile" }, idle: "Der Computer ist noch dran. Gleich bist du dran …", place: "top",
+      text: "<b>Du bist dran!</b> Zieh Plättchen vom Ständer auf den Tisch (oder tippe erst das Plättchen, dann das Ziel). Mit <b>Fertig</b> bestätigst du, mit <b>Zurück</b> nimmst du alles zurück. Hast du nichts zum Legen, tippe auf den <b>Vorrat</b>."
     },
     { target: "#menuBtn", text: "Im <b>Menü</b> findest du jederzeit Regeln und dieses Tutorial. Spiel die Runde einfach zu Ende. Viel Spaß!" }
   ]

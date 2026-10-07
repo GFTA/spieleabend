@@ -6,11 +6,11 @@ Computer-Gegner, Avatare und Tisch-Designs kommen aus `../shared/`, siehe
 
 - **Plättchen**: 106 Stück, je zweimal die Zahlen 1 bis 13 in vier Farben plus 2 Joker. Jeder bekommt 14.
 - **Sätze**: eine Reihe (mindestens 3 Zahlen in Folge, eine Farbe, 13 und 1 hängen nicht zusammen) oder eine Gruppe (3 oder 4 gleiche Zahlen in verschiedenen Farben). Joker ersetzen jedes Plättchen.
-- **Zug**: Plättchen vom Ständer auslegen und den Tisch beliebig umbauen, solange am Ende alles gültig ist, kein Plättchen vom Tisch fehlt und mindestens eins vom Ständer dazukam. Sonst ein Plättchen ziehen.
+- **Zug**: Plättchen vom Ständer auslegen und den Tisch beliebig umbauen, solange am Ende alles gültig ist, kein Plättchen vom Tisch fehlt und mindestens eins vom Ständer dazukam. Sonst auf den Vorrat tippen und ein Plättchen ziehen.
 - **Erstes Auslegen**: mindestens 30 Punkte (einstellbar: 20 oder ohne Mindestwert), nur aus dem eigenen Ständer, der Tisch bleibt unberührt.
 - **Rundenende**: Wer zuerst seinen Ständer leert, gewinnt und bekommt die Restpunkte der anderen, die anderen bekommen ihre eigenen als Minus (Joker 30). Ist der Vorrat leer und niemand kann mehr legen, gewinnt der kleinste Rest.
 - **Spiel**: eine Runde, bis 2 oder bis 3 Siege. 2 bis 4 Spieler plus Zuschauer.
-- **Bedienung**: Plättchen mit Maus oder Finger auf einen Satz, in den freien Platz („Neuer Satz“) oder zurück auf den Ständer ziehen. Oder antippen, dann das Ziel antippen. Der Zug gilt erst mit „Fertig“, „Zurück“ stellt den Tisch wie zu Beginn des Zuges her. Ungültige Sätze sind rot. Im Feld „Vorbereiten“ über dem Ständer kannst du neue Sätze schon planen, auch wenn die anderen dran sind; „Auslegen“ legt die gültigen davon auf den Tisch. Der Schalter „123 / Regenbogen“ sortiert den Ständer nach Zahl oder Farbe (wie in Uno und Phase 10).
+- **Bedienung**: Plättchen mit Maus oder Finger auf einen Satz, in den freien Platz („Neuer Satz“) oder zurück auf den Ständer ziehen. Oder antippen, dann das Ziel antippen. Der Zug gilt erst mit „Fertig“, „Zurück“ stellt den Tisch wie zu Beginn des Zuges her. Ungültige Sätze sind rot. Im Feld „Vorbereiten“ über dem Ständer kannst du neue Sätze schon planen, auch wenn die anderen dran sind; „Auslegen“ legt die gültigen davon auf den Tisch, „Fertig“ tut das auch von selbst. Der Schalter „123 / Regenbogen“ sortiert den Ständer nach Zahl oder Farbe (wie in Uno und Phase 10).
 - **Computer**: Leicht (legt nur aus dem Ständer, zieht manchmal trotzdem), Normal (ergänzt Sätze auf dem Tisch) und Profi (baut den ganzen Tisch um, auch Joker-Tausch).
 
 ## Abweichungen von den Originalregeln

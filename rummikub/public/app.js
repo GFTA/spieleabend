@@ -223,6 +223,17 @@
   }
 
   Cards.autoFlip("#rack", ".tile");
+  // the element matching sel closest to the pointer, if its edge is within max px (a drop that just misses still counts)
+  const NEAR = 30;
+  function nearest(sel, x, y, max = NEAR) {
+    let best = null, bd = max;
+    for (const el of document.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect();
+      const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if (d <= bd) { bd = d; best = el; }
+    }
+    return best;
+  }
   // glowing bar in front of the tile a dragged tile would be inserted before (or after the last one)
   function snapAt(setEl, e) {
     for (const t of document.querySelectorAll(".snap, .snap-end")) t.classList.remove("snap", "snap-end");
@@ -252,18 +263,20 @@
       return { el, id };
     },
     target(under, s, e) {
-      const ps = under && under.closest("#prep .pset");
-      const set0 = under && W && under.closest("#sets .set");
-      snapAt(ps || (set0 && !lockedSet(W.sets[+set0.dataset.i] || []) ? set0 : null), e);
-      if (!under) return null;
-      if (ps) return { el: ps, ok: true, kind: "prep", i: +ps.dataset.i };
-      if (under.closest("#prep")) return { el: $("#prepNew"), ok: true, kind: "prep", i: "new" };
-      if (under.closest("#rack")) return { el: $("#rack"), ok: W ? W.start.has(s.id) : inPrep(s.id), kind: "rack" };
-      if (!W) return null;
-      const set = under.closest("#sets .set");
-      if (set) return { el: set, ok: !lockedSet(W.sets[+set.dataset.i] || []), kind: "set", i: +set.dataset.i };
-      if (under.closest("#arena")) return { el: $("#newSet"), ok: true, kind: "new" };
-      return null;
+      let t = null;
+      if (under) {
+        const x = e.clientX, y = e.clientY;
+        if (under.closest("#rack")) t = { el: $("#rack"), ok: W ? W.start.has(s.id) : inPrep(s.id), kind: "rack" };
+        else if (under.closest("#prep")) {
+          const ps = under.closest("#prep .pset") || (under.closest("#prepNew") ? null : nearest("#prep .pset", x, y));
+          t = ps ? { el: ps, ok: true, kind: "prep", i: +ps.dataset.i } : { el: $("#prepNew"), ok: true, kind: "prep", i: "new" };
+        } else if (W && under.closest("#arena")) {
+          const set = under.closest("#sets .set") || (under.closest("#newSet") ? null : nearest("#sets .set", x, y));
+          t = set ? { el: set, ok: !lockedSet(W.sets[+set.dataset.i] || []), kind: "set", i: +set.dataset.i } : { el: $("#newSet"), ok: true, kind: "new" };
+        }
+      }
+      snapAt(t && t.ok && (t.kind === "prep" && t.i !== "new" || t.kind === "set") ? t.el : null, e);
+      return t;
     },
     drop(s, t, rect) {
       if (!t.ok) return false;
@@ -277,7 +290,9 @@
     tap(e) {
       if (!V || inflight || V.me < 0 || V.phase !== "play" || e.target.closest("button, a")) return;
       const sel = selOf(), tile = e.target.closest("#rack .tile, #sets .tile, #prep .tile");
-      const pset = e.target.closest("#prep .pset"), inSets = e.target.closest("#sets, #arena");
+      const pset = e.target.closest("#prep .pset") || (e.target.closest("#prep") && !e.target.closest("#prepNew, button") ? nearest("#prep .pset", e.clientX, e.clientY) : null);
+      const setEl = e.target.closest("#sets .set") || (W && e.target.closest("#arena") && !e.target.closest("#newSet") ? nearest("#sets .set", e.clientX, e.clientY) : null);
+      const inSets = e.target.closest("#sets, #arena");
       if (!W && inSets) return;
       const tid = tile ? +tile.dataset.id : null;
       if (tile && sel === tid) { setSel(null); render(); return; }
@@ -296,8 +311,8 @@
       else if (e.target.closest("#rack")) {
         if (selInRack) { if (tile) { setSel(tid); render(); } return; }
         if (!toRack(sel)) noRack();
-      } else if (e.target.closest("#sets .set")) {
-        const set = e.target.closest("#sets .set"), i = +set.dataset.i;
+      } else if (setEl) {
+        const set = setEl, i = +set.dataset.i;
         if (lockedSet(W.sets[i])) { toast("Vor dem ersten Auslegen bleibt der Tisch, wie er ist."); return; }
         moveTile(sel, "set", i, tile ? [...set.querySelectorAll(".tile")].filter((t) => +t.dataset.id !== sel).indexOf(tile) + 1 : null);
       } else if (e.target.closest("#arena")) moveTile(sel, "new");
@@ -380,6 +395,7 @@
     if (inflight) return;
     let a = { t: "draw" };
     if (t === "done") {
+      if (W && prep.some((s) => G.analyze(s))) layPrep(); // finished sets in the prepare zone go on the table first
       const c = check();
       if (!c.ok) {
         toast(c.msg); sfx("bad");
@@ -498,7 +514,6 @@
     renderPrep();
     Spieleabend.sortToggle($("#sortBtn"), sortMode);
     $("#pool b").textContent = V.pool;
-    $("#pool").title = `${V.pool} Steine im Vorrat`;
 
     // log
     const lmEl = $("#lastMove"), lines = V.log.slice(-2), lmKey = lines.join("\n");
@@ -533,14 +548,15 @@
     $("#whoHint").textContent = hint;
     $("#dock").classList.toggle("myturn", play);
     const acts = V.phase === "play" && V.me >= 0;
-    $("#doneBtn").hidden = $("#resetBtn").hidden = $("#drawBtn").hidden = !acts;
+    $("#doneBtn").hidden = $("#resetBtn").hidden = !acts;
     if (acts) {
       const c = play ? check() : { ok: false };
-      $("#doneBtn").classList.toggle("off", !c.ok);
+      $("#doneBtn").classList.toggle("off", !c.ok && !(play && prep.some((s) => G.analyze(s))));
       $("#resetBtn").disabled = !play || !dirtyW();
-      $("#drawBtn").classList.toggle("off", !play);
-      $("#drawBtn").textContent = V.pool ? "Ziehen" : "Aussetzen";
     }
+    $("#pool").classList.toggle("off", !play);
+    $("#pool i").textContent = V.pool ? "ziehen" : "passen";
+    $("#pool").title = V.pool ? `${V.pool} Steine im Vorrat. Tippen zum Ziehen.` : "Vorrat leer. Tippen zum Aussetzen.";
     $("#resultBtn").hidden = !(V.phase === "roundEnd" && peek);
     $("#reactBtn").hidden = mode !== "online";
     $("#keys").innerHTML = play ? "<kbd>Enter</kbd> fertig · <kbd>Z</kbd> ziehen" : "";
@@ -566,7 +582,7 @@
   }
 
   $("#doneBtn").addEventListener("click", () => play("done"));
-  $("#drawBtn").addEventListener("click", () => play("draw"));
+  $("#pool").addEventListener("click", () => play("draw"));
   $("#resetBtn").addEventListener("click", () => { if (canPlay() && !inflight) { W = null; sfx("pop"); render(); } });
   $("#prep").addEventListener("click", (e) => {
     const b = e.target.closest("[data-p]");
